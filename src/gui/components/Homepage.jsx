@@ -196,7 +196,11 @@ const Homepage = ({ onProjectOpen, onProjectCreate, userName = 'ritik!', isDarkM
             importedProjectData.name = projectName;
 
             // 2. Persist using projectStorageService (offline-first, localStorage + Appwrite sync)
-            await projectStorageService.saveProject(projectId, importedProjectData);
+            try {
+                await projectStorageService.saveProject(projectId, importedProjectData);
+            } catch (err) {
+                if (err.message !== 'offline') throw err;
+            }
 
             // 3. Update local projects list
             const newProjectItem = {

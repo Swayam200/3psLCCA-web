@@ -165,12 +165,20 @@ export const projectStorageService = {
                     ]
                 );
                 
-                return response.documents.map(doc => ({
+                const cloudList = response.documents.map(doc => ({
                     id: doc.$id,
                     name: doc.name,
                     date: new Date(doc.$createdAt).toLocaleDateString(),
                     pinned: false
                 }));
+                const localList = JSON.parse(localStorage.getItem('recentProjects') || '[]');
+                const merged = [...cloudList];
+                for (const localProj of localList) {
+                    if (!merged.some(p => p.id === localProj.id)) {
+                        merged.push(localProj);
+                    }
+                }
+                return merged;
             } catch (e) {
                 console.error("Failed to list projects from cloud", e);
                 // Fallback to local list if offline

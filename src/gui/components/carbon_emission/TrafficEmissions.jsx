@@ -3,19 +3,19 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useProjectData } from '../../../contexts/ProjectDataContext';
 
 const VEHICLE_TYPES = [
-    { key: "small_cars",   label: "Small Car",       defaultEf: 0.1030 },
-    { key: "big_cars",     label: "Big Car",         defaultEf: 0.2690 },
-    { key: "two_wheelers", label: "Two Wheeler",     defaultEf: 0.0351 },
-    { key: "o_buses",      label: "Ordinary Buses",  defaultEf: 0.4548 },
-    { key: "d_buses",      label: "Deluxe Buses",    defaultEf: 0.6064 },
-    { key: "lcv",          label: "LCV",             defaultEf: 0.3070 },
-    { key: "hcv",          label: "HCV",             defaultEf: 0.5928 },
-    { key: "mcv",          label: "MCV",             defaultEf: 0.7375 },
+    { key: "small_cars", label: "Small Car", defaultEf: 0.1030 },
+    { key: "big_cars", label: "Big Car", defaultEf: 0.2690 },
+    { key: "two_wheelers", label: "Two Wheeler", defaultEf: 0.0351 },
+    { key: "o_buses", label: "Ordinary Buses", defaultEf: 0.4548 },
+    { key: "d_buses", label: "Deluxe Buses", defaultEf: 0.6064 },
+    { key: "lcv", label: "LCV", defaultEf: 0.3070 },
+    { key: "hcv", label: "HCV", defaultEf: 0.5928 },
+    { key: "mcv", label: "MCV", defaultEf: 0.7375 },
 ];
 
 const TrafficEmissions = ({ controller }) => {
     const { projectData, updateProjectData } = useProjectData();
-    const [mode, setMode] = useState('calculate'); 
+    const [mode, setMode] = useState('calculate');
     const [rerouteKm, setRerouteKm] = useState(0);
     const [factors, setFactors] = useState(
         VEHICLE_TYPES.reduce((acc, v) => ({ ...acc, [v.key]: v.defaultEf }), {})
@@ -47,7 +47,7 @@ const TrafficEmissions = ({ controller }) => {
     };
 
     const saveToEngine = (newMode, km, f, direct, rem) => {
-        const totalPerDay = newMode === 'calculate' ? 
+        const totalPerDay = newMode === 'calculate' ?
             VEHICLE_TYPES.reduce((sum, v) => sum + ((aadt[v.key] || 0) * km * (f[v.key] || 0)), 0) :
             direct;
         const desktopMode = newMode === 'calculate' ? 'Calculate by Vehicle' : 'Enter Directly';
@@ -111,7 +111,7 @@ const TrafficEmissions = ({ controller }) => {
             {/* Calculation Mode */}
             <div className="mb-4">
                 <div className="fw-bold mb-2" style={{ fontSize: '0.85rem' }}>Calculation Mode</div>
-                <select 
+                <select
                     className="form-select form-select-sm bg-dark text-light border-secondary"
                     style={{ maxWidth: '300px', backgroundColor: 'var(--app-bg-alt)', color: 'var(--app-text-primary)', fontSize: '0.85rem' }}
                     value={mode}
@@ -127,16 +127,16 @@ const TrafficEmissions = ({ controller }) => {
                 <div className="fw-bold mb-1" style={{ fontSize: '0.85rem' }}>Total Diversion Emissions</div>
                 <div className="text-secondary small mb-2">Enter the total carbon emissions from traffic diversion per day of construction.</div>
                 <div className="position-relative">
-                    <input 
-                        type="number" 
+                    <input
+                        type="number"
                         className="form-control bg-dark text-light border-secondary py-3 px-4 font-monospace"
                         style={{ fontSize: '1.1rem', backgroundColor: 'var(--app-bg-card) !important', color: 'var(--app-text-primary)', borderRadius: '8px' }}
                         value={mode === 'calculate' ? calculatedTotal : directValue}
                         readOnly={mode === 'calculate'}
-                        onChange={e => { 
+                        onChange={e => {
                             const val = parseFloat(e.target.value) || 0;
-                            setDirectValue(val); 
-                            saveToEngine(mode, rerouteKm, factors, val, remarks); 
+                            setDirectValue(val);
+                            saveToEngine(mode, rerouteKm, factors, val, remarks);
                         }}
                         placeholder="0.000"
                     />
@@ -154,8 +154,8 @@ const TrafficEmissions = ({ controller }) => {
                         <div className="card-body p-3">
                             <label className="form-label text-secondary extra-small mb-1">ADDITIONAL REROUTE DISTANCE</label>
                             <div className="input-group input-group-sm">
-                                <input 
-                                    type="number" 
+                                <input
+                                    type="number"
                                     className="form-control bg-dark text-light border-secondary"
                                     value={rerouteKm}
                                     onChange={e => { setRerouteKm(parseFloat(e.target.value) || 0); saveToEngine(mode, parseFloat(e.target.value) || 0, factors, directValue, remarks); }}
@@ -184,8 +184,8 @@ const TrafficEmissions = ({ controller }) => {
                                             <td className="ps-3 py-1 text-light">{v.label}</td>
                                             <td className="text-end py-1 font-monospace text-secondary">{aadt[v.key] || 0} veh/day</td>
                                             <td className="py-1">
-                                                <input 
-                                                    type="number" 
+                                                <input
+                                                    type="number"
                                                     step="0.0001"
                                                     className="form-control form-control-sm border-0 bg-transparent text-end text-light px-0"
                                                     value={factors[v.key]}
@@ -226,9 +226,9 @@ const TrafficEmissions = ({ controller }) => {
                     <button className="remarks-btn">+ Col</button>
                     <button className="remarks-btn ms-auto" onClick={() => { setRemarks(''); saveToEngine(mode, rerouteKm, factors, directValue, ''); }}>Clear</button>
                 </div>
-                <textarea 
-                    className="w-100 p-3 text-light border-secondary border-top-0 rounded-bottom" 
-                    rows="4" 
+                <textarea
+                    className="w-100 p-3 text-light border-secondary border-top-0 rounded-bottom"
+                    rows="4"
                     placeholder="Add notes or remarks here. These will appear in the generated report."
                     style={{ fontSize: '0.85rem', resize: 'none', backgroundColor: 'var(--app-bg-alt)', color: 'var(--app-text-primary)' }}
                     value={remarks}
@@ -238,8 +238,8 @@ const TrafficEmissions = ({ controller }) => {
 
             {/* Clear All Button */}
             <div className="mb-5 pb-5">
-                <button 
-                    className="btn btn-sm w-100 py-2 border-secondary text-secondary" 
+                <button
+                    className="btn btn-sm w-100 py-2 border-secondary text-secondary"
                     style={{ backgroundColor: 'var(--app-bg-alt)', color: 'var(--app-text-secondary)' }}
                     onClick={handleClearAll}
                 >
@@ -261,7 +261,7 @@ const TrafficEmissions = ({ controller }) => {
                     </div>
                 </div>
             </div>
-            
+
             <style>{`
                 .extra-small { font-size: 0.65rem; }
                 .tracking-wider { letter-spacing: 0.04rem; }

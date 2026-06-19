@@ -33,5 +33,3 @@ export const validateLcca = ({ project, analysisPeriodYears, debug = false }) =>
 };
 
 export const getLccaApiBase = () => LCCA_API_BASE;
-
-
