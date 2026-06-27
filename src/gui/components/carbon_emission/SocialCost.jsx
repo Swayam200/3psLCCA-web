@@ -1,385 +1,474 @@
-/* eslint-disable no-unused-vars */
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+/* eslint-disable react-hooks/set-state-in-effect */
+import { useEffect, useMemo, useState } from 'react';
 import { useProjectData } from '../../../contexts/ProjectDataContext';
+import { formatNumber, getProjectCountryIso3, parseNumber } from './carbonUtils';
 
-const MODES = {
-    NITI: "NITI Aayog",
-    RICKE: "K. Ricke et al. (Country-Level)",
-    CUSTOM: "Custom / Manual Override"
-};
+const SOURCE_RICKE = 'K. Ricke et al. (Country-Level)';
+const SOURCE_CUSTOM = 'Custom / Manual Override';
 
 const SSP_OPTIONS = [
-    "SSP1 (Sustainability)",
-    "SSP2 (Middle of the Road)",
-    "SSP3 (Regional Rivalry)",
-    "SSP4 (Inequality)",
-    "SSP5 (Fossil-fueled Development)",
+    'SSP1 (Sustainability)',
+    'SSP2 (Middle of the Road)',
+    'SSP3 (Regional Rivalry)',
+    'SSP4 (Inequality)',
+    'SSP5 (Fossil-fueled Development)',
 ];
 
 const RCP_OPTIONS = [
-    "RCP 2.6 (Low Warming)",
-    "RCP 4.5 (Intermediate)",
-    "RCP 6.0 (High)",
-    "RCP 8.5 (Extreme)",
+    'Closest RCP (Default)',
+    'RCP4.5 (≈ +2.5°C in 2100)',
+    'RCP6.0 (≈ +3°C in 2100)',
+    'RCP8.5 (≈ +4.5°C in 2100)',
 ];
 
-const RICKE_SCC_TABLE = {
-    "SSP1 (Sustainability)|RCP 2.6 (Low Warming)": 0.085,
-    "SSP1 (Sustainability)|RCP 4.5 (Intermediate)": 0.095,
-    "SSP2 (Middle of the Road)|RCP 4.5 (Intermediate)": 0.110,
-    "SSP2 (Middle of the Road)|RCP 6.0 (High)": 0.135,
-    "SSP3 (Regional Rivalry)|RCP 8.5 (Extreme)": 0.185,
-    "SSP5 (Fossil-fueled Development)|RCP 8.5 (Extreme)": 0.210,
+const DAMAGE_FUNCTION_OPTIONS = [
+    'BHM SR (Short Run)',
+    'BHM RP SR (Rich/Poor Short Run)',
+    'BHM LR (Long Run)',
+    'BHM RP LR (Rich/Poor Long Run)',
+];
+
+const DAMAGE_PARAMETER_OPTIONS = [
+    'Bootstrap (Full Uncertainty)',
+    'Estimates (Central Params)',
+];
+
+const CLIMATE_OPTIONS = [
+    'Expected (Central Projections)',
+    'Uncertain (Bootstrapped)',
+];
+
+const DISCOUNT_OPTIONS = [
+    'Growth-adjusted (prtp=2%, η=1.5)',
+    'Growth-adjusted (prtp=1%, η=1.5)',
+    'Growth-adjusted (prtp=2%, η=0.7)',
+    'Growth-adjusted (prtp=1%, η=0.7)',
+    'Fixed 3%',
+    'Fixed 5%',
+];
+
+const PERCENTILE_OPTIONS = [
+    '16.7% (Optimistic)',
+    '50.0% (Central)',
+    '83.3% (Pessimistic)',
+];
+
+const SSP_MAP = {
+    [SSP_OPTIONS[0]]: 'SSP1',
+    [SSP_OPTIONS[1]]: 'SSP2',
+    [SSP_OPTIONS[2]]: 'SSP3',
+    [SSP_OPTIONS[3]]: 'SSP4',
+    [SSP_OPTIONS[4]]: 'SSP5',
 };
 
-const NITI_SCC_INR = 6.3936;
+const CLOSEST_RCP = { SSP1: 'rcp60', SSP2: 'rcp60', SSP3: 'rcp85', SSP4: 'rcp60', SSP5: 'rcp85' };
+const RCP_MAP = {
+    [RCP_OPTIONS[0]]: null,
+    [RCP_OPTIONS[1]]: 'rcp45',
+    [RCP_OPTIONS[2]]: 'rcp60',
+    [RCP_OPTIONS[3]]: 'rcp85',
+};
+const DAMAGE_FUNCTION_MAP = {
+    [DAMAGE_FUNCTION_OPTIONS[0]]: 'bhm_sr',
+    [DAMAGE_FUNCTION_OPTIONS[1]]: 'bhm_richpoor_sr',
+    [DAMAGE_FUNCTION_OPTIONS[2]]: 'bhm_lr',
+    [DAMAGE_FUNCTION_OPTIONS[3]]: 'bhm_richpoor_lr',
+};
+const DAMAGE_PARAMETER_MAP = {
+    [DAMAGE_PARAMETER_OPTIONS[0]]: 'bootstrap',
+    [DAMAGE_PARAMETER_OPTIONS[1]]: 'estimates',
+};
+const CLIMATE_MAP = {
+    [CLIMATE_OPTIONS[0]]: 'expected',
+    [CLIMATE_OPTIONS[1]]: 'uncertain',
+};
+const DISCOUNT_MAP = {
+    [DISCOUNT_OPTIONS[0]]: { prtp: '2', eta: '1p5', dr: 'NA' },
+    [DISCOUNT_OPTIONS[1]]: { prtp: '1', eta: '1p5', dr: 'NA' },
+    [DISCOUNT_OPTIONS[2]]: { prtp: '2', eta: '0p7', dr: 'NA' },
+    [DISCOUNT_OPTIONS[3]]: { prtp: '1', eta: '0p7', dr: 'NA' },
+    [DISCOUNT_OPTIONS[4]]: { prtp: 'NA', eta: 'NA', dr: '3' },
+    [DISCOUNT_OPTIONS[5]]: { prtp: 'NA', eta: 'NA', dr: '5' },
+};
+let rickeDbPromise;
 
-const calculateScc = ({ mode, inrRate, usdRate, ssp, rcp, customScc }) => {
-    if (mode === MODES.NITI) return NITI_SCC_INR * inrRate;
-    if (mode === MODES.RICKE) {
-        const key = `${ssp}|${rcp}`;
-        const baseUsd = RICKE_SCC_TABLE[key] || 0.1;
-        return baseUsd * usdRate;
+const parseRickeCsv = (text) => {
+    const lines = text.trim().split(/\r?\n/);
+    const header = lines.shift().split(',');
+    const index = Object.fromEntries(header.map((name, idx) => [name, idx]));
+    const rows = new Map();
+    const iso3 = new Set();
+    for (const line of lines) {
+        if (!line) continue;
+        const cells = line.split(',');
+        iso3.add(cells[index.ISO3]);
+        const key = [
+            cells[index.ISO3],
+            cells[index.run],
+            cells[index.dmgfuncpar],
+            cells[index.climate],
+            cells[index.SSP],
+            cells[index.RCP],
+            cells[index.prtp],
+            cells[index.eta],
+            cells[index.dr],
+        ].join('|');
+        rows.set(key, {
+            lo: parseNumber(cells[index['16.7%']], null),
+            med: parseNumber(cells[index['50%']], null),
+            hi: parseNumber(cells[index['83.3%']], null),
+        });
     }
-    return customScc;
+    return { rows, iso3: Array.from(iso3).sort() };
 };
 
-const CustomDropdown = ({ value, options, onChange }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const dropdownRef = useRef(null);
-
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    return (
-        <div className="custom-dropdown-container position-relative mb-4" ref={dropdownRef}>
-            <div 
-                className="custom-select-box py-3 px-3 d-flex justify-content-between align-items-center"
-                onClick={() => setIsOpen(!isOpen)}
-                style={{ 
-                    borderColor: isOpen ? 'var(--app-primary-accent)' : 'var(--app-border-mid)',
-                    boxShadow: isOpen ? '0 0 10px var(--app-accent-bg, rgba(154, 205, 50, 0.1))' : 'none'
-                }}
-            >
-                <span>{value}</span>
-                <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' width="16" height="12">
-                    <path fill='none' stroke='var(--app-primary-accent)' strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d={isOpen ? 'm2 11 6-6 6 6' : 'm2 5 6 6 6-6'}/>
-                </svg>
-            </div>
-            {isOpen && (
-                <div 
-                    className="position-absolute w-100 mt-1 rounded-3 shadow-lg overflow-hidden dropdown-menu-custom" 
-                    style={{ 
-                        backgroundColor: 'var(--app-bg-card)', 
-                        zIndex: 1000, 
-                        border: '1px solid var(--app-border-mid)'
-                    }}
-                >
-                    {options.map(o => (
-                        <div 
-                            key={o} 
-                            className={`px-3 py-3 dropdown-item-custom ${value === o ? 'selected' : ''}`}
-                            onClick={() => { onChange(o); setIsOpen(false); }}
-                        >
-                            {o}
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
+const loadRickeDb = async () => {
+    if (!rickeDbPromise) {
+        rickeDbPromise = fetch('/data/cscc_db_v2.csv')
+            .then((response) => {
+                if (!response.ok) throw new Error(`Unable to load Ricke SCC database (${response.status})`);
+                return response.text();
+            })
+            .then(parseRickeCsv);
+    }
+    return rickeDbPromise;
 };
 
-const SocialCost = ({ controller }) => {
+const selectValue = (data, key, fallback) => data?.[key] || fallback;
+
+const SocialCost = () => {
     const { projectData, updateProjectData } = useProjectData();
-    const [mode, setMode] = useState(MODES.NITI);
-    const [currency, setCurrency] = useState('INR');
-    
-    const [inrRate, setInrRate] = useState(1.0);
-    const [usdRate, setUsdRate] = useState(83.0);
-    const [ssp, setSsp] = useState(SSP_OPTIONS[1]);
-    const [rcp, setRcp] = useState(RCP_OPTIONS[1]);
-    const [customScc, setCustomScc] = useState(0.05);
+    const currency = projectData.general_info?.project_currency || projectData.currency || 'INR';
+    const projectIso = getProjectCountryIso3(projectData);
+    const saved = projectData.carbon_emission_data?.social_cost_data || {};
+    const savedRicke = saved.ricke || {};
+    const savedCustom = saved.custom || {};
+    const legacyCost = parseNumber(
+        saved.result?.cost_of_carbon_local ??
+        saved.cost_of_carbon_local ??
+        saved.calculated_scc_local ??
+        saved.custom_scc,
+        0
+    );
+
+    const initialSource = saved.source === SOURCE_CUSTOM || saved.source === SOURCE_RICKE
+        ? saved.source
+        : (saved.mode === SOURCE_CUSTOM || saved.mode === 'custom' ? SOURCE_CUSTOM : SOURCE_RICKE);
+
+    const [source, setSource] = useState(initialSource);
+    const [ricke, setRicke] = useState({
+        iso3: savedRicke.iso3 || projectIso,
+        ssp: selectValue(savedRicke, 'ssp', SSP_OPTIONS[0]),
+        rcp: selectValue(savedRicke, 'rcp', RCP_OPTIONS[0]),
+        dmg_func: selectValue(savedRicke, 'dmg_func', ''),
+        dmg_params: selectValue(savedRicke, 'dmg_params', ''),
+        climate_uncertainty: selectValue(savedRicke, 'climate_uncertainty', ''),
+        discounting: selectValue(savedRicke, 'discounting', ''),
+        percentile: selectValue(savedRicke, 'percentile', ''),
+        usd_to_local_rate: parseNumber(savedRicke.usd_to_local_rate ?? saved.usd_rate, 83),
+        cpi_ratio: parseNumber(savedRicke.cpi_ratio, 1),
+    });
+    const [custom, setCustom] = useState({
+        entered_value: parseNumber(savedCustom.entered_value ?? savedCustom.scc_value ?? legacyCost, 0),
+        source: savedCustom.source || '',
+        comments: savedCustom.comments || '',
+    });
+    const [dbState, setDbState] = useState({ loading: false, error: '', data: null });
 
     useEffect(() => {
-        const genInfo = projectData.general_info || {};
-        if (genInfo.project_currency) setCurrency(genInfo.project_currency);
-
-        const carbonData = projectData.carbon_emission_data || {};
-        const socialData = carbonData.social_cost_data || {};
-        
-        if (socialData.mode) setMode(socialData.mode);
-        if (socialData.inr_rate) setInrRate(socialData.inr_rate);
-        if (socialData.usd_rate) setUsdRate(socialData.usd_rate);
-        if (socialData.ssp) setSsp(socialData.ssp);
-        if (socialData.rcp) setRcp(socialData.rcp);
-        if (socialData.custom_scc) setCustomScc(socialData.custom_scc);
-    }, [projectData]);
-
-    const currentScc = useMemo(() => {
-        return calculateScc({ mode, inrRate, usdRate, ssp, rcp, customScc });
-    }, [mode, inrRate, usdRate, ssp, rcp, customScc]);
-
-    const saveChanges = (updates) => {
-        const prev = projectData.carbon_emission_data || {};
-        const nextValues = {
-            mode,
-            inrRate: updates.inr_rate ?? inrRate,
-            usdRate: updates.usd_rate ?? usdRate,
-            ssp: updates.ssp ?? ssp,
-            rcp: updates.rcp ?? rcp,
-            customScc: updates.custom_scc ?? customScc,
+        if (source !== SOURCE_RICKE) return;
+        let active = true;
+        setDbState((state) => ({ ...state, loading: true, error: '' }));
+        loadRickeDb()
+            .then((data) => {
+                if (active) setDbState({ loading: false, error: '', data });
+            })
+            .catch((error) => {
+                if (active) setDbState({ loading: false, error: error.message, data: null });
+            });
+        return () => {
+            active = false;
         };
-        nextValues.mode = updates.mode ?? nextValues.mode;
-        const nextScc = calculateScc(nextValues);
+    }, [source]);
+
+    useEffect(() => {
+        setRicke((prev) => ({ ...prev, iso3: projectIso }));
+    }, [projectIso]);
+
+    const rickeResult = useMemo(() => {
+        const required = [
+            ['Country (ISO3)', ricke.iso3],
+            ['Socioeconomic Pathway (SSP)', ricke.ssp],
+            ['Climate Trajectory (RCP)', ricke.rcp],
+            ['Damage Function', ricke.dmg_func],
+            ['Damage Parameters', ricke.dmg_params],
+            ['Climate Uncertainty', ricke.climate_uncertainty],
+            ['Discounting Approach', ricke.discounting],
+            ['Percentile', ricke.percentile],
+        ];
+        const missing = required.filter(([, value]) => !value).map(([label]) => label);
+        if (missing.length > 0) {
+            return { cost: 0, status: `Select ${missing.join(', ')} to calculate the Ricke SCC.` };
+        }
+        if (!dbState.data) return { cost: 0, status: dbState.loading ? 'Loading Ricke SCC database...' : 'Ricke SCC database not loaded yet.' };
+        const ssp = SSP_MAP[ricke.ssp];
+        const rcpRaw = RCP_MAP[ricke.rcp];
+        const rcp = rcpRaw || CLOSEST_RCP[ssp];
+        const discount = DISCOUNT_MAP[ricke.discounting];
+        if (!ssp || !discount) return { cost: 0, status: 'Select all Ricke parameters to calculate the SCC.' };
+        const key = [
+            ricke.iso3,
+            DAMAGE_FUNCTION_MAP[ricke.dmg_func],
+            DAMAGE_PARAMETER_MAP[ricke.dmg_params],
+            CLIMATE_MAP[ricke.climate_uncertainty],
+            ssp,
+            rcp,
+            discount.prtp,
+            discount.eta,
+            discount.dr,
+        ].join('|');
+        const row = dbState.data.rows.get(key);
+        if (!row || row.lo === null || row.med === null || row.hi === null) {
+            return { cost: 0, status: 'No data available for this combination in the DB.', key };
+        }
+        const raw = {
+            [PERCENTILE_OPTIONS[0]]: row.lo,
+            [PERCENTILE_OPTIONS[1]]: row.med,
+            [PERCENTILE_OPTIONS[2]]: row.hi,
+        }[ricke.percentile];
+        const finalPerTonne = raw * parseNumber(ricke.cpi_ratio, 1) * parseNumber(ricke.usd_to_local_rate, 1);
+        return {
+            cost: finalPerTonne / 1000,
+            status: `Raw: ${formatNumber(raw, 3)} USD/tCO2 | Final: ${formatNumber(finalPerTonne, 3)} ${currency}/tCO2`,
+            range: `${formatNumber(row.lo, 3)} - ${formatNumber(row.hi, 3)} USD/tCO2`,
+            key,
+        };
+    }, [currency, dbState, ricke]);
+
+    const currentCost = source === SOURCE_RICKE ? rickeResult.cost : parseNumber(custom.entered_value);
+
+    const saveData = (nextSource = source, nextRicke = ricke, nextCustom = custom, nextCost = currentCost) => {
+        const prev = projectData.carbon_emission_data || {};
+        const result = {
+            selected_mode: nextSource,
+            cost_of_carbon_local: nextCost,
+            currency,
+            unit: `${currency}/kgCO2e`,
+        };
         updateProjectData('carbon_emission_data', {
             ...prev,
             social_cost_data: {
-                mode: nextValues.mode,
-                inr_rate: nextValues.inrRate,
-                usd_rate: nextValues.usdRate,
-                ssp: nextValues.ssp,
-                rcp: nextValues.rcp,
-                custom_scc: nextValues.customScc,
-                calculated_scc_local: nextScc,
-                cost_of_carbon_local: nextScc,
-                currency,
-                result: {
-                    cost_of_carbon_local: nextScc,
+                ...prev.social_cost_data,
+                source: nextSource,
+                ricke: nextRicke,
+                custom: {
+                    entered_value: parseNumber(nextCustom.entered_value),
+                    currency,
+                    unit: `${currency}/kgCO2e`,
+                    source: nextCustom.source || '',
+                    comments: nextCustom.comments || '',
                 },
-                ...updates
-            }
+                result,
+                cost_of_carbon_local: nextCost,
+                calculated_scc_local: nextCost,
+                currency,
+            },
         });
     };
 
-    const handleClearAll = () => {
-        setMode(MODES.NITI);
-        setInrRate(1.0);
-        setUsdRate(83.0);
-        setSsp(SSP_OPTIONS[1]);
-        setRcp(RCP_OPTIONS[1]);
-        setCustomScc(0.05);
-        saveChanges({
-            mode: MODES.NITI,
-            inr_rate: 1.0,
-            usd_rate: 83.0,
-            ssp: SSP_OPTIONS[1],
-            rcp: RCP_OPTIONS[1],
-            custom_scc: 0.05
-        });
-    };
+    useEffect(() => {
+        saveData(source, ricke, custom, currentCost);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [source, ricke, custom, currentCost, currency]);
+
+    const updateRicke = (field, value) => setRicke((prev) => ({ ...prev, [field]: value }));
+    const updateCustom = (field, value) => setCustom((prev) => ({ ...prev, [field]: value }));
+
+    const resetRicke = () => setRicke({
+        iso3: projectIso,
+        ssp: SSP_OPTIONS[0],
+        rcp: RCP_OPTIONS[0],
+        dmg_func: '',
+        dmg_params: '',
+        climate_uncertainty: '',
+        discounting: '',
+        percentile: '',
+        usd_to_local_rate: 83,
+        cpi_ratio: 1,
+    });
+
+    const resetCustom = () => setCustom({ entered_value: 0, source: '', comments: '' });
+
+    const selectInput = ({ label, description, value, options, onChange, disabled = false, required = false }) => (
+        <div className="carbon-field" key={label}>
+            <label className="carbon-label">
+                {label}{required && <span className="carbon-required">*</span>}
+            </label>
+            {description && <div className="carbon-help">{description}</div>}
+            <select
+                className={`form-select form-select-sm ${required && !value ? 'border-danger' : ''}`}
+                value={value}
+                disabled={disabled}
+                onChange={(event) => onChange(event.target.value)}
+            >
+                {required && <option value="">-- select --</option>}
+                {options.map((option) => <option key={option} value={option}>{option}</option>)}
+            </select>
+        </div>
+    );
 
     return (
-        <div className="social-cost p-4" style={{ backgroundColor: 'transparent', color: 'var(--app-text-primary)' }}>
-            <div className="section-container mb-5">
-                <h5 className="fw-bold mb-3 mt-2" style={{ color: 'var(--app-text-primary)', fontSize: '1.25rem' }}>Economic Valuation Methodology</h5>
-                <hr style={{ borderColor: 'var(--app-border-light)', opacity: 0.5 }} className="mb-4" />
-
-                <div className="methodology-selection mb-4">
-                    <div className="d-flex align-items-center gap-2 mb-2">
-                        <span className="fw-bold" style={{ fontSize: '0.9rem' }}>Cost Methodology</span>
-                    </div>
-                    <div className="instruction-text mb-3" style={{ fontSize: '0.85rem', color: 'var(--app-text-secondary)' }}>
-                        Choose between government standards or peer-reviewed scientific models. 
-                    </div>
-                    
-                    <CustomDropdown 
-                        value={mode} 
-                        options={Object.values(MODES)} 
-                        onChange={val => { setMode(val); saveChanges({ mode: val }); }} 
-                    />
-
-                    <div className="calculation-details mt-4" style={{ fontSize: '0.9rem', lineHeight: '1.6' }}>
-                        <div className="d-block mb-1">
-                            <span className="fw-bold">Selected Mode:</span> {mode}
-                        </div>
-                        <div className="d-block mb-1">
-                            <span className="fw-bold">Base Price:</span> {mode === MODES.NITI ? NITI_SCC_INR.toFixed(3) : (currentScc / (mode === MODES.RICKE ? usdRate : 1)).toFixed(3)} {mode === MODES.RICKE ? 'USD' : 'INR'}/kgCO₂e
-                        </div>
-                        <div className="d-block mb-1">
-                            <span className="fw-bold">Conversion Rate:</span> {mode === MODES.RICKE ? usdRate.toFixed(3) + ' INR/USD' : inrRate.toFixed(3) + ' INR/INR'}
-                        </div>
-                        <div className="d-block mb-3">
-                            <span className="fw-bold">Effective SCC:</span> {currentScc.toFixed(3)} INR/kgCO₂e
-                        </div>
-                        
-                        {mode === MODES.RICKE && (
-                            <div className="mt-4 pt-2 mb-2" style={{ fontSize: '0.85rem' }}>
-                                <span className="fw-bold">Reference:</span> Ricke, K., Drouet, L., Caldeira, K. et al. <i>Country-level social cost of carbon.</i> Nature Clim Change 8, 895-900 (2018). <a href="https://doi.org/10.1038/s41558-018-0282-y" target="_blank" rel="noopener noreferrer" style={{color: 'var(--app-primary-accent)', textDecoration: 'none'}}>doi:10.1038/s41558-018-0282-y</a>
-                            </div>
-                        )}
-                        {mode === MODES.NITI && (
-                            <div className="mt-4 pt-2 mb-2" style={{ color: 'var(--app-text-secondary)', fontSize: '0.85rem' }}>
-                                Base Value: <span className="fw-bold">{NITI_SCC_INR.toFixed(4)} INR/kgCO₂e</span> ({mode}, 2023)
-                            </div>
-                        )}
-                    </div>
-                </div>
+        <div className="carbon-desktop-page">
+            <div className="carbon-field">
+                <label className="carbon-label">Mode</label>
+                <select
+                    className="form-select form-select-sm"
+                    value={source}
+                    onChange={(event) => setSource(event.target.value)}
+                >
+                    <option value={SOURCE_RICKE}>{SOURCE_RICKE}</option>
+                    <option value={SOURCE_CUSTOM}>{SOURCE_CUSTOM}</option>
+                </select>
             </div>
 
-            {mode === MODES.RICKE && (
-                <div className="section-container mt-5 mb-5">
-                    <h5 className="fw-bold mb-3" style={{ color: 'var(--app-text-primary)', fontSize: '1.1rem' }}>Climate & Socioeconomic Scenarios</h5>
-                    <hr style={{ borderColor: 'var(--app-border-light)', opacity: 0.5 }} className="mb-4" />
-
-                    <div className="mb-4">
-                        <div className="d-flex align-items-center gap-2 mb-2">
-                            <span className="fw-bold" style={{ fontSize: '0.9rem' }}>USD Conversion Rate</span>
-                        </div>
-                        <div className="instruction-text mb-3" style={{ fontSize: '0.85rem', color: 'var(--app-text-secondary)' }}>
-                            Conversion rate for international scientific model outputs.
-                        </div>
-                        <input 
-                            type="number" 
-                            className="form-control custom-input-box py-3 px-3 mb-4" 
-                            value={usdRate} 
-                            onChange={e => { setUsdRate(parseFloat(e.target.value)); saveChanges({ usd_rate: parseFloat(e.target.value) }); }}
-                        />
-                    </div>
-
-                    <div className="mb-4">
-                        <div className="d-flex align-items-center gap-2 mb-2">
-                            <span className="fw-bold" style={{ fontSize: '0.9rem' }}>Socioeconomic Pathway (SSP)</span>
-                        </div>
-                        <div className="instruction-text mb-3" style={{ fontSize: '0.85rem', color: 'var(--app-text-secondary)' }}>
-                            Assumptions on future population, GDP, and energy use.
-                        </div>
-                        <CustomDropdown 
-                            value={ssp} 
-                            options={SSP_OPTIONS} 
-                            onChange={val => { setSsp(val); saveChanges({ ssp: val }); }} 
-                        />
-                    </div>
-
-                    <div className="mb-4">
-                        <div className="d-flex align-items-center gap-2 mb-2">
-                            <span className="fw-bold" style={{ fontSize: '0.9rem' }}>Climate Trajectory (RCP)</span>
-                        </div>
-                        <div className="instruction-text mb-3" style={{ fontSize: '0.85rem', color: 'var(--app-text-secondary)' }}>
-                            Representative Concentration Pathway for greenhouse gases.
-                        </div>
-                        <CustomDropdown 
-                            value={rcp} 
-                            options={RCP_OPTIONS} 
-                            onChange={val => { setRcp(val); saveChanges({ rcp: val }); }} 
-                        />
-                    </div>
-
-                    <div className="adjustment-details mt-4 mb-2" style={{ fontSize: '0.9rem', lineHeight: '1.8' }}>
-                        <div className="d-block">
-                            Scenario Baseline: <span className="fw-bold">${(currentScc / usdRate).toFixed(3)} USD/kgCO₂e</span>
-                        </div>
-                        <div className="d-block">
-                            Adjusted Local Cost: <span className="fw-bold">{currentScc.toFixed(3)} INR/kgCO₂e</span>
-                        </div>
-                    </div>
+            {saved.mode === 'NITI Aayog' && (
+                <div className="alert alert-warning py-2" style={{ fontSize: '0.82rem' }}>
+                    Legacy NITI Aayog data was found. Desktop Carbon Emissions uses Ricke or Custom mode, so the numeric value has been preserved under Custom.
                 </div>
             )}
 
-            {mode === MODES.CUSTOM && (
-                <div className="section-container mt-5 mb-5">
-                    <h5 className="fw-bold mb-3" style={{ color: 'var(--app-text-primary)', fontSize: '1.1rem' }}>Custom Parameters</h5>
-                    <hr style={{ borderColor: 'var(--app-border-light)', opacity: 0.5 }} className="mb-4" />
-
-                    <div className="mb-4">
-                        <div className="d-flex align-items-center gap-2 mb-2">
-                            <span className="fw-bold" style={{ fontSize: '0.9rem' }}>Custom Shadow Price ({currency}/kgCO₂e)</span>
-                        </div>
-                        <input 
-                            type="number" 
-                            className="form-control custom-input-box py-3 px-3 mb-4" 
-                            value={customScc} 
-                            onChange={e => { setCustomScc(parseFloat(e.target.value)); saveChanges({ custom_scc: parseFloat(e.target.value) }); }}
-                        />
+            {source === SOURCE_RICKE ? (
+                <>
+                    <div className="carbon-section">
+                        <div className="carbon-section-title">Socioeconomic & Climate Scenarios</div>
+                        {selectInput({
+                            label: 'Country (ISO3)',
+                            description: "The country for which to calculate the social cost. 'WLD' represents the global aggregate.",
+                            value: ricke.iso3,
+                            options: [ricke.iso3, ...(dbState.data?.iso3 || []).filter((iso) => iso !== ricke.iso3)],
+                            onChange: (value) => updateRicke('iso3', value),
+                            disabled: projectIso !== 'WLD',
+                            required: true,
+                        })}
+                        {selectInput({
+                            label: 'Socioeconomic Pathway (SSP)',
+                            description: 'Assumptions on future population, GDP, and energy use.',
+                            value: ricke.ssp,
+                            options: SSP_OPTIONS,
+                            onChange: (value) => updateRicke('ssp', value),
+                            required: true,
+                        })}
+                        {selectInput({
+                            label: 'Climate Trajectory (RCP)',
+                            description: "Representative Concentration Pathway. Choose 'Closest RCP' to use the paper's default pairing.",
+                            value: ricke.rcp,
+                            options: RCP_OPTIONS,
+                            onChange: (value) => updateRicke('rcp', value),
+                            required: true,
+                        })}
                     </div>
-                </div>
+
+                    <div className="carbon-section">
+                        <div className="carbon-section-title">Damage Function & Model Parameters</div>
+                        {selectInput({
+                            label: 'Damage Function',
+                            description: 'The empirical model used to relate temperature change to economic damage.',
+                            value: ricke.dmg_func,
+                            options: DAMAGE_FUNCTION_OPTIONS,
+                            onChange: (value) => updateRicke('dmg_func', value),
+                            required: true,
+                        })}
+                        {selectInput({
+                            label: 'Damage Parameters',
+                            description: 'Choose whether the full uncertainty distribution or central parameter estimates are used.',
+                            value: ricke.dmg_params,
+                            options: DAMAGE_PARAMETER_OPTIONS,
+                            onChange: (value) => updateRicke('dmg_params', value),
+                            required: true,
+                        })}
+                        {selectInput({
+                            label: 'Climate Uncertainty',
+                            description: 'Climate projection uncertainty treatment.',
+                            value: ricke.climate_uncertainty,
+                            options: CLIMATE_OPTIONS,
+                            onChange: (value) => updateRicke('climate_uncertainty', value),
+                            required: true,
+                        })}
+                    </div>
+
+                    <div className="carbon-section">
+                        <div className="carbon-section-title">Discounting & Valuation</div>
+                        {selectInput({
+                            label: 'Discounting Approach',
+                            description: 'Discounting specification used for future climate damages.',
+                            value: ricke.discounting,
+                            options: DISCOUNT_OPTIONS,
+                            onChange: (value) => updateRicke('discounting', value),
+                            required: true,
+                        })}
+                        {selectInput({
+                            label: 'Percentile',
+                            description: 'Select optimistic, central, or pessimistic estimate from the uncertainty interval.',
+                            value: ricke.percentile,
+                            options: PERCENTILE_OPTIONS,
+                            onChange: (value) => updateRicke('percentile', value),
+                            required: true,
+                        })}
+                    </div>
+
+                    <div className="carbon-section">
+                        <div className="carbon-section-title">Currency Adjustment</div>
+                        <div className="carbon-field">
+                            <label className="carbon-label">USD Conversion Rate</label>
+                            <div className="carbon-help">Conversion rate from USD to the project currency.</div>
+                            <div className="input-group input-group-sm">
+                                <input className="form-control" type="number" value={ricke.usd_to_local_rate} onChange={(event) => updateRicke('usd_to_local_rate', event.target.value)} />
+                                <span className="input-group-text">{currency}/USD</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="carbon-section">
+                        <div className="carbon-section-title">Inflation Adjustment (CPI)</div>
+                        <div className="carbon-field">
+                            <label className="carbon-label">CPI Ratio (Reference-Year CPI / 2018 CPI)</label>
+                            <div className="carbon-help">Use 1 when no CPI adjustment is required.</div>
+                            <input className="form-control form-control-sm" type="number" value={ricke.cpi_ratio} onChange={(event) => updateRicke('cpi_ratio', event.target.value)} />
+                        </div>
+                    </div>
+
+                    <div className="carbon-summary-strip mt-3">
+                        <div className="fw-bold">Social Cost of Carbon: {formatNumber(currentCost, 6)} {currency}/kgCO2e</div>
+                        <div className="text-secondary small mt-1">{dbState.error || rickeResult.status}</div>
+                        {rickeResult.range && <div className="text-secondary small">66.7% Confidence Interval: {rickeResult.range}</div>}
+                    </div>
+                    <button className="btn btn-sm btn-outline-light mt-3 w-100" onClick={resetRicke}>Clear All</button>
+                </>
+            ) : (
+                <>
+                    <div className="carbon-section">
+                        <div className="carbon-section-title">Custom Social Cost of Carbon</div>
+                        <div className="carbon-field">
+                            <label className="carbon-label">Social Cost of Carbon (SCC)</label>
+                            <div className="carbon-help">Manual value to apply in backend carbon cost calculations.</div>
+                            <div className="input-group input-group-sm">
+                                <input className="form-control" type="number" value={custom.entered_value} onChange={(event) => updateCustom('entered_value', event.target.value)} />
+                                <span className="input-group-text">{currency}/kgCO2e</span>
+                            </div>
+                        </div>
+                        <div className="carbon-field">
+                            <label className="carbon-label">Source</label>
+                            <input className="form-control form-control-sm" value={custom.source} onChange={(event) => updateCustom('source', event.target.value)} />
+                        </div>
+                        <div className="carbon-field">
+                            <label className="carbon-label">Comments</label>
+                            <textarea className="form-control" rows="5" value={custom.comments} onChange={(event) => updateCustom('comments', event.target.value)} />
+                        </div>
+                    </div>
+                    <div className="carbon-summary-strip fw-bold">Social Cost of Carbon: {formatNumber(currentCost, 6)} {currency}/kgCO2e</div>
+                    <button className="btn btn-sm btn-outline-light mt-3 w-100" onClick={resetCustom}>Clear All</button>
+                </>
             )}
-
-            <button 
-                className="btn w-100 py-3 mt-4 border-0 rounded-3 shadow-sm clear-all-btn"
-                onClick={handleClearAll}
-                style={{ 
-                    backgroundColor: 'var(--app-bg-alt)', 
-                    color: 'var(--app-text-primary)',
-                    border: '1px solid var(--app-border-mid)'
-                }}
-            >
-                Clear All
-            </button>
-
-            <style>{`
-                .social-cost {
-                    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-                }
-                .custom-select-box, .custom-input-box {
-                    background-color: var(--app-bg-card) !important;
-                    color: var(--app-text-primary) !important;
-                    border: 1px solid var(--app-border-mid) !important;
-                    border-radius: 8px !important;
-                    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-                }
-                .custom-select-box:hover, .custom-input-box:hover {
-                    border-color: var(--app-primary-accent) !important;
-                    background-color: var(--app-bg-alt) !important;
-                }
-                .custom-select-box {
-                    cursor: pointer;
-                    user-select: none;
-                }
-                .custom-select-box:focus, .custom-input-box:focus {
-                    border-color: var(--app-primary-accent) !important;
-                    box-shadow: 0 0 0 3px var(--app-accent-bg, rgba(154, 205, 50, 0.2)) !important;
-                    outline: none !important;
-                }
-                .dropdown-item-custom {
-                    cursor: pointer;
-                    transition: all 0.2s ease;
-                    color: var(--app-text-primary);
-                }
-                .dropdown-item-custom:hover {
-                    background-color: var(--app-bg-alt);
-                    padding-left: 1.25rem !important;
-                    color: var(--app-primary-accent);
-                }
-                .dropdown-item-custom.selected {
-                    background-color: var(--app-accent-bg, rgba(154, 205, 50, 0.1));
-                    color: var(--app-primary-accent);
-                    font-weight: 600;
-                }
-                .clear-all-btn {
-                    font-weight: 600;
-                    letter-spacing: 0.5px;
-                    transition: all 0.3s ease;
-                }
-                .clear-all-btn:hover {
-                    background-color: var(--app-bg-card) !important;
-                    color: var(--app-primary-accent) !important;
-                    border-color: var(--app-primary-accent) !important;
-                    transform: translateY(-1px);
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
-                }
-                .section-container {
-                    background: var(--app-bg-card);
-                    border-radius: 12px;
-                    padding: 1.5rem;
-                    border: 1px solid var(--app-border-light);
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-                }
-                .instruction-text {
-                    opacity: 0.85;
-                }
-                .fw-bold {
-                    color: var(--app-text-primary);
-                }
-                .extra-small { font-size: 0.7rem; }
-            `}</style>
         </div>
     );
 };

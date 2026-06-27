@@ -11,7 +11,13 @@ import { computeAllSummaries } from './lifecycleSummary';
 import { generateFullReport } from './reportGenerator';
 import ReportSectionModal from './ReportSectionModal';
 import { buildCalculationProjectInputs } from '../../../utils/projectDerivations';
-import { calculateLcca, getLccaApiBase } from '../../../lib/lccaApi';
+import {
+    calculateLcca,
+    getLccaEngineDescription,
+    getLccaEngineMode,
+    getLccaEngineStatus,
+    initializeLccaEngine,
+} from '../../../lib/lccaApi';
 
 const D3PieChart = ({ data }) => {
     const svgRef = useRef();
@@ -277,6 +283,10 @@ const Outputs = ({ addLog, navTrigger }) => {
     const [computedData, setComputedData] = useState(null);
     const [uploadedFileName, setUploadedFileName] = useState(null);
     const [isCalculating, setIsCalculating] = useState(false);
+    const [calculationPhase, setCalculationPhase] = useState('idle');
+    const [engineMetadata, setEngineMetadata] = useState(
+        () => projectData?.outputs_data?.engine || {}
+    );
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
     const [showReportModal, setShowReportModal] = useState(false);
 
@@ -403,24 +413,41 @@ const Outputs = ({ addLog, navTrigger }) => {
         }
 
         setIsCalculating(true);
+        setCalculationPhase('loading');
         setFileError(null);
-        addLog(`Running LCCA calculation through backend (${getLccaApiBase()})...`);
 
         try {
+            const engineDescription = await getLccaEngineDescription();
+            addLog(`Loading LCCA calculation engine (${engineDescription})...`);
+            const initialized = await initializeLccaEngine();
+            const engineStatus = await getLccaEngineStatus();
+            const nextEngineMetadata = {
+                source: getLccaEngineMode(),
+                coreVersion: initialized?.coreVersion || engineStatus?.coreVersion || 'unknown',
+                pyodideVersion: initialized?.pyodideVersion || engineStatus?.pyodideVersion || 'unknown',
+            };
+            setEngineMetadata(nextEngineMetadata);
+            setCalculationPhase('calculating');
+            addLog("Running lifecycle cost calculation...");
             const response = await calculateLcca({
                 project: projectData,
                 analysisPeriodYears: analysisPeriod,
-                debug: false,
             });
 
             if (response.status !== 'success') {
-                const errors = response.validation?.errors || ['Backend calculation failed.'];
+                const errors = response.validation?.errors || ['Calculation failed.'];
                 setFileError(errors.join(' '));
                 addLog(`Calculation failed: ${errors.join(' ')}`);
                 return;
             }
 
             const summaries = computeAllSummaries(response.results);
+            const calculatedAt = new Date().toISOString();
+            const completedEngineMetadata = {
+                ...nextEngineMetadata,
+                calculatedAt,
+            };
+            setEngineMetadata(completedEngineMetadata);
             setCalculationResults(response.results);
             setComputedData(summaries);
             updateProjectData('outputs_data', {
@@ -428,17 +455,19 @@ const Outputs = ({ addLog, navTrigger }) => {
                 computed: response.computed || {},
                 validation: response.validation || { errors: [], warnings: [] },
                 analysis_period_years: analysisPeriod,
-                calculated_at: new Date().toISOString(),
-                source: 'backend',
+                calculated_at: calculatedAt,
+                source: getLccaEngineMode(),
+                engine: completedEngineMetadata,
             });
             setView('results');
             addLog("Calculation completed successfully.");
         } catch (err) {
-            const message = `Backend unavailable or failed: ${err.message}`;
+            const message = `Calculation engine unavailable or failed: ${err.message}`;
             setFileError(message);
             addLog(message);
         } finally {
             setIsCalculating(false);
+            setCalculationPhase('idle');
         }
     };
 
@@ -470,7 +499,13 @@ const Outputs = ({ addLog, navTrigger }) => {
                 addLog, 
                 charts, 
                 uploadedFileName,
-                selections
+                selections,
+                {
+                    source: projectData?.outputs_data?.source || getLccaEngineMode(),
+                    calculated_at: projectData?.outputs_data?.calculated_at || engineMetadata.calculatedAt,
+                    ...projectData?.outputs_data?.engine,
+                    ...engineMetadata,
+                },
             );
         } catch (err) {
             console.error("PDF Export Error:", err);
@@ -518,6 +553,15 @@ const Outputs = ({ addLog, navTrigger }) => {
                 />
             </Form.Group>
 
+            <div
+                className="mb-2"
+                style={{ fontSize: '0.82rem', color: 'var(--app-text-secondary)' }}
+                data-testid="lcca-engine-indicator"
+            >
+                Calculation engine: {getLccaEngineMode() === 'wasm' ? 'Browser WebAssembly' : 'Development FastAPI backend'}
+                {engineMetadata.coreVersion && ` | Core ${engineMetadata.coreVersion}`}
+            </div>
+
             <Button 
                 className="w-100 mt-4 py-2" 
                 disabled={isCalculating || (!uploadedResults && !projectInputs)}
@@ -530,7 +574,11 @@ const Outputs = ({ addLog, navTrigger }) => {
                 }}
                 onClick={handleProceed}
             >
-                {isCalculating ? 'Calculating...' : 'Proceed with Calculation ▸'}
+                {calculationPhase === 'loading'
+                    ? 'Loading calculation engine...'
+                    : calculationPhase === 'calculating'
+                        ? 'Calculating...'
+                        : 'Proceed with Calculation ▸'}
             </Button>
         </div>
     );

@@ -4,7 +4,7 @@
  * Ported from: 3psLCCA-gui/gui/components/outputs/helper_functions/breakdown_stages.py
  */
 
-import { COLORS } from './lccColors';
+import { COLORS } from './lccColors.js';
 
 export const BREAKDOWN_STAGES = [
     {

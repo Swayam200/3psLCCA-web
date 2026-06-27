@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3psLCCA WebAssembly Smoke Test</title>
+    <style>
+      body { font: 16px/1.5 system-ui, sans-serif; margin: 2rem; max-width: 70rem; }
+      pre { background: #111; color: #d8ffd8; padding: 1rem; overflow: auto; }
+    </style>
+  </head>
+  <body>
+    <h1>3psLCCA WebAssembly Smoke Test</h1>
+    <p id="status" data-status="loading">Loading browser calculation engine…</p>
+    <pre id="result"></pre>
+    <script type="module" src="/src/wasm/smoke.js"></script>
+  </body>
+</html>

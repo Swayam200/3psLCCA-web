@@ -1,529 +1,408 @@
-/* eslint-disable no-unused-vars */
-import React, { useState, useEffect, useMemo } from 'react';
-import { Modal, Button, Form, Table } from 'react-bootstrap';
+import { useEffect, useMemo, useState } from 'react';
+import { Button, Form, Modal, Table } from 'react-bootstrap';
 import { useProjectData } from '../../../contexts/ProjectDataContext';
+import {
+    computeTransportEmissions,
+    computeTransportEntry,
+    computeTrips,
+    defaultKgFactorForRow,
+    formatNumber,
+    getStructureMaterials,
+    parseNumber,
+    STRUCTURE_CHUNKS,
+} from './carbonUtils';
 
-const VEHICLE_PRESETS = [
-    { name: "Light Commercial Vehicle (LCV)", capacity: 3.5, gross_weight: 7.5, empty_weight: 4.0, emission_factor: 0.8, class_label: "Small Truck" },
-    { name: "Medium Commercial Vehicle (MCV)", capacity: 10.0, gross_weight: 16.0, empty_weight: 6.0, emission_factor: 1.2, class_label: "Medium Truck" },
-    { name: "Heavy Commercial Vehicle (HCV)", capacity: 25.0, gross_weight: 35.0, empty_weight: 10.0, emission_factor: 1.8, class_label: "Heavy Truck" },
-];
+const blankVehicle = {
+    name: '',
+    vehicle_class: '',
+    capacity: 0,
+    gross_weight: 0,
+    empty_weight: 0,
+    emission_factor: 0,
+    is_custom: true,
+};
 
-const AddDeliveryModal = ({ isOpen, onClose, onSave, initialData, controller }) => {
+const DeliveryModal = ({ show, onHide, onSave, initialData }) => {
     const { projectData } = useProjectData();
-    const [vehicle, setVehicle] = useState(VEHICLE_PRESETS[0]);
-    const [route, setRoute] = useState({ origin: '', distance_km: 0 });
-    const [allMaterials, setAllMaterials] = useState([]);
-    const [selectedMaterialIds, setSelectedMaterialIds] = useState(new Set());
+    const allMaterials = useMemo(() => getStructureMaterials(projectData), [projectData]);
+    const assigned = useMemo(() => {
+        const currentId = initialData?.id;
+        return new Set((projectData.transport_data?.vehicles || [])
+            .filter((entry) => entry.id !== currentId && entry.state?.in_trash !== true)
+            .flatMap((entry) => entry.materials || [])
+            .map((item) => item.uuid));
+    }, [initialData?.id, projectData.transport_data?.vehicles]);
 
-    useEffect(() => {
-        const STRUCTURE_CHUNKS = [
-            ['foundation_data', 'Foundation'],
-            ['substructure_data', 'Sub Structure'],
-            ['superstructure_data', 'Super Structure'],
-            ['miscellaneous_data', 'Miscellaneous']
-        ];
+    const [origin, setOrigin] = useState(initialData?.route?.origin || '');
+    const [distance, setDistance] = useState(initialData?.route?.distance_km || 0);
+    const [vehicle, setVehicle] = useState({ ...blankVehicle, ...(initialData?.vehicle || {}) });
+    const [selected, setSelected] = useState(() => {
+        const map = new Map();
+        (initialData?.materials || []).forEach((item) => map.set(item.uuid, parseNumber(item.kg_factor)));
+        return map;
+    });
+    const [search, setSearch] = useState('');
+    const [hideAssigned, setHideAssigned] = useState(false);
+    const [poolMaterials, setPoolMaterials] = useState(initialData?.summary?.pool_materials ?? true);
 
-        let mats = [];
-        STRUCTURE_CHUNKS.forEach(([chunkId, category]) => {
-            const sections = projectData[chunkId] || [];
-            sections.forEach(section => {
-                const items = section.rows || [];
-                items.filter(item => !item?.state?.in_trash).forEach(item => {
-                    mats.push({
-                        id: item.id,
-                        name: item.workName || 'Unnamed',
-                        category: category,
-                        quantity: parseFloat(item.qty || 0),
-                        unit: item.unit || '',
-                        kgFactor: 1.0 // This could be inferred from the unit if needed
-                    });
-                });
-            });
-        });
-        setAllMaterials(mats);
+    const materialRows = allMaterials.map((material) => {
+        const kgFactor = selected.get(material.id) ?? material.kg_factor ?? defaultKgFactorForRow(material.raw);
+        return {
+            ...material,
+            kg_factor: kgFactor,
+            qty_kg: material.quantity * kgFactor,
+            assigned: assigned.has(material.id),
+        };
+    }).filter((material) => {
+        const term = search.trim().toLowerCase();
+        const matches = !term || [material.name, material.category, material.unit]
+            .some((value) => String(value || '').toLowerCase().includes(term));
+        return matches && (!hideAssigned || !material.assigned);
+    });
 
-        if (initialData) {
-            setVehicle(initialData.vehicle || VEHICLE_PRESETS[0]);
-            setRoute(initialData.route || { origin: '', distance_km: 0 });
-            setSelectedMaterialIds(new Set((initialData.selectedMaterials || []).map(m => m.id)));
-        }
-    }, [isOpen, initialData, projectData]);
+    const selectedRows = materialRows.filter((material) => selected.has(material.id));
+    const trips = computeTrips(selectedRows.map((row) => ({
+        material_name: row.name,
+        qty_kg: row.qty_kg,
+    })), parseNumber(vehicle.capacity) * 1000, poolMaterials);
+    const emission = trips * parseNumber(distance) * parseNumber(vehicle.emission_factor) *
+        (parseNumber(vehicle.gross_weight) + parseNumber(vehicle.empty_weight));
 
-    const handleSave = () => {
-        const selectedMaterials = allMaterials.filter(m => selectedMaterialIds.has(m.id));
-        onSave({
-            vehicle,
-            route,
-            selectedMaterials
+    const setVehicleField = (field, value) => {
+        setVehicle((prev) => {
+            const next = { ...prev, [field]: value };
+            if (field === 'name') next.vehicle_class = value;
+            if (field === 'capacity' || field === 'gross_weight') {
+                next.empty_weight = Math.max(0, parseNumber(next.gross_weight) - parseNumber(next.capacity));
+            }
+            return next;
         });
     };
 
-    const toggleMaterial = (id) => {
-        const next = new Set(selectedMaterialIds);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
-        setSelectedMaterialIds(next);
+    const toggleMaterial = (material) => {
+        if (material.assigned) return;
+        setSelected((prev) => {
+            const next = new Map(prev);
+            if (next.has(material.id)) next.delete(material.id);
+            else next.set(material.id, material.kg_factor || 0);
+            return next;
+        });
+    };
+
+    const updateKgFactor = (materialId, value) => {
+        setSelected((prev) => {
+            const next = new Map(prev);
+            if (next.has(materialId)) next.set(materialId, parseNumber(value));
+            return next;
+        });
+    };
+
+    const selectAllVisible = () => {
+        const enabled = materialRows.filter((material) => !material.assigned && material.quantity > 0 && material.kg_factor > 0);
+        const allSelected = enabled.every((material) => selected.has(material.id));
+        setSelected((prev) => {
+            const next = new Map(prev);
+            enabled.forEach((material) => {
+                if (allSelected) next.delete(material.id);
+                else next.set(material.id, material.kg_factor);
+            });
+            return next;
+        });
+    };
+
+    const handleSave = () => {
+        if (parseNumber(distance) <= 0) return window.alert('One-way distance must be greater than 0 km.');
+        if (parseNumber(vehicle.capacity) <= 0) return window.alert('Payload capacity must be greater than 0 t.');
+        if (parseNumber(vehicle.gross_weight) <= 0) return window.alert('Gross weight (loaded) must be greater than 0 t.');
+        if (parseNumber(vehicle.gross_weight) < parseNumber(vehicle.capacity)) return window.alert('Gross weight (loaded) must be >= payload capacity.');
+        if (parseNumber(vehicle.emission_factor) <= 0) return window.alert('Emission factor must be greater than 0 kgCO2e / t-km.');
+        const materials = Array.from(selected.entries())
+            .filter(([, kgFactor]) => kgFactor > 0)
+            .map(([uuid, kgFactor]) => ({
+                uuid,
+                kg_factor: kgFactor,
+                material_name: allMaterials.find((item) => item.id === uuid)?.name || '',
+            }));
+        if (materials.length === 0) return window.alert('Select at least one material with a valid kg/unit factor.');
+        const totalCargoKg = materials.reduce((sum, item) => {
+            const material = allMaterials.find((row) => row.id === item.uuid);
+            return sum + (material?.quantity || 0) * item.kg_factor;
+        }, 0);
+        if (totalCargoKg <= 0) return window.alert('At least one selected material must have non-zero quantity.');
+        onSave({
+            id: initialData?.id || crypto.randomUUID(),
+            vehicle: {
+                ...vehicle,
+                capacity: parseNumber(vehicle.capacity),
+                gross_weight: parseNumber(vehicle.gross_weight),
+                empty_weight: Math.max(0, parseNumber(vehicle.gross_weight) - parseNumber(vehicle.capacity)),
+                emission_factor: parseNumber(vehicle.emission_factor),
+                vehicle_class: vehicle.vehicle_class || vehicle.name,
+                is_custom: true,
+            },
+            route: {
+                origin,
+                destination: 'Site',
+                distance_km: parseNumber(distance),
+            },
+            materials,
+            summary: {
+                pool_materials: poolMaterials,
+                trips,
+                total_cargo_kg: totalCargoKg,
+                total_cargo_t: totalCargoKg / 1000,
+                distance_km: parseNumber(distance),
+                emission_factor: parseNumber(vehicle.emission_factor),
+                total_emissions_kgco2e: emission,
+            },
+            meta: {
+                created_at: initialData?.meta?.created_at || new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            },
+            state: initialData?.state || {},
+        });
+        return null;
     };
 
     return (
-        <Modal show={isOpen} onHide={onClose} size="lg" centered contentClassName="border-0" style={{ '--bs-modal-bg': 'var(--app-bg-card)', color: 'var(--app-text-primary)' }}>
-            <Modal.Header closeButton className="border-0" style={{ borderBottom: '1px solid var(--app-border-light)' }}>
-                <Modal.Title style={{ fontSize: '1.1rem' }}>{initialData ? 'Edit Delivery' : 'Add New Delivery'}</Modal.Title>
+        <Modal show={show} onHide={onHide} size="xl" centered contentClassName="bg-dark text-light carbon-delivery-modal">
+            <Modal.Header closeButton closeVariant="white">
+                <Modal.Title>{initialData ? 'Edit Delivery' : 'Add Delivery'}</Modal.Title>
             </Modal.Header>
-            <Modal.Body className="custom-scrollbar overflow-y-auto" style={{ maxHeight: '70vh' }}>
-                <Form>
-                    <div className="row g-3 mb-4">
-                        <div className="col-md-6">
-                            <Form.Group>
-                                <Form.Label className="small text-secondary fw-bold">Vehicle Type</Form.Label>
-                                <Form.Select 
-                                    style={{ backgroundColor: 'var(--app-bg-main)', color: 'var(--app-text-primary)', borderColor: 'var(--app-border-mid)' }}
-                                    value={vehicle.name}
-                                    onChange={(e) => setVehicle(VEHICLE_PRESETS.find(v => v.name === e.target.value))}
-                                >
-                                    {VEHICLE_PRESETS.map(v => <option key={v.name} value={v.name}>{v.name}</option>)}
-                                </Form.Select>
-                            </Form.Group>
-                        </div>
-                        <div className="col-md-3">
-                            <Form.Group>
-                                <Form.Label className="small text-secondary fw-bold">Origin</Form.Label>
-                                <Form.Control 
-                                    style={{ backgroundColor: 'var(--app-bg-main)', color: 'var(--app-text-primary)', borderColor: 'var(--app-border-mid)' }}
-                                    value={route.origin}
-                                    onChange={(e) => setRoute({ ...route, origin: e.target.value })}
-                                />
-                            </Form.Group>
-                        </div>
-                        <div className="col-md-3">
-                            <Form.Group>
-                                <Form.Label className="small text-secondary fw-bold">Distance (km)</Form.Label>
-                                <Form.Control 
-                                    type="number"
-                                    style={{ backgroundColor: 'var(--app-bg-main)', color: 'var(--app-text-primary)', borderColor: 'var(--app-border-mid)' }}
-                                    value={route.distance_km}
-                                    onChange={(e) => setRoute({ ...route, distance_km: e.target.value })}
-                                />
-                            </Form.Group>
-                        </div>
+            <Modal.Body style={{ maxHeight: '72vh', overflowY: 'auto' }}>
+                <style>{`
+                    .carbon-delivery-modal .form-control,
+                    .carbon-delivery-modal .form-select {
+                        background: var(--app-bg-alt);
+                        color: var(--app-text-primary);
+                        border-color: var(--app-border-mid);
+                    }
+                    .carbon-delivery-modal .form-label {
+                        font-size: 0.72rem;
+                        font-weight: 700;
+                        color: var(--app-text-secondary);
+                    }
+                `}</style>
+                <div className="carbon-section-title mt-0">Delivery Configuration</div>
+                <div className="row g-3 mb-3">
+                    <div className="col-md-3">
+                        <Form.Label>FROM - TO</Form.Label>
+                        <Form.Control size="sm" value={origin} onChange={(event) => setOrigin(event.target.value)} />
                     </div>
-
-                    <div className="mb-2 small text-secondary fw-bold">Vehicle Specifications</div>
-                    <div className="p-3 rounded border border-secondary mb-4" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
-                        <div className="row g-3 text-center">
-                            <div className="col-3">
-                                <div className="tiny text-muted mb-1">CAPACITY</div>
-                                <div className="fw-bold">{vehicle.capacity} T</div>
-                            </div>
-                            <div className="col-3">
-                                <div className="tiny text-muted mb-1">GROSS WT</div>
-                                <div className="fw-bold">{vehicle.gross_weight} T</div>
-                            </div>
-                            <div className="col-3">
-                                <div className="tiny text-muted mb-1">EMPTY WT</div>
-                                <div className="fw-bold">{vehicle.empty_weight} T</div>
-                            </div>
-                            <div className="col-3">
-                                <div className="tiny text-muted mb-1">EMISSION FACTOR</div>
-                                <div className="fw-bold text-success">{vehicle.emission_factor} <small>kg/T-km</small></div>
-                            </div>
-                        </div>
+                    <div className="col-md-3">
+                        <Form.Label>ONE-WAY DISTANCE (km) *</Form.Label>
+                        <Form.Control size="sm" type="number" value={distance} onChange={(event) => setDistance(event.target.value)} />
                     </div>
+                    <div className="col-md-3">
+                        <Form.Label>VEHICLE TYPE</Form.Label>
+                        <Form.Control size="sm" value={vehicle.name} onChange={(event) => setVehicleField('name', event.target.value)} />
+                    </div>
+                    <div className="col-md-3">
+                        <Form.Label>PAYLOAD CAPACITY (t) *</Form.Label>
+                        <Form.Control size="sm" type="number" value={vehicle.capacity} onChange={(event) => setVehicleField('capacity', event.target.value)} />
+                    </div>
+                    <div className="col-md-3">
+                        <Form.Label>GROSS WEIGHT - LOADED (t) *</Form.Label>
+                        <Form.Control size="sm" type="number" value={vehicle.gross_weight} onChange={(event) => setVehicleField('gross_weight', event.target.value)} />
+                    </div>
+                    <div className="col-md-3">
+                        <Form.Label>EMPTY WEIGHT (t)</Form.Label>
+                        <Form.Control size="sm" type="number" value={vehicle.empty_weight} onChange={(event) => setVehicleField('empty_weight', event.target.value)} />
+                    </div>
+                    <div className="col-md-3">
+                        <Form.Label>EMISSION FACTOR *</Form.Label>
+                        <Form.Control size="sm" type="number" value={vehicle.emission_factor} onChange={(event) => setVehicleField('emission_factor', event.target.value)} />
+                    </div>
+                </div>
 
-                    <div className="mb-2 small text-secondary fw-bold">Select Materials for this Delivery</div>
-                    <div className="border rounded overflow-hidden" style={{ borderColor: 'var(--app-border-mid)' }}>
-                        <Table hover variant="dark" className="mb-0" style={{ fontSize: '0.82rem', '--bs-table-bg': 'var(--app-bg-main)', '--bs-table-color': 'var(--app-text-primary)', '--bs-table-hover-bg': 'var(--app-surface-pressed)' }}>
-                            <thead>
-                                <tr>
-                                    <th style={{ width: '40px' }} className="text-center">#</th>
-                                    <th>Material</th>
-                                    <th>Category</th>
-                                    <th className="text-end">Weight (T)</th>
+                <div className="carbon-section-title mt-4">Material Picker</div>
+                <div className="d-flex align-items-center gap-2 mb-2">
+                    <Form.Control size="sm" placeholder="Search materials..." value={search} onChange={(event) => setSearch(event.target.value)} />
+                    <Form.Check type="checkbox" label="Pool same materials" checked={poolMaterials} onChange={(event) => setPoolMaterials(event.target.checked)} />
+                    <Form.Check type="checkbox" label="Hide assigned" checked={hideAssigned} onChange={(event) => setHideAssigned(event.target.checked)} />
+                    <Button size="sm" variant="outline-light" onClick={selectAllVisible}>Select with Quantity</Button>
+                </div>
+
+                <Table size="sm" variant="dark" bordered hover responsive className="carbon-desktop-table">
+                    <thead>
+                        <tr>
+                            <th style={{ width: 42 }} />
+                            <th>Material</th>
+                            <th>Category</th>
+                            <th>Unit</th>
+                            <th className="text-end">kg / unit</th>
+                            <th className="text-end">Quantity (kg)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {materialRows.map((material) => {
+                            const checked = selected.has(material.id);
+                            const canSelect = !material.assigned && material.kg_factor > 0;
+                            return (
+                                <tr key={material.id} className={material.assigned ? 'opacity-50' : ''}>
+                                    <td className="text-center">
+                                        <Form.Check
+                                            checked={checked}
+                                            disabled={!canSelect}
+                                            onChange={() => toggleMaterial(material)}
+                                        />
+                                    </td>
+                                    <td>{material.name}</td>
+                                    <td>{material.category}</td>
+                                    <td>{material.unit || '-'}</td>
+                                    <td className="text-end">
+                                        <input
+                                            type="number"
+                                            className="form-control form-control-sm text-end"
+                                            value={material.kg_factor || ''}
+                                            disabled={material.assigned}
+                                            onChange={(event) => updateKgFactor(material.id, event.target.value)}
+                                            onFocus={() => {
+                                                if (!checked && !material.assigned) toggleMaterial(material);
+                                            }}
+                                        />
+                                    </td>
+                                    <td className="text-end">{material.qty_kg > 0 ? formatNumber(material.qty_kg, 0) : '-'}</td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                {allMaterials.map((m) => (
-                                    <tr 
-                                        key={m.id} 
-                                        onClick={() => toggleMaterial(m.id)}
-                                        style={{ cursor: 'pointer', backgroundColor: selectedMaterialIds.has(m.id) ? 'rgba(154, 220, 50, 0.1)' : 'transparent' }}
-                                    >
-                                        <td className="text-center">
-                                            <Form.Check readOnly checked={selectedMaterialIds.has(m.id)} />
-                                        </td>
-                                        <td>{m.name}</td>
-                                        <td className="text-muted">{m.category}</td>
-                                        <td className="text-end font-monospace">{(m.quantity * m.kgFactor / 1000).toFixed(2)}</td>
-                                    </tr>
-                                ))}
-                                {allMaterials.length === 0 && (
-                                    <tr><td colSpan="4" className="text-center py-4 text-secondary">No materials found in project</td></tr>
-                                )}
-                            </tbody>
-                        </Table>
-                    </div>
-                </Form>
+                            );
+                        })}
+                    </tbody>
+                </Table>
             </Modal.Body>
-            <Modal.Footer className="border-secondary">
-                <Button variant="outline-secondary" size="sm" onClick={onClose}>Cancel</Button>
-                <Button 
-                    variant="primary" 
-                    size="sm" 
-                    className="fw-bold"
-                    onClick={handleSave} 
-                    style={{ backgroundColor: 'var(--app-primary-accent)', color: 'var(--app-bg-card)', border: 'none' }}
-                >
-                    Save Delivery
-                </Button>
+            <Modal.Footer className="justify-content-between">
+                <div className="d-flex gap-3">
+                    <span>Trips: <strong>{trips || '-'}</strong></span>
+                    <span>Total Emission: <strong>{emission > 0 ? formatNumber(emission) : '-'}</strong> kgCO2e</span>
+                </div>
+                <div className="d-flex gap-2">
+                    <Button variant="secondary" onClick={onHide}>Cancel</Button>
+                    <Button variant="primary" onClick={handleSave}>Save Delivery</Button>
+                </div>
             </Modal.Footer>
         </Modal>
     );
 };
 
-const TransportationEmissions = ({ controller }) => {
+const TransportationEmissions = () => {
     const { projectData, updateProjectData } = useProjectData();
-    const [deliveries, setDeliveries] = useState([]);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingDelivery, setEditingDelivery] = useState(null);
+    const [editingEntry, setEditingEntry] = useState(null);
+    const transportData = projectData.transport_data || { vehicles: [] };
+    const computed = useMemo(() => computeTransportEmissions(projectData), [projectData]);
 
     useEffect(() => {
-        const carbonData = projectData.carbon_emission_data || {};
-        const transportData = carbonData.transport_emissions_data || {};
-        setDeliveries(transportData.raw_ui_entries || []);
-    }, [projectData]);
-
-    const handleAddDelivery = () => {
-        setEditingDelivery(null);
-        setIsModalOpen(true);
-    };
-
-    const handleEditDelivery = (delivery, index) => {
-        setEditingDelivery({ ...delivery, index });
-        setIsModalOpen(true);
-    };
-
-    const handleDeleteDelivery = (index) => {
-        const updated = deliveries.filter((_, i) => i !== index);
-        setDeliveries(updated);
-        saveToEngine(updated);
-    };
-
-    const handleSaveDelivery = (delivery) => {
-        let updated;
-        if (editingDelivery !== null && editingDelivery.index !== undefined) {
-             updated = [...deliveries];
-             updated[editingDelivery.index] = delivery;
-        } else {
-            updated = [...deliveries, delivery];
-        }
-        setDeliveries(updated);
-        setIsModalOpen(false);
-        saveToEngine(updated);
-    };
-
-    const saveToEngine = (updatedDeliveries) => {
-        const computed = computeEmissions(updatedDeliveries);
         const prev = projectData.carbon_emission_data || {};
+        const nextTransportData = {
+            ...(prev.transport_emissions_data || {}),
+            entries: computed.entries,
+            cat_totals: computed.cat_totals,
+            total_kgCO2e: computed.total_kgCO2e,
+            active_vehicle_count: computed.active_vehicle_count,
+        };
+        if (JSON.stringify(prev.transport_emissions_data || {}) === JSON.stringify(nextTransportData)) return;
         updateProjectData('carbon_emission_data', {
             ...prev,
-            transport_emissions_data: {
-                ...computed,
-                raw_ui_entries: updatedDeliveries
-            }
+            transport_emissions_data: nextTransportData,
+            transportation_emissions_data: nextTransportData,
         });
+    }, [computed, projectData.carbon_emission_data, updateProjectData]);
+
+    const saveEntry = (entry) => {
+        const vehicles = transportData.vehicles || [];
+        const exists = vehicles.some((item) => item.id === entry.id);
+        const nextVehicles = exists
+            ? vehicles.map((item) => (item.id === entry.id ? entry : item))
+            : [...vehicles, entry];
+        updateProjectData('transport_data', { ...transportData, vehicles: nextVehicles });
+        setEditingEntry(null);
     };
 
-    const computeEmissionsForSingle = (entry) => {
-        const v = entry.vehicle || {};
-        const r = entry.route || {};
-        const cap = parseFloat(v.capacity || 0);
-        const gross = parseFloat(v.gross_weight || 0);
-        const empty = parseFloat(v.empty_weight || 0);
-        const dist = parseFloat(r.distance_km || 0);
-        const ef = parseFloat(v.emission_factor || 0);
-        
-        const totalWeightT = (entry.selectedMaterials || []).reduce((sum, m) => sum + (parseFloat(m.quantity || 0) * (m.kgFactor || 1) / 1000), 0);
-        const trips = cap > 0 ? Math.ceil(totalWeightT / cap) : 0;
-        return (gross + empty) * trips * dist * ef;
+    const trashEntry = (entryId) => {
+        if (!window.confirm('Remove this delivery entry? Materials will be available for reassignment.')) return;
+        const nextVehicles = (transportData.vehicles || []).map((entry) => (
+            entry.id === entryId
+                ? { ...entry, state: { ...(entry.state || {}), in_trash: true }, meta: { ...(entry.meta || {}), updated_at: new Date().toISOString() } }
+                : entry
+        ));
+        updateProjectData('transport_data', { ...transportData, vehicles: nextVehicles });
     };
 
-    const computeEmissions = (entries) => {
-        let totalEmission = 0;
-        const processedEntries = entries.map(entry => {
-            const emission = computeEmissionsForSingle(entry);
-            totalEmission += emission;
-            return {
-                vehicle_name: entry.vehicle?.name,
-                origin: entry.route?.origin,
-                distance_km: entry.route?.distance_km,
-                emission_kgCO2e: emission,
-                materials: entry.selectedMaterials
-            };
-        });
-
-        return {
-            entries: processedEntries,
-            total_kgCO2e: totalEmission,
-            active_vehicle_count: entries.length
-        };
-    };
-
-    const [showDetails, setShowDetails] = useState(true);
-
-    const totals = useMemo(() => {
-        const computed = computeEmissions(deliveries);
-        const categorical = {
-            'Foundation': 0,
-            'Sub Structure': 0,
-            'Super Structure': 0,
-            'Misc': 0
-        };
-
-        deliveries.forEach(delivery => {
-            const emission = computeEmissionsForSingle(delivery);
-            (delivery.selectedMaterials || []).forEach(m => {
-                const mWeight = (parseFloat(m.quantity || 0) * (m.kgFactor || 1) / 1000);
-                const mEmission = delivery.vehicle?.emission_factor * delivery.route?.distance_km * (mWeight / (delivery.vehicle?.capacity || 1)); // Rough estimate per material
-                if (categorical[m.category] !== undefined) {
-                    categorical[m.category] += mEmission;
-                } else {
-                    categorical['Misc'] += mEmission;
-                }
-            });
-        });
-
-        return {
-            total: computed.total_kgCO2e,
-            count: deliveries.length,
-            categorical
-        };
-    }, [deliveries]);
+    const activeVehicles = (transportData.vehicles || []).filter((entry) => entry.state?.in_trash !== true);
 
     return (
-        <div className="transportation-emissions d-flex flex-column h-100" style={{ backgroundColor: 'var(--app-bg-main)', color: 'var(--app-text-primary)' }}>
-            <style>{`
-                .btn-lime {
-                    background-color: var(--app-primary-accent);
-                    color: var(--app-bg-card);
-                    border: none;
-                }
-                .btn-lime:hover {
-                    background-color: color-mix(in srgb, var(--app-primary-accent) 80%, #fff);
-                    color: var(--app-bg-card);
-                }
-                .transportation-top-summary {
-                    background-color: transparent;
-                    color: var(--app-text-primary);
-                    padding: 8px 16px;
-                    border-bottom: 1px solid var(--app-border-light);
-                }
-                .v-separator {
-                    width: 1px;
-                    height: 16px;
-                    background-color: var(--app-border-light);
-                    margin: 0 16px;
-                }
-                .form-control:focus, .form-select:focus {
-                    border-color: var(--app-primary-accent) !important;
-                    box-shadow: 0 0 0 2px color-mix(in srgb, var(--app-primary-accent) 25%, transparent) !important;
-                    outline: none !important;
-                }
-                .custom-scrollbar::-webkit-scrollbar {
-                    width: 6px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-track {
-                    background: transparent;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: var(--app-border-mid);
-                    border-radius: 10px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                    background: var(--app-text-secondary);
-                }
-                .transportation-card {
-                    background-color: var(--app-bg-card);
-                    border: 1px solid var(--app-border-mid);
-                    border-radius: 4px;
-                    overflow: hidden;
-                    margin-bottom: 16px;
-                }
-                .transportation-card-header {
-                    background-color: var(--app-bg-alt);
-                    padding: 6px 12px;
-                    border-bottom: 1px solid var(--app-border-mid);
-                }
-                .transportation-table th {
-                    background-color: var(--app-bg-alt) !important;
-                    color: var(--app-text-secondary) !important;
-                    font-weight: 500;
-                    padding: 4px 8px !important;
-                    border: 1px solid var(--app-border-mid) !important;
-                }
-                .transportation-table td {
-                    padding: 4px 8px !important;
-                    border: 1px solid var(--app-border-mid) !important;
-                }
-            `}</style>
-
-            {/* Top Summary Bar */}
-            <div className="transportation-top-summary d-flex align-items-center justify-content-between">
-                <div className="d-flex align-items-center gap-4" style={{ fontSize: '0.82rem' }}>
-                    <div className="text-light">
-                        Total: <span className="fw-bold">{totals.total.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</span> <span className="text-secondary opacity-75">kgCO₂e</span>
-                    </div>
-                    
-                    <div className="text-light">
-                        Vehicles: <span className="fw-bold">{totals.count}</span>
-                    </div>
+        <div className="transportation-emissions carbon-desktop-page">
+            <div className="carbon-summary-strip mb-3 d-flex justify-content-between align-items-center">
+                <div className="d-flex gap-4">
+                    <span>Total Transport Emissions: <strong>{formatNumber(computed.total_kgCO2e)}</strong> kgCO2e</span>
+                    <span>Vehicles: <strong>{computed.active_vehicle_count}</strong></span>
                 </div>
-                
-                <button 
-                    className="btn btn-sm py-1 px-3 d-flex align-items-center gap-2 border-0"
-                    onClick={() => setShowDetails(!showDetails)}
-                    style={{ 
-                        fontSize: '0.75rem', 
-                        backgroundColor: 'var(--app-bg-alt)', 
-                        color: 'var(--app-text-primary)',
-                        borderRadius: '4px',
-                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)'
-                    }}
-                >
-                    {showDetails ? 'Hide Details ▲' : 'Show Details ▼'}
-                </button>
+                <Button size="sm" variant="outline-light" onClick={() => setEditingEntry({})}>+ Add Delivery</Button>
             </div>
 
-            {/* Details Row (only if expanded) */}
-            {showDetails && (
-                <div className="p-3 border-bottom animate-fade-in" style={{ backgroundColor: 'var(--app-bg-alt)', borderColor: 'var(--app-border-mid)' }}>
-                    <table className="transportation-table w-100" style={{ fontSize: '0.78rem' }}>
-                        <thead>
-                            <tr style={{ backgroundColor: 'var(--app-bg-alt)' }}>
-                                <th className="ps-3" style={{ border: '1px solid var(--app-border-mid)', color: 'var(--app-text-primary)', padding: '8px', fontSize: '0.82rem', fontWeight: '600' }}>Category</th>
-                                <th style={{ border: '1px solid var(--app-border-mid)', color: 'var(--app-text-primary)', padding: '8px', fontSize: '0.82rem', fontWeight: '600' }}>kgCO₂e</th>
-                                <th style={{ border: '1px solid var(--app-border-mid)', color: 'var(--app-text-primary)', padding: '8px', fontSize: '0.82rem', fontWeight: '600' }}>% of Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {Object.entries(totals.categorical).map(([label, value]) => (
-                                <tr key={label} style={{ borderBottom: '1px solid var(--app-border-light)' }}>
-                                    <td className="ps-3" style={{ border: '1px solid var(--app-border-light)', color: 'var(--app-text-secondary)', padding: '6px' }}>{label}</td>
-                                    <td style={{ border: '1px solid var(--app-border-light)', color: 'var(--app-text-primary)', padding: '6px' }}>{value.toFixed(3)}</td>
-                                    <td style={{ border: '1px solid var(--app-border-light)', color: 'var(--app-primary-accent)', padding: '6px' }}>
-                                        {totals.total > 0 ? ((value / totals.total) * 100).toFixed(1) : 0}%
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+            <div className="d-flex gap-4 flex-wrap mb-3 small text-secondary">
+                {STRUCTURE_CHUNKS.map(([, label]) => (
+                    <span key={label}>{label}: <strong>{formatNumber(computed.cat_totals[label] || 0)}</strong></span>
+                ))}
+            </div>
+
+            <div className="carbon-section-title">Transportation Deliveries</div>
+
+            {activeVehicles.length === 0 ? (
+                <div className="text-center py-5" style={{ border: '1px dashed var(--app-border-mid)', background: 'var(--app-bg-card)' }}>
+                    <div className="text-secondary mb-3">No active transportation deliveries configured</div>
+                    <Button size="sm" onClick={() => setEditingEntry({})}>Configure First Delivery</Button>
                 </div>
+            ) : (
+                activeVehicles.map((entry) => {
+                    const calc = computeTransportEntry(entry, projectData);
+                    return (
+                        <div key={entry.id} className="mb-3" style={{ border: '1px solid var(--app-border-mid)', background: 'var(--app-bg-card)', borderRadius: 4 }}>
+                            <div className="d-flex justify-content-between align-items-center p-2" style={{ background: 'var(--app-bg-alt)' }}>
+                                <strong>{entry.vehicle?.name || 'Delivery'} - {entry.route?.origin || ''} | {formatNumber(entry.route?.distance_km, 2)} km | {formatNumber(calc.emission_kgCO2e)} kgCO2e</strong>
+                                <div className="d-flex gap-2">
+                                    <Button size="sm" variant="outline-light" onClick={() => setEditingEntry(entry)}><i className="bi bi-pencil" /></Button>
+                                    <Button size="sm" variant="outline-danger" onClick={() => trashEntry(entry.id)}><i className="bi bi-trash" /></Button>
+                                </div>
+                            </div>
+                            <div className="p-2 small d-flex gap-4 flex-wrap">
+                                <span>Capacity: {formatNumber(entry.vehicle?.capacity, 2)} t</span>
+                                <span>Gross Wt: {formatNumber(entry.vehicle?.gross_weight, 2)} t</span>
+                                <span>Empty Wt: {formatNumber(entry.vehicle?.empty_weight, 2)} t</span>
+                                <span>EF: {formatNumber(entry.vehicle?.emission_factor, 4)} kgCO2e/t-km</span>
+                                <span>Trips: {calc.trips}</span>
+                            </div>
+                            <Table size="sm" variant="dark" bordered responsive className="mb-0 carbon-desktop-table">
+                                <thead>
+                                    <tr>
+                                        <th>Material</th>
+                                        <th>Category</th>
+                                        <th className="text-end">kg Factor</th>
+                                        <th className="text-end">Quantity (kg)</th>
+                                        <th className="text-end">Trips</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {calc.materials.map((material) => (
+                                        <tr key={material.uuid}>
+                                            <td>{material.name}</td>
+                                            <td>{material.category || '-'}</td>
+                                            <td className="text-end">{formatNumber(material.kg_factor)}</td>
+                                            <td className="text-end">{formatNumber(material.qty_kg, 0)}</td>
+                                            <td className="text-end">{material.trips}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </Table>
+                        </div>
+                    );
+                })
             )}
 
-            {/* Action Bar */}
-            <div className="p-3 pb-0 d-flex align-items-center">
-                <button 
-                    className="btn btn-sm py-2 px-3 d-flex align-items-center gap-2 btn-lime"
-                    onClick={handleAddDelivery}
-                    style={{ 
-                        fontSize: '0.85rem', 
-                        fontWeight: 'bold',
-                        color: 'var(--app-bg-card)',
-                        borderRadius: '4px'
-                    }}
-                >
-                    <i className="bi bi-plus-lg"></i> Add Delivery
-                </button>
-            </div>
-
-            <div className="px-3 pt-2 flex-grow-1 overflow-auto custom-scrollbar">
-                {deliveries.length === 0 ? (
-                    <div className="text-center py-5 rounded-1" style={{ backgroundColor: 'var(--app-bg-card)', border: '1px dashed var(--app-border-mid)' }}>
-                        <i className="bi bi-truck text-secondary display-4 mb-3 d-block" style={{ color: 'var(--app-text-muted)' }}></i>
-                        <div className="text-secondary mb-3" style={{ color: 'var(--app-text-secondary)' }}>No transportation deliveries configured</div>
-                        <button 
-                            className="btn btn-sm btn-lime px-3 py-2 fw-bold" 
-                            style={{ color: 'var(--app-bg-card)' }} 
-                            onClick={handleAddDelivery}
-                        >
-                            Configure First Delivery
-                        </button>
-                    </div>
-                ) : (
-                    <div className="row g-4">
-                        {deliveries.map((delivery, index) => {
-                            const singleEmission = computeEmissionsForSingle(delivery);
-                            return (
-                                <div key={index} className="col-12">
-                                    <div className="transportation-card">
-                                        {/* Header */}
-                                        <div className="transportation-card-header d-flex justify-content-between align-items-center">
-                                            <div className="d-flex align-items-center gap-2">
-                                                <i className="bi bi-truck text-secondary" style={{ color: 'var(--app-text-muted)' }}></i>
-                                                <span className="fw-bold text-light" style={{ fontSize: '0.82rem' }}>
-                                                    {delivery.vehicle?.name} — {delivery.route?.origin} | {delivery.route?.distance_km} km | {singleEmission.toLocaleString(undefined, { maximumFractionDigits: 1 })} kgCO₂e
-                                                </span>
-                                            </div>
-                                            <div className="d-flex gap-1">
-                                                <button className="btn btn-sm btn-light border p-1" style={{ width: '28px', backgroundColor: 'var(--app-bg-alt)', borderColor: '#3d3d3d', color: 'var(--app-text-primary)' }} onClick={() => handleEditDelivery(delivery, index)} title="Edit">
-                                                    <i className="bi bi-pencil small"></i>
-                                                </button>
-                                                <button className="btn btn-sm btn-light border p-1 text-danger" style={{ width: '28px', backgroundColor: 'var(--app-bg-alt)', borderColor: '#3d3d3d' }} onClick={() => handleDeleteDelivery(index)} title="Delete">
-                                                    <i className="bi bi-trash small"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                            <div className="p-0" style={{ borderTop: '1px solid var(--app-border-mid)' }}>
-                                                {/* Specs Row */}
-                                                <div className="d-flex flex-wrap gap-4 px-3 py-2 border-bottom" style={{ fontSize: '0.78rem', backgroundColor: 'var(--app-bg-card)', borderColor: 'var(--app-border-mid)' }}>
-                                                    <div><span className="text-secondary opacity-75">Class:</span> <span className="fw-medium text-light">{delivery.vehicle?.class_label}</span></div>
-                                                    <div><span className="text-secondary opacity-75">Capacity:</span> <span className="fw-medium text-light">{delivery.vehicle?.capacity} T</span></div>
-                                                    <div><span className="text-secondary opacity-75">Gross Wt:</span> <span className="fw-medium text-light">{delivery.vehicle?.gross_weight} T</span></div>
-                                                    <div><span className="text-secondary opacity-75">Empty Wt:</span> <span className="fw-medium text-light">{delivery.vehicle?.empty_weight} T</span></div>
-                                                    <div><span className="text-secondary opacity-75">EF:</span> <span className="fw-medium text-light">{delivery.vehicle?.emission_factor} kg/km</span></div>
-                                                </div>
-                                                
-                                                {/* Material Table */}
-                                                <div className="table-responsive">
-                                                    <table className="transportation-table table-sm mb-0 w-100" style={{ fontSize: '0.78rem' }}>
-                                                        <thead>
-                                                            <tr style={{ backgroundColor: 'var(--app-bg-alt)' }}>
-                                                                <th className="ps-3" style={{ border: '1px solid var(--app-border-mid)', color: 'var(--app-text-primary)', padding: '6px' }}>Material</th>
-                                                                <th className="text-end" style={{ border: '1px solid var(--app-border-mid)', color: 'var(--app-text-primary)', padding: '6px' }}>Quantity</th>
-                                                                <th className="text-end pe-3" style={{ border: '1px solid var(--app-border-mid)', color: 'var(--app-text-primary)', padding: '6px' }}>Weight (T)</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {delivery.selectedMaterials?.map((m, mIdx) => (
-                                                                <tr key={mIdx}>
-                                                                    <td className="ps-3 py-1" style={{ border: '1px solid var(--app-border-mid)', color: 'var(--app-text-secondary)' }}>{m.name} <span className="text-secondary extra-small">({m.category})</span></td>
-                                                                    <td className="text-end py-1 font-monospace" style={{ border: '1px solid var(--app-border-mid)', color: 'var(--app-text-primary)' }}>{parseFloat(m.quantity || 0).toLocaleString()} {m.unit}</td>
-                                                                    <td className="text-end py-1 pe-3 font-monospace" style={{ border: '1px solid var(--app-border-mid)', color: 'var(--app-text-primary)' }}>
-                                                                        {(parseFloat(m.quantity || 0) * (m.kgFactor || 1) / 1000).toFixed(2)}
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )
-            }
-            </div>
-
-            {/* Modals */}
-            {isModalOpen && (
-                <AddDeliveryModal 
-                    isOpen={isModalOpen}
-                    onClose={() => setIsModalOpen(false)}
-                    onSave={handleSaveDelivery}
-                    initialData={editingDelivery}
-                    controller={controller}
+            {editingEntry !== null && (
+                <DeliveryModal
+                    show={editingEntry !== null}
+                    initialData={editingEntry.id ? editingEntry : null}
+                    onHide={() => setEditingEntry(null)}
+                    onSave={saveEntry}
                 />
             )}
         </div>

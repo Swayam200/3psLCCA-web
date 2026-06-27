@@ -1,7 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import { normalizeProjectData } from '../src/utils/projectSchema.js';
+import {
+    computeMachineryDetailedTotal,
+    computeMachineryLumpsumTotal,
+    computeMaterialEmissions,
+    computeTrafficReroutingData,
+    computeTransportEmissions,
+} from '../src/gui/components/carbon_emission/carbonUtils.js';
 import {
     normalizeCarbonEmissionData,
     normalizeBridgeData,
@@ -42,6 +50,132 @@ test('carbon emission data preserves transport and diversion aliases', () => {
     assert.equal(normalized.transportation_emissions_data.total_kgCO2e, 12);
     assert.equal(normalized.diversion_emissions_data.total_direct_emissions, 5);
     assert.equal(normalized.diversion_emissions.total_direct_emissions, 5);
+});
+
+test('carbon navigation matches desktop order and keeps old route aliases', () => {
+    const sidebar = readFileSync(new URL('../src/gui/components/Sidebar.jsx', import.meta.url), 'utf8');
+    const app = readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8');
+    const social = sidebar.indexOf('"Social Cost of Carbon"');
+    const material = sidebar.indexOf('"Material Emissions"');
+    const transport = sidebar.indexOf('"Transportation Emissions"');
+    const machinery = sidebar.indexOf('"Machinery/Equipment Emissions"');
+    const traffic = sidebar.indexOf('"Traffic Rerouting Emissions"');
+
+    assert.ok(sidebar.includes('"Carbon Emissions Data"'));
+    assert.ok(social < material);
+    assert.ok(material < transport);
+    assert.ok(transport < machinery);
+    assert.ok(machinery < traffic);
+    assert.ok(app.includes("'Carbon Emission Data'"));
+    assert.ok(app.includes("'Machinery Emissions'"));
+    assert.ok(app.includes("'Traffic Diversion Emissions'"));
+});
+
+test('legacy raw transport entries migrate to top-level transport data', () => {
+    const normalized = normalizeProjectData({
+        carbon_emission_data: {
+            transport_emissions_data: {
+                raw_ui_entries: [{
+                    vehicle: { name: 'Truck', capacity: 10, gross_weight: 16, empty_weight: 6, emission_factor: 1.2 },
+                    route: { origin: 'Depot', distance_km: 5 },
+                    selectedMaterials: [{ id: 'foundation_data-row-1', kgFactor: 1 }],
+                }],
+            },
+        },
+    });
+
+    assert.equal(normalized.transport_data.vehicles.length, 1);
+    assert.equal(normalized.transport_data.vehicles[0].vehicle.name, 'Truck');
+    assert.equal(normalized.transport_data.vehicles[0].materials[0].uuid, 'foundation_data-row-1');
+});
+
+test('material carbon calculation excludes trashed rows and respects conversion factors', () => {
+    const project = normalizeProjectData({
+        foundation_data: [{
+            name: 'Foundation',
+            rows: [
+                { id: 'row-1', workName: 'Concrete', qty: 2, unit: 'm3', conversionFactor: 2400, carbonEmission: { factor: 0.1, perUnit: 'kgCO2e/kg' } },
+                { id: 'row-2', workName: 'Deleted steel', qty: 10, unit: 'kg', conversionFactor: 1, carbonEmission: { factor: 5, perUnit: 'kgCO2e/kg' }, state: { in_trash: true } },
+            ],
+        }],
+    });
+    const result = computeMaterialEmissions(project);
+
+    assert.equal(result.total_count, 1);
+    assert.equal(result.included_count, 1);
+    assert.equal(result.total_kgCO2e, 480);
+});
+
+test('transport emissions use desktop trip formula and top-level transport_data', () => {
+    const project = normalizeProjectData({
+        foundation_data: [{
+            name: 'Foundation',
+            rows: [{ id: 'row-1', workName: 'Concrete', qty: 12000, unit: 'kg', conversionFactor: 1, carbonEmission: { factor: 1, perUnit: 'kgCO2e/kg' } }],
+        }],
+        transport_data: {
+            vehicles: [{
+                id: 'delivery-1',
+                vehicle: { name: 'Truck', capacity: 10, gross_weight: 16, empty_weight: 6, emission_factor: 1.2 },
+                route: { origin: 'Depot', distance_km: 5 },
+                materials: [{ uuid: 'foundation_data-row-1', kg_factor: 1 }],
+                summary: { pool_materials: true },
+            }],
+        },
+    });
+    const result = computeTransportEmissions(project);
+
+    assert.equal(result.active_vehicle_count, 1);
+    assert.equal(result.total_kgCO2e, 264);
+});
+
+test('machinery detailed and lumpsum totals match desktop formulas', () => {
+    assert.equal(computeMachineryDetailedTotal([{ rate: 5, hrs: 8, days: 2, ef: 2.69 }]), 215.2);
+    assert.ok(Math.abs(computeMachineryLumpsumTotal({
+        elec_consumption_per_day: 10,
+        elec_days: 2,
+        elec_ef: 0.71,
+        fuel_consumption_per_day: 5,
+        fuel_days: 2,
+        fuel_ef: 2.69,
+    }) - 41.1) < 1e-9);
+});
+
+test('traffic rerouting uses canonical vehicle counts and reroute distance', () => {
+    const project = normalizeProjectData({
+        traffic_data: normalizeProjectSection('traffic_data', {
+            calculation_mode: 'INDIA',
+            vehicles: {
+                small_cars: { vehicles_per_day: 100 },
+            },
+            road_params: {
+                additional_reroute_distance_km: 2,
+            },
+        }),
+        carbon_emission_data: {
+            diversion_emissions_data: {
+                emission_factors: { small_cars: 0.5 },
+            },
+        },
+    });
+    const result = computeTrafficReroutingData(project);
+
+    assert.equal(result.mode, 'Calculate by Vehicle');
+    assert.equal(result.total_calculated_emissions, 100);
+});
+
+test('custom social cost derives backend-compatible cost field', () => {
+    const derived = buildCalculationProjectInputs(normalizeProjectData({
+        carbon_emission_data: {
+            social_cost_data: {
+                source: 'Custom / Manual Override',
+                custom: { entered_value: 0.25 },
+                result: { cost_of_carbon_local: 0.25 },
+            },
+        },
+    })).carbon_emission_data;
+
+    assert.equal(derived.social_cost_data.cost_of_carbon_local, 0.25);
+    assert.equal(derived.social_cost_data.result.cost_of_carbon_local, 0.25);
 });
 
 test('traffic page state derives to core-compatible traffic fields', () => {

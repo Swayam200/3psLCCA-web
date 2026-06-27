@@ -206,6 +206,53 @@ export const normalizeTrafficData = (value) => {
     };
 };
 
+export const normalizeTransportData = (value, project = {}) => {
+    const data = normalizeObject(value);
+    const legacyEntries = project?.carbon_emission_data?.transport_emissions_data?.raw_ui_entries
+        || project?.carbon_emission_data?.transportation_emissions_data?.raw_ui_entries
+        || [];
+    const vehicles = asArray(data.vehicles).length > 0 ? data.vehicles : legacyEntries;
+    return {
+        ...data,
+        vehicles: asArray(vehicles).map((entry, index) => {
+            const entryData = normalizeObject(entry);
+            const vehicle = normalizeObject(entryData.vehicle);
+            const route = normalizeObject(entryData.route);
+            return {
+                ...entryData,
+                id: entryData.id || `transport-${index + 1}`,
+                vehicle: {
+                    name: vehicle.name || vehicle.vehicle_class || '',
+                    vehicle_class: vehicle.vehicle_class || vehicle.name || '',
+                    capacity: numberValue(vehicle.capacity) ?? 0,
+                    gross_weight: numberValue(vehicle.gross_weight) ?? 0,
+                    empty_weight: numberValue(vehicle.empty_weight) ?? 0,
+                    emission_factor: numberValue(vehicle.emission_factor) ?? 0,
+                    is_custom: vehicle.is_custom ?? true,
+                },
+                route: {
+                    origin: route.origin || entryData.origin || '',
+                    destination: route.destination || 'Site',
+                    distance_km: numberValue(route.distance_km) ?? 0,
+                },
+                materials: asArray(entryData.materials || entryData.selectedMaterials)
+                    .map((item) => {
+                        const material = normalizeObject(item);
+                        return {
+                            uuid: material.uuid || material.id,
+                            kg_factor: numberValue(material.kg_factor ?? material.kgFactor) ?? 0,
+                            material_name: material.material_name || material.name || '',
+                        };
+                    })
+                    .filter((item) => item.uuid),
+                summary: normalizeObject(entryData.summary),
+                meta: normalizeObject(entryData.meta),
+                state: normalizeObject(entryData.state),
+            };
+        }),
+    };
+};
+
 export const normalizeCarbonEmissionData = (value) => {
     const data = normalizeObject(value);
     const transportData = normalizeObject(data.transport_emissions_data || data.transportation_emissions_data);
@@ -254,6 +301,7 @@ const SECTION_NORMALIZERS = {
     bridge_data: normalizeBridgeData,
     financial_data: normalizeFinancialData,
     traffic_data: normalizeTrafficData,
+    transport_data: normalizeTransportData,
     foundation_data: (value) => normalizeConstructionSections(value, 'foundation'),
     substructure_data: (value) => normalizeConstructionSections(value, 'substructure'),
     superstructure_data: (value) => normalizeConstructionSections(value, 'superstructure'),
