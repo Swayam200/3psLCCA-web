@@ -225,3 +225,78 @@ test('bridge validation only requires the four desktop-required fields', () => {
     assert.ok(missing.some((message) => message.includes('analysis period')));
     assert.ok(missing.some((message) => message.includes('duration construction months')));
 });
+
+test('carbon emission data sections sync and recalculate correctly from structural and traffic inputs', () => {
+    const project = normalizeProjectData({
+        foundation_data: [
+            {
+                name: 'Main Foundation',
+                rows: [
+                    { id: 'row-1', workName: 'Concrete', qty: 100, unit: 'm3', conversionFactor: 2.4, carbonEmission: { factor: 0.15 } }
+                ]
+            }
+        ],
+        traffic_data: {
+            calculation_mode: 'INDIA',
+            vehicles: {
+                small_cars: { vehicles_per_day: 500, accident_percentage: 100 }
+            }
+        },
+        carbon_emission_data: {
+            material_emissions_data: {
+                excluded_ids: []
+            },
+            transportation_emissions_data: {
+                raw_ui_entries: [
+                    {
+                        vehicle: { name: 'Medium Truck', capacity: 10.0, gross_weight: 16.0, empty_weight: 6.0, emission_factor: 1.2 },
+                        route: { origin: 'Quarry', distance_km: 50 },
+                        selectedMaterials: [
+                            { id: 'row-1', name: 'Concrete', quantity: 0, unit: 'm3', kgFactor: 1.0 }
+                        ]
+                    }
+                ]
+            },
+            machinery_emissions_data: {
+                mode: 'detailed',
+                detailed_entries: [
+                    { rate: 1, hours: 8, days: 5, ef: 2.5 }
+                ]
+            },
+            diversion_emissions_data: {
+                mode: 'calculate',
+                reroute_km: 10,
+                factors: {
+                    small_cars: 0.1
+                }
+            },
+            social_cost_data: {
+                mode: 'NITI Aayog',
+                inr_rate: 1.5
+            }
+        }
+    });
+
+    const carbon = project.carbon_emission_data;
+
+    // 1. Material emissions recalculation check (100 * 2.4 * 0.15 = 36)
+    assert.equal(carbon.material_emissions_data.total_kgCO2e, 36);
+
+    // 2. Transportation emissions recalculation check
+    // Updated material weight: 100 qty * 2.4 conversion factor = 240 kg = 0.24 T
+    // Trips: ceil(0.24 / 10 capacity) = 1 trip
+    // Emission: (16 gross + 6 empty) * 1 trip * 50 km * 1.2 ef = 1320 kgCO2e
+    assert.equal(carbon.transport_emissions_data.total_kgCO2e, 1320);
+    assert.equal(carbon.transport_emissions_data.raw_ui_entries[0].selectedMaterials[0].quantity, 100);
+    assert.equal(carbon.transport_emissions_data.raw_ui_entries[0].selectedMaterials[0].kgFactor, 2.4);
+
+    // 3. Machinery emissions check (1 * 8 * 5 * 2.5 = 100)
+    assert.equal(carbon.machinery_emissions_data.total_kgCO2e, 100);
+
+    // 4. Traffic diversion emissions check (500 adt * 10 km * 0.1 ef = 500)
+    assert.equal(carbon.diversion_emissions_data.total_kgCO2e_per_day, 500);
+
+    // 5. Social cost of carbon check (6.3936 * 1.5 inr_rate = 9.5904)
+    assert.equal(carbon.social_cost_data.calculated_scc_local, 9.5904);
+});
+
