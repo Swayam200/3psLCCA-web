@@ -12,16 +12,31 @@ import { resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
 
 const projectRoot = resolve(import.meta.dirname, '..')
-const coreRoot = resolve(
-  projectRoot,
-  process.env.LCCA_CORE_PATH || '../3psLCCA-gui-python-venv/3psLCCA-core',
-)
+const possiblePaths = [
+  process.env.LCCA_CORE_PATH,
+  '../3psLCCA-gui-python-venv/3psLCCA-core',
+  '../3psLCCA-gui Pip/3psLCCA-gui/3psLCCA-core',
+  '../3psLCCA-core',
+].filter(Boolean)
+
+let coreRoot = null
+for (const p of possiblePaths) {
+  const resolvedPath = resolve(projectRoot, p)
+  if (existsSync(resolvedPath)) {
+    coreRoot = resolvedPath
+    break
+  }
+}
+
+if (!coreRoot) {
+  throw new Error(`ERROR: Could not find 3psLCCA-core in any of the possible paths: ${possiblePaths.join(', ')}`)
+}
 const generatedRoot = resolve(projectRoot, '.wasm-assets')
 const outputRoot = resolve(generatedRoot, 'lcca-wasm')
 const wheelBuildRoot = resolve(generatedRoot, 'wheel-build')
 const backendPython = resolve(projectRoot, 'backend/.venv/bin/python')
 const python = process.env.LCCA_PYTHON || (
-  process.platform !== 'win32' && existsSync(backendPython) ? backendPython : 'python3'
+  process.platform !== 'win32' && existsSync(backendPython) ? backendPython : (process.platform === 'win32' ? 'python' : 'python3')
 )
 
 rmSync(generatedRoot, { recursive: true, force: true })

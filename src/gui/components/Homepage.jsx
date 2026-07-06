@@ -4,8 +4,10 @@ import { BsHouseDoorFill, BsFileEarmarkPlus, BsFolder2Open, BsGearFill, BsThreeD
 import { AiOutlineRedo } from 'react-icons/ai';
 import NewProject from './NewProject';
 import SettingsModal from './SettingsModal';
+import ProjectInfoModal from './ProjectInfoModal';
 import { projectStorageService } from '../../lib/projectStorageService';
 import { import3psFile } from '../../utils/projectImport';
+import { export3psFile } from '../../utils/projectExport';
 
 // Base Imports
 import Logo3psLCCA from '../../assets/logo-3psLCCA.svg';
@@ -114,6 +116,8 @@ const Homepage = ({ onProjectOpen, onProjectCreate, userName = 'ritik!', isDarkM
     const [contextMenu, setContextMenu] = useState({ show: false, x: 0, y: 0, project: null });
     const [importStatus, setImportStatus] = useState('idle'); // 'idle' | 'loading' | 'success' | 'error'
     const [importMessage, setImportMessage] = useState('');
+    const [showInfoModal, setShowInfoModal] = useState(false);
+    const [infoProjectData, setInfoProjectData] = useState(null);
 
     const fetchProjects = async () => {
         const list = await projectStorageService.listProjects();
@@ -313,6 +317,45 @@ const Homepage = ({ onProjectOpen, onProjectCreate, userName = 'ritik!', isDarkM
             await fetchProjects();
         }
         closeContextMenu();
+    };
+
+    const handleExportProject = async (proj) => {
+        closeContextMenu();
+        try {
+            const fullProj = await projectStorageService.loadProject(proj.id);
+            if (!fullProj) {
+                alert(`Error: Project '${proj.name}' could not be loaded.`);
+                return;
+            }
+            const blob = await export3psFile(fullProj);
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${proj.name || 'project'}.3ps`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error("Failed to export project:", err);
+            alert(`Export failed: ${err.message || err}`);
+        }
+    };
+
+    const handleShowInfo = async (proj) => {
+        closeContextMenu();
+        try {
+            const fullProj = await projectStorageService.loadProject(proj.id);
+            if (!fullProj) {
+                alert(`Error: Project '${proj.name}' could not be loaded.`);
+                return;
+            }
+            setInfoProjectData(fullProj);
+            setShowInfoModal(true);
+        } catch (err) {
+            console.error("Failed to load project details:", err);
+            alert(`Failed to load project details: ${err.message || err}`);
+        }
     };
 
     const getGreetingTime = () => {
@@ -552,8 +595,8 @@ const Homepage = ({ onProjectOpen, onProjectCreate, userName = 'ritik!', isDarkM
                                     </button>
                                     <button 
                                         className="dropdown-item d-flex align-items-center px-3 py-1"
-                                        style={{ background: 'transparent', border: 'none', color: theme.textSecondary, cursor: 'not-allowed', width: '100%', textAlign: 'left', fontSize: '13px' }}
-                                        disabled
+                                        style={{ background: 'transparent', border: 'none', color: theme.textPrimary, cursor: 'pointer', width: '100%', textAlign: 'left', fontSize: '13px' }}
+                                        onClick={() => handleExportProject(contextMenu.project)}
                                     >
                                         Share / Export...
                                     </button>
@@ -573,8 +616,8 @@ const Homepage = ({ onProjectOpen, onProjectCreate, userName = 'ritik!', isDarkM
                                     </button>
                                     <button 
                                         className="dropdown-item d-flex align-items-center px-3 py-1"
-                                        style={{ background: 'transparent', border: 'none', color: theme.textSecondary, cursor: 'not-allowed', width: '100%', textAlign: 'left', fontSize: '13px' }}
-                                        disabled
+                                        style={{ background: 'transparent', border: 'none', color: theme.textPrimary, cursor: 'pointer', width: '100%', textAlign: 'left', fontSize: '13px' }}
+                                        onClick={() => handleShowInfo(contextMenu.project)}
                                     >
                                         Info
                                     </button>
@@ -643,6 +686,13 @@ const Homepage = ({ onProjectOpen, onProjectCreate, userName = 'ritik!', isDarkM
                         darkTheme: settings.darkTheme
                     });
                 }}
+            />
+
+            {/* Project Info Modal */}
+            <ProjectInfoModal
+                show={showInfoModal}
+                onHide={() => setShowInfoModal(false)}
+                projectData={infoProjectData}
             />
             {/* Import Status Overlays / Toasts */}
             {importStatus === 'loading' && (

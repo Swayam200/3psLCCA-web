@@ -20,6 +20,7 @@ import Outputs from './gui/components/outputs/Outputs'
 import { ProjectDataProvider } from './contexts/ProjectDataContext'
 import { buildProjectFromCreation } from './utils/projectCreation'
 import { createDefaultProject, normalizeProjectData } from './utils/projectSchema'
+import { export3psFile } from './utils/projectExport'
 import { account, ID } from './lib/appwrite'
 import { projectStorageService } from './lib/projectStorageService'
 import './App.css'
@@ -154,32 +155,27 @@ function ProjectViewWrapper({ projectData, setProjectData, logs, setLogs, isLock
     }
   }
 
-  const handleExportProject = () => {
+  const handleExportProject = async () => {
     if (!projectData) return;
 
-    const exportData = {
-      project: normalizeProjectData(projectData),
+    try {
+      const normalizedProj = normalizeProjectData(projectData);
+      const blob = await export3psFile(normalizedProj);
+      const url = URL.createObjectURL(blob);
 
-      logs: logs,
-      exportedAt: new Date().toISOString()
-    };
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${projectData.name || 'project'}.3ps`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
 
-    const storageKey = `lcca_export_${projectData.name || 'unnamed'}`;
-    localStorage.setItem(storageKey, JSON.stringify(exportData));
-
-    const dataStr = JSON.stringify(exportData, null, 2);
-    const blob = new Blob([dataStr], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${projectData.name || 'project'}_export.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    addLog(`Project exported and saved to local storage as '${storageKey}'.`);
+      addLog(`Project exported successfully as '${projectData.name || 'project'}.3ps'.`);
+    } catch (err) {
+      console.error("Failed to export project:", err);
+      alert(`Export failed: ${err.message || err}`);
+    }
   };
 
   const CONTENT_MAP = {
