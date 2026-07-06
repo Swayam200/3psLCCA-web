@@ -73,6 +73,7 @@ export default defineConfig({
       input: {
         app: resolve(process.cwd(), 'index.html'),
         wasmSmoke: resolve(process.cwd(), 'wasm-smoke.html'),
+        swiftlatexReportSmoke: resolve(process.cwd(), 'swiftlatex-report-smoke.html'),
       },
     },
   },

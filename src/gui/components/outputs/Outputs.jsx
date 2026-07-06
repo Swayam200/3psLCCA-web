@@ -8,7 +8,7 @@ import { FaCheckCircle, FaFileDownload, FaFileUpload } from 'react-icons/fa';
 import { PILLAR_COLORS, STAGE_COLORS } from './lccColors';
 import { BREAKDOWN_STAGES, STAGE_DEFS, computeStagePillarTotals } from './breakdownStages';
 import { computeAllSummaries } from './lifecycleSummary';
-import { generateFullReport } from './reportGenerator';
+import { generateReport } from './reportEngine';
 import ReportSectionModal from './ReportSectionModal';
 import { buildCalculationProjectInputs } from '../../../utils/projectDerivations';
 import {
@@ -492,21 +492,21 @@ const Outputs = ({ addLog, navTrigger }) => {
                 throw new Error("Calculation results are not ready. Please run the backend calculation first.");
             }
             
-            await generateFullReport(
-                projectInputs, 
-                resultsForReport, 
-                computedData, 
-                addLog, 
-                charts, 
+            await generateReport({
+                projectInputs,
+                results: resultsForReport,
+                computedData,
+                addLog,
+                chartRefs: charts,
                 uploadedFileName,
                 selections,
-                {
+                calculationMetadata: {
                     source: projectData?.outputs_data?.source || getLccaEngineMode(),
                     calculated_at: projectData?.outputs_data?.calculated_at || engineMetadata.calculatedAt,
                     ...projectData?.outputs_data?.engine,
                     ...engineMetadata,
                 },
-            );
+            });
         } catch (err) {
             console.error("PDF Export Error:", err);
             addLog(`Error: ${err.message}`);
