@@ -6,7 +6,7 @@ import { useProjectData } from '../../../contexts/ProjectDataContext';
 import { Dropdown } from 'react-bootstrap';
 import { backfillGeneralInfo } from '../../../utils/projectCreation';
 import { normalizeGeneralInfo, validateGeneralInfoData } from '../../../utils/projectPageSchema';
-import { getProfiles } from '../../utils/profileStorage';
+import { getProfiles, getActiveProfile } from '../../utils/profileStorage';
 import ProfileAvatar from '../ProfileAvatar';
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -207,8 +207,20 @@ const ProjectInformationPlaceholder = ({ controller }) => {
     const containerRef = useRef(null);
     const [form, setForm] = useState(() => {
         const filled = backfillGeneralInfo(projectData);
-        const saved = filled.general_info;
-        return normalizeGeneralInfo({ ...INITIAL_STATE, ...saved }, filled);
+        const saved = filled.general_info || {};
+        const activeProfile = getActiveProfile() || {};
+        const merged = {
+            ...INITIAL_STATE,
+            ...saved,
+            agency_logo: saved.agency_logo || activeProfile.agency_logo || null,
+            agency_name: saved.agency_name || activeProfile.agency_name || '',
+            contact_person: saved.contact_person || activeProfile.contact_person || '',
+            agency_address: saved.agency_address || activeProfile.agency_address || '',
+            agency_country: saved.agency_country || activeProfile.agency_country || '',
+            agency_email: saved.agency_email || activeProfile.agency_email || '',
+            agency_phone: saved.agency_phone || activeProfile.agency_phone || '',
+        };
+        return normalizeGeneralInfo(merged, filled);
     });
 
     // Sync local state if context data changes (e.g. from global storage)
@@ -219,7 +231,19 @@ const ProjectInformationPlaceholder = ({ controller }) => {
             if (containerRef.current && containerRef.current.contains(document.activeElement)) {
                 return;
             }
-            const next = normalizeGeneralInfo({ ...INITIAL_STATE, ...saved }, filled);
+            const activeProfile = getActiveProfile() || {};
+            const merged = {
+                ...INITIAL_STATE,
+                ...saved,
+                agency_logo: saved.agency_logo || activeProfile.agency_logo || null,
+                agency_name: saved.agency_name || activeProfile.agency_name || '',
+                contact_person: saved.contact_person || activeProfile.contact_person || '',
+                agency_address: saved.agency_address || activeProfile.agency_address || '',
+                agency_country: saved.agency_country || activeProfile.agency_country || '',
+                agency_email: saved.agency_email || activeProfile.agency_email || '',
+                agency_phone: saved.agency_phone || activeProfile.agency_phone || '',
+            };
+            const next = normalizeGeneralInfo(merged, filled);
             setForm(prev => JSON.stringify(next) !== JSON.stringify(prev) ? next : prev);
         }
     }, [projectData.general_info, projectData.country, projectData.currency, projectData.unitSystem, projectData.name]);
@@ -311,7 +335,7 @@ const ProjectInformationPlaceholder = ({ controller }) => {
     // ── Render ────────────────────────────────────────────────────────────────
 
     return (
-        <div style={{ padding: '24px', color: 'var(--app-text-primary)' }}>
+        <div ref={containerRef} style={{ padding: '24px', color: 'var(--app-text-primary)' }}>
 
             {/* ── Project Information ──────────────────────────────────────── */}
             <SectionHeader title="Project Information" />

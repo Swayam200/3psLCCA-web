@@ -253,19 +253,296 @@ export const normalizeTransportData = (value, project = {}) => {
     };
 };
 
-export const normalizeCarbonEmissionData = (value) => {
+export const normalizeCarbonEmissionData = (value, project = {}) => {
     const data = normalizeObject(value);
+    const projectData = project || {};
+
+    // 1. Material Emissions (material_emissions_data)
+    const STRUCTURE_CHUNKS = [
+        ['foundation_data', 'Foundation'],
+        ['substructure_data', 'Sub Structure'],
+        ['superstructure_data', 'Super Structure'],
+        ['miscellaneous_data', 'Miscellaneous']
+    ];
+    let allMats = [];
+    STRUCTURE_CHUNKS.forEach(([chunkId, category]) => {
+        const sections = asArray(projectData[chunkId]);
+        sections.forEach(section => {
+            const compName = section.name || '';
+            const items = asArray(section.rows);
+            items.filter(item => !asObject(item.state).in_trash).forEach(item => {
+                allMats.push({
+                    id: `${chunkId}-${item.id}`,
+                    raw_id: item.id,
+                    name: item.workName || 'Unnamed Material',
+                    category: category,
+                    component: compName,
+                    quantity: numberValue(item.qty) || 0,
+                    unit: item.unit || '',
+                    cf: numberValue(item.conversionFactor) ?? 1.0,
+                    ef: item.carbonEmission ? (numberValue(item.carbonEmission.factor) || 0) : 0,
+                    chunkId: chunkId
+                });
+            });
+        });
+    });
+
+    const materialData = normalizeObject(data.material_emissions_data);
+    const excludedIdsList = asArray(materialData.excluded_ids || materialData.excluded);
+    const excludedSet = new Set(excludedIdsList);
+
+    const matRows = allMats.map(m => ({
+        id: m.id,
+        name: m.name,
+        category: m.category,
+        component: m.component,
+        quantity: m.quantity,
+        unit: m.unit,
+        conversion_factor: m.cf,
+        emission_factor: m.ef,
+        total_kgCO2e: m.quantity * m.cf * m.ef,
+        included: !excludedSet.has(m.id),
+    }));
+    const includedRows = matRows.filter(row => row.included);
+    const calculatedCategoryTotals = includedRows.reduce((acc, row) => {
+        acc[row.category] = (acc[row.category] || 0) + row.total_kgCO2e;
+        return acc;
+    }, {
+        Foundation: 0,
+        'Sub Structure': 0,
+        'Super Structure': 0,
+        Miscellaneous: 0,
+    });
+    const materialTotal = includedRows.reduce((sum, row) => sum + row.total_kgCO2e, 0);
+
+    const nextMaterialData = {
+        ...materialData,
+        excluded_ids: Array.from(excludedSet),
+        rows: matRows,
+        category_totals: calculatedCategoryTotals,
+        total_kgCO2e: materialTotal,
+    };
+
+    // 2. Transportation Emissions (transport_emissions_data / transportation_emissions_data)
     const transportData = normalizeObject(data.transport_emissions_data || data.transportation_emissions_data);
+    const rawEntries = asArray(transportData.raw_ui_entries || transportData.deliveries);
+
+    // Create lookup by raw_id and prefixed_id
+    const matsLookup = {};
+    allMats.forEach(m => {
+        matsLookup[m.raw_id] = m;
+        matsLookup[m.id] = m;
+    });
+
+    const updatedEntries = rawEntries.map(entry => {
+        const vehicle = asObject(entry.vehicle);
+        const route = asObject(entry.route);
+        const entryMats = asArray(entry.selectedMaterials || entry.materials);
+
+        const updatedEntryMats = entryMats.map(em => {
+            const currentItem = matsLookup[em.id];
+            if (currentItem) {
+                return {
+                    ...em,
+                    name: currentItem.name || em.name,
+                    quantity: currentItem.quantity,
+                    unit: currentItem.unit || em.unit,
+                    kgFactor: currentItem.cf,
+                };
+            }
+            return em;
+        });
+
+        const cap = numberValue(vehicle.capacity) || 0;
+        const gross = numberValue(vehicle.gross_weight) || 0;
+        const empty = numberValue(vehicle.empty_weight) || 0;
+        const dist = numberValue(route.distance_km) || 0;
+        const ef = numberValue(vehicle.emission_factor) || 0;
+
+        const totalWeightT = updatedEntryMats.reduce((sum, m) => sum + ((numberValue(m.quantity) || 0) * (numberValue(m.kgFactor) || 1) / 1000), 0);
+        const trips = cap > 0 ? Math.ceil(totalWeightT / cap) : 0;
+        const emission = (gross + empty) * trips * dist * ef;
+
+        return {
+            ...entry,
+            vehicle,
+            route,
+            selectedMaterials: updatedEntryMats,
+            emission_kgCO2e: emission,
+            materials: updatedEntryMats,
+            vehicle_name: vehicle.name,
+            origin: route.origin,
+            distance_km: route.distance_km,
+        };
+    });
+
+    const transportTotal = updatedEntries.length > 0
+        ? updatedEntries.reduce((sum, entry) => sum + (entry.emission_kgCO2e || 0), 0)
+        : (numberValue(transportData.total_kgCO2e) || 0);
+
+    const nextTransportData = {
+        ...transportData,
+        raw_ui_entries: updatedEntries,
+        entries: updatedEntries.map(entry => ({
+            vehicle_name: entry.vehicle?.name,
+            origin: entry.route?.origin,
+            distance_km: entry.route?.distance_km,
+            emission_kgCO2e: entry.emission_kgCO2e,
+            materials: entry.selectedMaterials
+        })),
+        total_kgCO2e: transportTotal,
+        active_vehicle_count: updatedEntries.length,
+    };
+
+    // 3. Machinery Emissions (machinery_emissions_data)
+    const machData = normalizeObject(data.machinery_emissions_data);
+    const machMode = machData.mode || 'detailed';
+    const detailedEntries = asArray(machData.detailed_entries || machData.entries);
+    const ls = asObject(machData.lump_sum);
+
+    let machineryTotal = 0;
+    if (machMode === 'detailed' && detailedEntries.length > 0) {
+        machineryTotal = detailedEntries.reduce((sum, e) => {
+            const r = numberValue(e.rate) || 0;
+            const h = numberValue(e.hours) || 0;
+            const d = numberValue(e.days) || 0;
+            const ef = numberValue(e.ef || e.emission_factor) || 0;
+            return sum + (r * h * d * ef);
+        }, 0);
+    } else if (machMode === 'lump_sum' && (ls.elec_kwh_per_day || ls.fuel_litres_per_day)) {
+        const elec_kwh = numberValue(ls.elec_kwh_per_day) || 0;
+        const elec_days = numberValue(ls.elec_days) || 0;
+        const elec_ef = numberValue(ls.elec_ef !== undefined ? ls.elec_ef : 0.71) ?? 0.71;
+        const fuel_litres = numberValue(ls.fuel_litres_per_day) || 0;
+        const fuel_days = numberValue(ls.fuel_days) || 0;
+        const fuel_ef = numberValue(ls.fuel_ef !== undefined ? ls.fuel_ef : 2.69) ?? 2.69;
+        machineryTotal = (elec_kwh * elec_days * elec_ef) + (fuel_litres * fuel_days * fuel_ef);
+    } else {
+        machineryTotal = numberValue(machData.total_kgCO2e) || 0;
+    }
+
+    const nextMachData = {
+        ...machData,
+        total_kgCO2e: machineryTotal,
+    };
+
+    // 4. Traffic Diversion Emissions (diversion_emissions_data / diversion_emissions)
+    const defaultFactors = {
+        small_cars: 0.1030,
+        big_cars: 0.2690,
+        two_wheelers: 0.0351,
+        o_buses: 0.4548,
+        d_buses: 0.6064,
+        lcv: 0.3070,
+        hcv: 0.5928,
+        mcv: 0.7375
+    };
+
     const diversionData = normalizeObject(data.diversion_emissions_data || data.diversion_emissions);
+    const divMode = diversionData.mode || 'direct';
+    const rerouteKm = numberValue(diversionData.reroute_km) || 0;
+    const divFactors = {
+        ...defaultFactors,
+        ...asObject(diversionData.factors)
+    };
+    const directValue = numberValue(diversionData.direct_value) || 0;
+
+    const trafficData = asObject(projectData.traffic_data);
+    let totalPerDay = 0;
+    if (divMode === 'calculate') {
+        const getVehicleAdt = (td, key) => {
+            const vehicles = asObject(td.vehicles || td.vehicle_data);
+            const row = asObject(vehicles[key]);
+            const vpdLegacy = asObject(td.vehicles_per_day);
+            return numberValue(
+                row.vehicles_per_day ?? 
+                row.adt ?? 
+                row.ADT ?? 
+                vpdLegacy[key]
+            ) || 0;
+        };
+
+        const hasAdt = Object.keys(defaultFactors).some(key => getVehicleAdt(trafficData, key) > 0);
+        if (hasAdt && rerouteKm > 0) {
+            totalPerDay = Object.keys(defaultFactors).reduce((sum, key) => {
+                const adt = getVehicleAdt(trafficData, key);
+                const factor = numberValue(divFactors[key]) || 0;
+                return sum + (adt * rerouteKm * factor);
+            }, 0);
+        } else {
+            totalPerDay = numberValue(diversionData.total_kgCO2e_per_day ?? diversionData.total_calculated_emissions) || 0;
+        }
+    } else {
+        totalPerDay = directValue || numberValue(diversionData.total_kgCO2e_per_day ?? diversionData.total_direct_emissions) || 0;
+    }
+
+    const desktopMode = divMode === 'calculate' ? 'Calculate by Vehicle' : 'Enter Directly';
+
+    const nextDiversionData = {
+        ...diversionData,
+        mode: divMode,
+        calculation_mode: desktopMode,
+        reroute_km: rerouteKm,
+        factors: divFactors,
+        direct_value: directValue,
+        total_kgCO2e_per_day: totalPerDay,
+        total_calculated_emissions: divMode === 'calculate' ? totalPerDay : 0,
+        total_direct_emissions: divMode === 'direct' ? totalPerDay : 0,
+    };
+
+    // 5. Social Cost of Carbon (social_cost_data)
+    const socialData = normalizeObject(data.social_cost_data);
+    const sccMode = socialData.mode || socialData.source || 'NITI Aayog';
+    const inrRate = numberValue(socialData.inr_rate !== undefined ? socialData.inr_rate : 1.0) ?? 1.0;
+    const usdRate = numberValue(socialData.usd_rate !== undefined ? socialData.usd_rate : 83.0) ?? 83.0;
+    const ssp = socialData.ssp || 'SSP2 (Middle of the Road)';
+    const rcp = socialData.rcp || 'RCP 4.5 (Intermediate)';
+    const customScc = numberValue(socialData.custom_scc !== undefined ? socialData.custom_scc : socialData.custom?.entered_value !== undefined ? socialData.custom.entered_value : 0.05) ?? 0.05;
+
+    let sccVal = 0.05;
+    if (sccMode === 'NITI Aayog') {
+        sccVal = 6.3936 * inrRate;
+    } else if (sccMode === 'K. Ricke et al. (Country-Level)') {
+        const RICKE_SCC_TABLE = {
+            "SSP1 (Sustainability)|RCP 2.6 (Low Warming)": 0.085,
+            "SSP1 (Sustainability)|RCP 4.5 (Intermediate)": 0.095,
+            "SSP2 (Middle of the Road)|RCP 4.5 (Intermediate)": 0.110,
+            "SSP2 (Middle of the Road)|RCP 6.0 (High)": 0.135,
+            "SSP3 (Regional Rivalry)|RCP 8.5 (Extreme)": 0.185,
+            "SSP5 (Fossil-fueled Development)|RCP 8.5 (Extreme)": 0.210,
+        };
+        const key = `${ssp}|${rcp}`;
+        const baseUsd = RICKE_SCC_TABLE[key] !== undefined ? RICKE_SCC_TABLE[key] : 0.1;
+        sccVal = baseUsd * usdRate;
+    } else {
+        sccVal = customScc;
+    }
+
+    const nextSocialData = {
+        ...socialData,
+        mode: sccMode,
+        inr_rate: inrRate,
+        usd_rate: usdRate,
+        ssp,
+        rcp,
+        custom_scc: customScc,
+        calculated_scc_local: sccVal,
+        cost_of_carbon_local: sccVal,
+        result: {
+            ...asObject(socialData.result),
+            cost_of_carbon_local: sccVal,
+        }
+    };
+
     return {
         ...data,
-        material_emissions_data: normalizeObject(data.material_emissions_data),
-        transport_emissions_data: transportData,
-        transportation_emissions_data: transportData,
-        machinery_emissions_data: normalizeObject(data.machinery_emissions_data),
-        diversion_emissions_data: diversionData,
-        diversion_emissions: diversionData,
-        social_cost_data: normalizeObject(data.social_cost_data),
+        material_emissions_data: nextMaterialData,
+        transport_emissions_data: nextTransportData,
+        transportation_emissions_data: nextTransportData,
+        machinery_emissions_data: nextMachData,
+        diversion_emissions_data: nextDiversionData,
+        diversion_emissions: nextDiversionData,
+        social_cost_data: nextSocialData,
     };
 };
 

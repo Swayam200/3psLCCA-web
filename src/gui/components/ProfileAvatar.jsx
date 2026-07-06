@@ -52,7 +52,7 @@ const ProfileAvatar = ({ size = 80, profileName, logoData, onLogoChange, theme }
 
     // Determine display content
     const getDisplayContent = () => {
-        if (logoData) {
+        if (logoData && logoData !== 'null' && logoData !== 'undefined') {
             return (
                 <img 
                     src={logoData} 
@@ -68,11 +68,22 @@ const ProfileAvatar = ({ size = 80, profileName, logoData, onLogoChange, theme }
         }
         
         if (profileName) {
-            const letter = profileName[0].toUpperCase();
-            // Generate consistent color from name
-            const colors = [theme?.activeIconColor || '#8bc34a', '#2196f3', '#4caf50', '#ff9800'];
-            const colorIndex = profileName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
-            const bgColor = colors[colorIndex];
+            const initials = profileName
+                .split(/\s+/)
+                .filter(Boolean)
+                .map(word => word[0])
+                .join('')
+                .slice(0, 2)
+                .toUpperCase();
+
+            // Calculate a hash from the profileName for dynamic consistent color/gradient
+            let hash = 0;
+            for (let i = 0; i < profileName.length; i++) {
+                hash = profileName.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const hue1 = Math.abs(hash) % 360;
+            const hue2 = (hue1 + 40) % 360;
+            const bgGradient = `linear-gradient(135deg, hsl(${hue1}, 60%, 50%) 0%, hsl(${hue2}, 60%, 40%) 100%)`;
             
             return (
                 <div
@@ -80,16 +91,17 @@ const ProfileAvatar = ({ size = 80, profileName, logoData, onLogoChange, theme }
                         width: '100%',
                         height: '100%',
                         borderRadius: '50%',
-                        backgroundColor: bgColor,
+                        background: bgGradient,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         color: '#fff',
-                        fontSize: `${size / 3}px`,
-                        fontWeight: 'bold'
+                        fontSize: initials.length > 1 ? `${size / 3.5}px` : `${size / 3}px`,
+                        fontWeight: 'bold',
+                        letterSpacing: initials.length > 1 ? '1px' : 'normal'
                     }}
                 >
-                    {letter}
+                    {initials}
                 </div>
             );
         }
