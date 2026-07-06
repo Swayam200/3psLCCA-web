@@ -206,6 +206,53 @@ export const normalizeTrafficData = (value) => {
     };
 };
 
+export const normalizeTransportData = (value, project = {}) => {
+    const data = normalizeObject(value);
+    const legacyEntries = project?.carbon_emission_data?.transport_emissions_data?.raw_ui_entries
+        || project?.carbon_emission_data?.transportation_emissions_data?.raw_ui_entries
+        || [];
+    const vehicles = asArray(data.vehicles).length > 0 ? data.vehicles : legacyEntries;
+    return {
+        ...data,
+        vehicles: asArray(vehicles).map((entry, index) => {
+            const entryData = normalizeObject(entry);
+            const vehicle = normalizeObject(entryData.vehicle);
+            const route = normalizeObject(entryData.route);
+            return {
+                ...entryData,
+                id: entryData.id || `transport-${index + 1}`,
+                vehicle: {
+                    name: vehicle.name || vehicle.vehicle_class || '',
+                    vehicle_class: vehicle.vehicle_class || vehicle.name || '',
+                    capacity: numberValue(vehicle.capacity) ?? 0,
+                    gross_weight: numberValue(vehicle.gross_weight) ?? 0,
+                    empty_weight: numberValue(vehicle.empty_weight) ?? 0,
+                    emission_factor: numberValue(vehicle.emission_factor) ?? 0,
+                    is_custom: vehicle.is_custom ?? true,
+                },
+                route: {
+                    origin: route.origin || entryData.origin || '',
+                    destination: route.destination || 'Site',
+                    distance_km: numberValue(route.distance_km) ?? 0,
+                },
+                materials: asArray(entryData.materials || entryData.selectedMaterials)
+                    .map((item) => {
+                        const material = normalizeObject(item);
+                        return {
+                            uuid: material.uuid || material.id,
+                            kg_factor: numberValue(material.kg_factor ?? material.kgFactor) ?? 0,
+                            material_name: material.material_name || material.name || '',
+                        };
+                    })
+                    .filter((item) => item.uuid),
+                summary: normalizeObject(entryData.summary),
+                meta: normalizeObject(entryData.meta),
+                state: normalizeObject(entryData.state),
+            };
+        }),
+    };
+};
+
 export const normalizeCarbonEmissionData = (value, project = {}) => {
     const data = normalizeObject(value);
     const projectData = project || {};
@@ -445,12 +492,12 @@ export const normalizeCarbonEmissionData = (value, project = {}) => {
 
     // 5. Social Cost of Carbon (social_cost_data)
     const socialData = normalizeObject(data.social_cost_data);
-    const sccMode = socialData.mode || 'NITI Aayog';
+    const sccMode = socialData.mode || socialData.source || 'NITI Aayog';
     const inrRate = numberValue(socialData.inr_rate !== undefined ? socialData.inr_rate : 1.0) ?? 1.0;
     const usdRate = numberValue(socialData.usd_rate !== undefined ? socialData.usd_rate : 83.0) ?? 83.0;
     const ssp = socialData.ssp || 'SSP2 (Middle of the Road)';
     const rcp = socialData.rcp || 'RCP 4.5 (Intermediate)';
-    const customScc = numberValue(socialData.custom_scc !== undefined ? socialData.custom_scc : 0.05) ?? 0.05;
+    const customScc = numberValue(socialData.custom_scc !== undefined ? socialData.custom_scc : socialData.custom?.entered_value !== undefined ? socialData.custom.entered_value : 0.05) ?? 0.05;
 
     let sccVal = 0.05;
     if (sccMode === 'NITI Aayog') {
@@ -531,6 +578,7 @@ const SECTION_NORMALIZERS = {
     bridge_data: normalizeBridgeData,
     financial_data: normalizeFinancialData,
     traffic_data: normalizeTrafficData,
+    transport_data: normalizeTransportData,
     foundation_data: (value) => normalizeConstructionSections(value, 'foundation'),
     substructure_data: (value) => normalizeConstructionSections(value, 'substructure'),
     superstructure_data: (value) => normalizeConstructionSections(value, 'superstructure'),

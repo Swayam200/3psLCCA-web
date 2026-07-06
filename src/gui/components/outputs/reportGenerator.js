@@ -1,13 +1,23 @@
-/* eslint-disable no-unused-vars */
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { BREAKDOWN_STAGES, STAGE_DEFS, computeStagePillarTotals } from './breakdownStages';
-import { SECTION_KEYS } from './ReportSectionModal';
+import { BREAKDOWN_STAGES, STAGE_DEFS, computeStagePillarTotals } from './breakdownStages.js';
+import { SECTION_KEYS } from './reportSections.js';
+import { buildReportModel } from './reportModel.js';
 
 /**
  * Generates a modular, professional PDF report based on project data and user selections.
  */
-export const generateFullReport = async (projectInputs, results, computedData, addLog, chartRefs, uploadedFileName, selections) => {
+export const generateFullReport = async (
+    projectInputs,
+    results,
+    computedData,
+    addLog,
+    chartRefs,
+    uploadedFileName,
+    selections,
+    calculationMetadata = {},
+    options = {},
+) => {
     addLog("Initializing professional report generation...");
     
     // Results might be passed as 'results' (from uploaded file) or we might need to derive them
@@ -24,10 +34,11 @@ export const generateFullReport = async (projectInputs, results, computedData, a
             textColor: [40, 40, 40],
             greyColor: [150, 150, 150]
         };
+        const report = buildReportModel(projectInputs, calculationMetadata);
 
         // 1. Title Page
         if (selections[SECTION_KEYS.KEY_SHOW_TITLE_PAGE]) {
-            addTitlePage(doc, projectInputs, config);
+            addTitlePage(doc, report, config);
         }
 
         // 2. Introduction
@@ -36,7 +47,7 @@ export const generateFullReport = async (projectInputs, results, computedData, a
         }
 
         // 3. Input Data Section
-        await addInputDataSection(doc, projectInputs, selections, config, addLog);
+        await addInputDataSection(doc, report, selections, config, addLog);
 
         // 4. LCCA Results Section
         if (selections[SECTION_KEYS.KEY_SHOW_LCCA_RESULTS]) {
@@ -44,13 +55,13 @@ export const generateFullReport = async (projectInputs, results, computedData, a
         }
 
         // 5. Appendix / Methodology (Always include)
-        addAppendix(doc, config);
+        addAppendix(doc, report, config);
 
         // 6. Global Header/Footer/Page Numbers
         applyPageDecoration(doc, config);
 
         // Save File
-        const bridgeName = projectInputs?.bridge_data?.bridge_name || "Bridge";
+        const bridgeName = report.project.name || "Bridge";
         let finalFileName = "LCCA_Report.pdf";
         if (uploadedFileName) {
             finalFileName = uploadedFileName.replace(/\.[^/.]+$/, "") + "_Report.pdf";
@@ -59,8 +70,12 @@ export const generateFullReport = async (projectInputs, results, computedData, a
         }
 
         addLog("Finalizing PDF...");
-        doc.save(finalFileName);
+        if (options.save !== false) doc.save(finalFileName);
         addLog(`Report "${finalFileName}" generated successfully.`);
+        return {
+            fileName: finalFileName,
+            arrayBuffer: options.returnArrayBuffer ? doc.output('arraybuffer') : null,
+        };
 
     } catch (err) {
         console.error("Fatal Error in PDF Generation:", err);
@@ -71,7 +86,7 @@ export const generateFullReport = async (projectInputs, results, computedData, a
 
 // --- Helper Components ---
 
-const addTitlePage = (doc, inputs, config) => {
+const addTitlePage = (doc, report, config) => {
     const { pageWidth, margin } = config;
     
     // Title
@@ -97,9 +112,9 @@ const addTitlePage = (doc, inputs, config) => {
     
     doc.setFont("helvetica", "normal");
     doc.setFontSize(11);
-    const bridgeName = inputs?.bridge_data?.bridge_name || "N/A";
-    const projectCode = inputs?.bridge_data?.project_code || "N/A";
-    const description = inputs?.bridge_data?.project_description || "No description provided.";
+    const bridgeName = report.project.name;
+    const projectCode = report.project.code;
+    const description = report.project.description;
     
     let currentY = 145;
     doc.text(`Project Name:`, margin + 10, currentY);
@@ -118,12 +133,21 @@ const addTitlePage = (doc, inputs, config) => {
     doc.setFontSize(10);
     const splitDesc = doc.splitTextToSize(description, pageWidth - (margin * 2) - 30);
     doc.text(splitDesc, margin + 10, currentY + 6);
+
+    currentY += 20;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(
+        `Country: ${report.project.country} | Currency: ${report.project.currency} | Units: ${report.project.unitSystem}`,
+        margin + 10,
+        currentY,
+    );
     
     // Signatures Area
     const sigY = 230;
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
-    doc.text("Evaluated By", margin, sigY);
+    doc.text(`Evaluated By: ${report.project.evaluator}`, margin, sigY);
     doc.line(margin, sigY + 20, margin + 60, sigY + 20);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
@@ -131,7 +155,7 @@ const addTitlePage = (doc, inputs, config) => {
     
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
-    doc.text("Reviewed By", pageWidth / 2 + 10, sigY);
+    doc.text(`Reviewed By: ${report.project.reviewer}`, pageWidth / 2 + 10, sigY);
     doc.line(pageWidth / 2 + 10, sigY + 20, pageWidth / 2 + 70, sigY + 20);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
@@ -165,181 +189,148 @@ const addIntroductionPage = (doc, config) => {
     doc.line(margin, 70, pageWidth - margin, 70);
 };
 
-const addInputDataSection = async (doc, inputs, selections, config, addLog) => {
-    const { margin, pageWidth } = config;
-    let hasAddedInputChapter = false;
+const addInputDataSection = async (doc, report, selections, config, addLog) => {
+    const { margin, pageHeight } = config;
+    let sectionNumber = 0;
+    let cursor = 45;
 
-    const checkStartChapter = () => {
-        if (!hasAddedInputChapter) {
+    doc.addPage();
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...config.primaryColor);
+    doc.text("2  Input Data", margin, 25);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(0, 0, 0);
+    doc.text("Project inputs used for the life cycle assessment.", margin, 35);
+
+    const ensureSpace = (minimum = 35) => {
+        const tableEnd = doc.lastAutoTable?.finalY;
+        if (tableEnd && tableEnd > cursor) cursor = tableEnd + 12;
+        if (cursor + minimum > pageHeight - 22) {
             doc.addPage();
-            doc.setFontSize(18);
-            doc.setFont("helvetica", "bold");
-            doc.setTextColor(...config.primaryColor);
-            doc.text("2  Input Data", margin, 25);
-            doc.setFontSize(11);
-            doc.setFont("helvetica", "normal");
-            doc.setTextColor(0, 0, 0);
-            doc.text("Detailed project parameters used for the life cycle assessment.", margin, 35);
-            hasAddedInputChapter = true;
-            return 45;
+            cursor = 25;
         }
-        return doc.lastAutoTable ? doc.lastAutoTable.finalY + 15 : 45;
+        return cursor;
     };
 
-    // 2.1 Bridge geometry and description
+    const table = (title, head, body, options = {}) => {
+        if (!body?.length) return;
+        sectionNumber += 1;
+        ensureSpace(options.minimumSpace || 40);
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...config.primaryColor);
+        doc.text(`2.${sectionNumber} ${title}`, margin, cursor);
+        autoTable(doc, {
+            startY: cursor + 5,
+            head: [head],
+            body,
+            theme: options.theme || 'striped',
+            headStyles: { fillColor: config.primaryColor },
+            styles: { fontSize: options.fontSize || 8, overflow: 'linebreak', cellPadding: 2 },
+            margin: { left: margin, right: margin },
+            rowPageBreak: 'avoid',
+            ...options.autoTable,
+        });
+        cursor = doc.lastAutoTable.finalY + 12;
+    };
+
     if (selections[SECTION_KEYS.KEY_SHOW_BRIDGE_DESC]) {
-        let startY = checkStartChapter();
         addLog("Adding bridge description table...");
-        
-        doc.setFontSize(12);
-        doc.setFont("helvetica", "bold");
-        doc.text("2.1 Bridge Geometry and Description", margin, startY);
-        
-        const rows = [
-            ["Bridge Name", inputs?.bridge_data?.bridge_name || "N/A"],
-            ["Bridge Type", inputs?.bridge_data?.bridge_type || "N/A"],
-            ["Total Span (m)", inputs?.bridge_data?.span || "0"],
-            ["Number of Lanes", inputs?.bridge_data?.num_lanes || "0"],
-            ["Design Life (years)", inputs?.bridge_data?.design_life || "0"],
-            ["Analysis Period (years)", inputs?.bridge_data?.analysis_period || "0"]
-        ];
-
-        autoTable(doc, {
-            startY: startY + 5,
-            head: [['Parameter', 'Value']],
-            body: rows,
-            theme: 'striped',
-            headStyles: { fillColor: config.primaryColor },
-            styles: { fontSize: 9 }
-        });
+        table("Bridge Geometry and Description", ['Parameter', 'Value'], report.bridgeRows, { fontSize: 8.5 });
     }
 
-    // 2.2 Financial Parameters
     if (selections[SECTION_KEYS.KEY_SHOW_FINANCIAL]) {
-        let startY = checkStartChapter();
         addLog("Adding financial data table...");
-        
-        doc.setFontSize(12);
-        doc.setFont("helvetica", "bold");
-        doc.text("2.2 Financial Parameters", margin, startY);
-        
-        const rows = [
-            ["Discount Rate (%)", inputs?.financial_data?.discount_rate || "0"],
-            ["Inflation Rate (%)", inputs?.financial_data?.inflation_rate || "0"],
-            ["Interest Rate (%)", inputs?.financial_data?.interest_rate || "0"],
-            ["Social Cost of Carbon (INR/MT)", inputs?.financial_data?.social_cost_of_carbon || "0"]
-        ];
-
-        autoTable(doc, {
-            startY: startY + 5,
-            head: [['Financial Variable', 'Value']],
-            body: rows,
-            theme: 'striped',
-            headStyles: { fillColor: config.primaryColor },
-            styles: { fontSize: 9 }
-        });
+        table("Financial Inputs", ['Variable', 'Value', 'Source'], report.financialRows, { fontSize: 8.5 });
     }
 
-    // 2.3 Construction Materials
     if (selections[SECTION_KEYS.KEY_SHOW_CONSTRUCTION]) {
-        let startY = checkStartChapter();
-        addLog("Adding construction materials table...");
-        
-        doc.setFontSize(12);
-        doc.setFont("helvetica", "bold");
-        doc.text("2.3 Construction Materials", margin, startY);
-        
-        const workData = inputs?.construction_work_data || {};
-        const materialRows = [];
-        
-        // Loop through categories like "Sub Structure", "Super Structure"
-        Object.entries(workData).forEach(([category, data]) => {
-            if (category !== "grand_total" && typeof data === 'object') {
-                if (data.materials) {
-                    Object.entries(data.materials).forEach(([mat, qty]) => {
-                        materialRows.push([category, mat, qty]);
-                    });
-                }
-            }
-        });
+        addLog("Adding construction work data...");
+        table(
+            "Construction Data",
+            ['Category', 'Component', 'Material', 'Quantity', 'Unit', 'Rate', 'Source', `Total (${report.project.currency})`],
+            report.constructionRows.map((row) => [
+                row.category, row.component, row.material, row.quantity, row.unit,
+                row.rate, row.source, row.total,
+            ]),
+            { fontSize: 6.5, minimumSpace: 55 },
+        );
+    }
 
-        if (materialRows.length > 0) {
-            autoTable(doc, {
-                startY: startY + 5,
-                head: [['Category', 'Material', 'Quantity']],
-                body: materialRows,
-                theme: 'striped',
-                headStyles: { fillColor: config.primaryColor },
-                styles: { fontSize: 8 }
-            });
+    if (selections[SECTION_KEYS.KEY_SHOW_USE_STAGE]) {
+        table(
+            "Maintenance and End-of-Life Inputs",
+            ['Activity', 'Cost basis', 'Frequency', 'Duration'],
+            report.maintenanceRows,
+            { fontSize: 7.5 },
+        );
+    }
+
+    if (selections[SECTION_KEYS.KEY_SHOW_ROAD_TRAFFIC]) {
+        if (report.trafficMode === 'GLOBAL') {
+            table("Global Road-User Cost Input", ['Parameter', 'Value'], report.globalTrafficRows);
         } else {
-            doc.setFontSize(10);
-            doc.setFont("helvetica", "italic");
-            doc.text("No specific material quantities provided.", margin + 5, startY + 10);
+            table("Road and Traffic Parameters", ['Parameter', 'Value'], report.roadRows);
         }
     }
-
-    // 2.4 Traffic Data
-    if (selections[SECTION_KEYS.KEY_SHOW_AVG_TRAFFIC] || selections[SECTION_KEYS.KEY_SHOW_ROAD_TRAFFIC]) {
-        let startY = checkStartChapter();
-        doc.setFontSize(12);
-        doc.setFont("helvetica", "bold");
-        doc.text("2.4 Traffic and Operational Data", margin, startY);
-        
-        if (selections[SECTION_KEYS.KEY_SHOW_AVG_TRAFFIC]) {
-            addLog("Adding average daily traffic...");
-            const traffic = inputs?.traffic_data || {};
-            const rows = [
-                ["Commercial Vehicles (AADCV)", traffic.aadcv || "0"],
-                ["Passenger Vehicles (AADPV)", traffic.aadpv || "0"],
-                ["Traffic Growth Rate (%)", traffic.growth_rate || "0"],
-                ["Base Year", traffic.base_year || "N/A"]
-            ];
-            autoTable(doc, {
-                startY: startY + 5,
-                head: [['Traffic Parameter', 'Value']],
-                body: rows,
-                theme: 'striped',
-                headStyles: { fillColor: config.primaryColor },
-                styles: { fontSize: 9 }
-            });
-        }
+    if (report.trafficMode !== 'GLOBAL' && selections[SECTION_KEYS.KEY_SHOW_AVG_TRAFFIC]) {
+        table(
+            "Average Daily Traffic",
+            ['Vehicle category', 'Vehicles/day', 'Accident share (%)', 'PWR'],
+            report.vehicleRows,
+        );
+    }
+    if (report.trafficMode !== 'GLOBAL' && selections[SECTION_KEYS.KEY_SHOW_PEAK_HOUR] && report.peakRows.length) {
+        table("Peak-Hour Distribution", ['Peak period', 'Daily traffic fraction'], report.peakRows);
     }
 
-    // 2.5 Environmental Externalities
-    if (selections[SECTION_KEYS.KEY_SHOW_SOCIAL_CARBON] || selections[SECTION_KEYS.KEY_SHOW_MATERIAL_EMISSION]) {
-        let startY = checkStartChapter();
-        doc.setFontSize(12);
-        doc.setFont("helvetica", "bold");
-        doc.text("2.5 Environmental Emission Factors", margin, startY);
-        
-        if (selections[SECTION_KEYS.KEY_SHOW_MATERIAL_EMISSION]) {
-            addLog("Adding emission factors...");
-            const ced = inputs?.carbon_emission_data || {};
-            const items = ced.material_emissions_data?.included_items || [];
-            
-            const rows = items.map(item => [
-                item.category || "-",
-                item.material || "-",
-                item.carbon_emission || "0",
-                item.carbon_unit || "kgCO2e"
-            ]);
-
-            if (rows.length > 0) {
-                autoTable(doc, {
-                    startY: startY + 5,
-                    head: [['Category', 'Material', 'Emission Factor', 'Unit']],
-                    body: rows,
-                    theme: 'striped',
-                    headStyles: { fillColor: config.primaryColor },
-                    styles: { fontSize: 8 }
-                });
-            } else {
-                doc.setFontSize(10);
-                doc.setFont("helvetica", "italic");
-                doc.text("Default emission factors applied as per standard database.", margin + 5, startY + 10);
-            }
-        }
+    if (selections[SECTION_KEYS.KEY_SHOW_SOCIAL_CARBON]) {
+        table("Social Cost of Carbon", ['Parameter', 'Value'], report.socialCarbonRows);
+    }
+    if (selections[SECTION_KEYS.KEY_SHOW_MATERIAL_EMISSION]) {
+        table(
+            "Materials Included in Carbon Emissions",
+            ['Category', 'Component', 'Material', 'Quantity', 'Unit', 'Conversion', 'Emission factor', 'Factor unit', 'Total kgCO2e'],
+            report.materialIncluded.map((row) => [
+                row.category, row.component, row.material, row.quantity, row.unit,
+                row.conversionFactor, row.emissionFactor, row.emissionUnit, row.total,
+            ]),
+            { fontSize: 6.2, minimumSpace: 55 },
+        );
+        table(
+            "Materials Excluded from Carbon Emissions",
+            ['Category', 'Component', 'Material', 'Reason'],
+            report.materialExcluded.map((row) => [row.category, row.component, row.material, row.reason]),
+        );
+    }
+    if (selections[SECTION_KEYS.KEY_SHOW_TRANSPORT_EMISSION]) {
+        table(
+            "Transport Emissions",
+            ['Vehicle', 'Origin', 'Distance (km)', 'Trips', 'Emissions (kgCO2e)'],
+            report.transportRows.map((row) => [row.vehicle, row.origin, row.distance, row.trips, row.emissions]),
+        );
+    }
+    if (selections[SECTION_KEYS.KEY_SHOW_ONSITE_EMISSION]) {
+        table(
+            "Machinery and Equipment Emissions",
+            ['Equipment/source', 'Energy source', 'Consumption', 'Days', 'Emission factor', 'Emissions (kgCO2e)'],
+            report.machineryRows.map((row) => [
+                row.equipment, row.source, row.consumption, row.days, row.factor, row.emissions,
+            ]),
+        );
+    }
+    if (selections[SECTION_KEYS.KEY_SHOW_VEHICLE_EMISSION]) {
+        table("Traffic Diversion Emissions", ['Parameter', 'Value'], report.diversionRows);
+    }
+    if (selections[SECTION_KEYS.KEY_SHOW_RECYCLING]) {
+        table(
+            "Materials Included in Recycling",
+            ['Material', 'Recovery (%)', 'Scrap rate', `Recovered value (${report.project.currency})`],
+            report.recyclingIncluded,
+        );
+        table("Materials Excluded from Recycling", ['Material', 'Reason'], report.recyclingExcluded);
     }
 };
 
@@ -485,7 +476,7 @@ const addResultsSection = async (doc, results, computedData, chartRefs, config, 
     });
 };
 
-const addAppendix = (doc, config) => {
+const addAppendix = (doc, report, config) => {
     doc.addPage();
     const { margin, pageWidth } = config;
     
@@ -498,7 +489,11 @@ const addAppendix = (doc, config) => {
     doc.setFont("helvetica", "normal");
     doc.setTextColor(50, 50, 50);
     
-    const text = "Methodology: The Lifecycle Cost Analysis follows the ISO 15686-5 standard. All future costs are discounted to present values using the specified discount rate. Environmental costs are estimated based on the Social Cost of Carbon as defined in the project inputs. Social costs account for road user delays and safety impacts during construction and maintenance events.\n\nSoftware: Generated using 3psLCCA Web Application developed for the FOSSEE project, IIT Bombay. This tool provides a collaborative environment for lifecycle engineering of bridge structures.";
+    const text = `Methodology: The Lifecycle Cost Analysis follows the ISO 15686-5 standard. All future costs are discounted to present values using the specified discount rate. Environmental costs are estimated based on the Social Cost of Carbon as defined in the project inputs. Social costs account for road user delays and safety impacts during construction and maintenance events.
+
+Calculation engine: ${report.calculation.source}. Core version: ${report.calculation.coreVersion}. Pyodide version: ${report.calculation.pyodideVersion}. Calculated at: ${report.calculation.calculatedAt}.
+
+Software: Generated using 3psLCCA Web Application developed for the FOSSEE project, IIT Bombay. This tool provides a collaborative environment for lifecycle engineering of bridge structures.`;
     
     doc.text(doc.splitTextToSize(text, pageWidth - (margin * 2)), margin, 35);
 };

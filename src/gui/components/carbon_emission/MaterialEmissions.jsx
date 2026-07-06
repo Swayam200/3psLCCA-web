@@ -1,200 +1,133 @@
-/* eslint-disable no-unused-vars */
-import React, { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useProjectData } from '../../../contexts/ProjectDataContext';
+import { computeMaterialEmissions, formatNumber, STRUCTURE_CHUNKS } from './carbonUtils';
 
-const MaterialEmissions = ({ controller }) => {
+const MaterialEmissions = () => {
     const { projectData, updateProjectData } = useProjectData();
-    const [materials, setMaterials] = useState([]);
-    const [excludedIds, setExcludedIds] = useState(new Set());
     const [searchTerm, setSearchTerm] = useState('');
-    const [isDetailsVisible, setIsDetailsVisible] = useState(false);
+    const [detailsVisible, setDetailsVisible] = useState(false);
 
-    useEffect(() => {
-        const STRUCTURE_CHUNKS = [
-            ['foundation_data', 'Foundation'],
-            ['substructure_data', 'Sub Structure'],
-            ['superstructure_data', 'Super Structure'],
-            ['miscellaneous_data', 'Miscellaneous']
-        ];
-
-        let allMats = [];
-        STRUCTURE_CHUNKS.forEach(([chunkId, category]) => {
-            const sections = projectData[chunkId] || [];
-            sections.forEach(section => {
-                const compName = section.name || '';
-                const items = section.rows || [];
-                items.filter(item => !item?.state?.in_trash).forEach(item => {
-                    allMats.push({
-                        id: `${chunkId}-${item.id}`,
-                        name: item.workName || 'Unnamed Material',
-                        category: category,
-                        component: compName,
-                        quantity: parseFloat(item.qty || 0),
-                        unit: item.unit || '',
-                        cf: 1.0,
-                        ef: item.carbonEmission ? parseFloat(item.carbonEmission.factor || 0) : 0,
-                        chunkId: chunkId
-                    });
-                });
-            });
-        });
-        setMaterials(allMats);
-
-        const carbonData = projectData.carbon_emission_data || {};
-        const matData = carbonData.material_emissions_data || {};
-        if (matData.excluded_ids) {
-            setExcludedIds(new Set(matData.excluded_ids));
-        }
-    }, [projectData]);
-
-    const handleToggleInclusion = (id, include) => {
-        const newSet = new Set(excludedIds);
-        if (include) {
-            newSet.delete(id);
-        } else {
-            newSet.add(id);
-        }
-        setExcludedIds(newSet);
-        saveToEngine(newSet);
+    const computed = useMemo(() => computeMaterialEmissions(projectData), [projectData]);
+    const serializeRow = (row) => {
+        const next = { ...row };
+        delete next.raw;
+        return next;
     };
-
-    const buildMaterialData = (newExcludedSet) => {
-        const excludedList = Array.from(newExcludedSet);
-        const rows = materials.map(m => ({
-            id: m.id,
-            name: m.name,
-            category: m.category,
-            component: m.component,
-            quantity: m.quantity,
-            unit: m.unit,
-            conversion_factor: m.cf,
-            emission_factor: m.ef,
-            total_kgCO2e: m.quantity * m.cf * m.ef,
-            included: !newExcludedSet.has(m.id),
-        }));
-        const includedRows = rows.filter(row => row.included);
-        const calculatedCategoryTotals = includedRows.reduce((acc, row) => {
-            acc[row.category] = (acc[row.category] || 0) + row.total_kgCO2e;
-            return acc;
-        }, {
-            Foundation: 0,
-            'Sub Structure': 0,
-            'Super Structure': 0,
-            Miscellaneous: 0,
-        });
-
-        return {
-            excluded_ids: excludedList,
-            rows,
-            category_totals: calculatedCategoryTotals,
-            total_kgCO2e: includedRows.reduce((sum, row) => sum + row.total_kgCO2e, 0),
-        };
-    };
-
-    const saveToEngine = (newExcludedSet) => {
-        const prev = projectData.carbon_emission_data || {};
-        const nextMaterialData = {
-            ...(prev.material_emissions_data || {}),
-            ...buildMaterialData(newExcludedSet),
-        };
-        updateProjectData('carbon_emission_data', {
-            ...prev,
-            material_emissions_data: nextMaterialData,
-        });
-    };
-
-    const categoryTotals = useMemo(() => {
-        const categories = ['Foundation', 'Sub Structure', 'Super Structure', 'Miscellaneous'];
-        const totals = categories.reduce((acc, cat) => ({ ...acc, [cat]: 0 }), {});
-        materials.forEach(m => {
-            if (!excludedIds.has(m.id)) {
-                totals[m.category] += m.quantity * m.cf * m.ef;
-            }
-        });
-        return totals;
-    }, [materials, excludedIds]);
-
-    const totalCarbon = useMemo(() => {
-        return Object.values(categoryTotals).reduce((sum, v) => sum + v, 0);
-    }, [categoryTotals]);
 
     useEffect(() => {
         const prev = projectData.carbon_emission_data || {};
         const nextMaterialData = {
             ...(prev.material_emissions_data || {}),
-            ...buildMaterialData(excludedIds),
+            rows: computed.rows.map(serializeRow),
+            included_items: computed.includedRows.map(serializeRow),
+            excluded_items: computed.excludedRows.map(serializeRow),
+            excluded_ids: computed.excluded_ids,
+            category_totals: computed.cat_totals,
+            cat_totals: computed.cat_totals,
+            total_kgCO2e: computed.total_kgCO2e,
+            included_count: computed.included_count,
+            total_count: computed.total_count,
         };
         if (JSON.stringify(prev.material_emissions_data || {}) === JSON.stringify(nextMaterialData)) return;
-
         updateProjectData('carbon_emission_data', {
             ...prev,
             material_emissions_data: nextMaterialData,
         });
-    }, [materials, excludedIds, updateProjectData]);
+    }, [computed, projectData.carbon_emission_data, updateProjectData]);
 
-    const { included, excluded } = useMemo(() => {
-        const filtered = materials.filter(m => 
-            m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            m.category.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-        return {
-            included: filtered.filter(m => !excludedIds.has(m.id)),
-            excluded: filtered.filter(m => excludedIds.has(m.id))
-        };
-    }, [materials, excludedIds, searchTerm]);
+    const updateMaterialState = (materialId, include) => {
+        const row = computed.rows.find((item) => item.id === materialId);
+        if (!row) return;
+        const sections = Array.isArray(projectData[row.chunkId]) ? projectData[row.chunkId] : [];
+        const nextSections = sections.map((section) => ({
+            ...section,
+            rows: (section.rows || []).map((item) => {
+                if ((item.id || '') !== row.rowId) return item;
+                return {
+                    ...item,
+                    state: {
+                        ...(item.state || {}),
+                        included_in_carbon_emission: include,
+                    },
+                };
+            }),
+        }));
+        updateProjectData(row.chunkId, nextSections);
 
-    const renderTable = (items, isIncludedSection) => (
-        <div className="table-responsive bg-transparent mb-4" style={{ border: 'none' }}>
-            <table className="custom-carbon-table" style={{ fontSize: '0.78rem', color: 'var(--app-text-primary)' }}>
+        const prev = projectData.carbon_emission_data || {};
+        const currentExcluded = new Set(prev.material_emissions_data?.excluded_ids || []);
+        if (include) currentExcluded.delete(materialId);
+        else currentExcluded.add(materialId);
+        updateProjectData('carbon_emission_data', {
+            ...prev,
+            material_emissions_data: {
+                ...(prev.material_emissions_data || {}),
+                excluded_ids: Array.from(currentExcluded),
+            },
+        });
+    };
+
+    const matchesSearch = (row) => {
+        const term = searchTerm.trim().toLowerCase();
+        if (!term) return true;
+        return [row.name, row.category, row.sectionName, row.unit]
+            .some((value) => String(value || '').toLowerCase().includes(term));
+    };
+
+    const included = computed.includedRows.filter(matchesSearch);
+    const excluded = computed.excludedRows.filter(matchesSearch);
+
+    const renderRows = (rows, isIncluded) => (
+        <div className="table-responsive mb-4">
+            <table className="table table-sm table-dark carbon-desktop-table mb-0">
                 <thead>
                     <tr>
-                        <th rowSpan="2" style={{ width: '12%' }}>Category</th>
-                        <th rowSpan="2" style={{ width: '22%' }}>Material</th>
-                        <th colSpan="2">Quantity</th>
-                        <th rowSpan="2" style={{ width: '10%' }}>Conv. Factor</th>
-                        <th colSpan="2">Emission</th>
-                        <th rowSpan="2" className="text-end" style={{ width: '12%' }}>{isIncludedSection ? 'Total kgCO₂e' : 'Reason'}</th>
-                        {isIncludedSection && <th rowSpan="2" style={{ width: '8%' }}>Warning</th>}
-                        <th rowSpan="2" style={{ width: '6%' }}>Action</th>
+                        <th rowSpan="2">Category</th>
+                        <th rowSpan="2">Material</th>
+                        <th colSpan="2" className="text-center">Quantity</th>
+                        <th rowSpan="2" className="text-end">Conversion Factor</th>
+                        <th colSpan="2" className="text-center">Emission</th>
+                        <th rowSpan="2" className="text-end">Total Emissions (kgCO2e)</th>
+                        <th rowSpan="2">{isIncluded ? 'Warning' : 'Reason'}</th>
+                        <th rowSpan="2" className="text-center">Action</th>
                     </tr>
                     <tr>
-                        <th style={{ width: '8%' }}>Value</th>
-                        <th style={{ width: '6%' }}>Unit</th>
-                        <th style={{ width: '9%' }}>Value</th>
-                        <th style={{ width: '6%' }}>Unit</th>
+                        <th className="text-end">Value</th>
+                        <th>Unit</th>
+                        <th className="text-end">Value</th>
+                        <th>Unit</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {items.map(m => {
-                        const totalEm = m.quantity * m.cf * m.ef;
-                        return (
-                            <tr key={m.id}>
-                                <td className="text-secondary opacity-75">{m.category}</td>
-                                <td className="fw-medium">{m.name}</td>
-                                <td className="text-end font-monospace">{m.quantity.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</td>
-                                <td className="text-center text-secondary opacity-70">{m.unit}</td>
-                                <td className="text-center font-monospace">{m.cf.toFixed(2)}</td>
-                                <td className="text-end font-monospace">{m.ef.toFixed(3)}</td>
-                                <td className="text-center text-secondary opacity-70">{m.unit ? `kg/${m.unit}` : 'kg'}</td>
-                                <td className="text-end fw-bold font-monospace" style={{ color: isIncludedSection ? 'var(--app-text-primary)' : 'var(--app-text-muted)' }}>
-                                    {isIncludedSection ? totalEm.toLocaleString(undefined, { maximumFractionDigits: 3, minimumFractionDigits: 3 }) : '-'}
-                                </td>
-                                {isIncludedSection && <td className="text-center">-</td>}
-                                <td className="text-center">
-                                    <button 
-                                        className={`btn btn-sm p-0 border-0 ${isIncludedSection ? 'text-danger' : 'text-success'}`}
-                                        title={isIncludedSection ? "Exclude" : "Include"}
-                                        onClick={() => handleToggleInclusion(m.id, !isIncludedSection)}
-                                    >
-                                        <i className={`bi ${isIncludedSection ? 'bi-trash' : 'bi-plus-circle'}`} style={{ fontSize: '0.85rem' }}></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        );
-                    })}
-                    {items.length === 0 && (
+                    {rows.map((row) => (
+                        <tr key={row.id} className={!isIncluded ? 'opacity-75' : ''}>
+                            <td>{row.category}</td>
+                            <td>
+                                <div className="fw-semibold">{row.name}</div>
+                                {row.sectionName && <div className="text-secondary small">{row.sectionName}</div>}
+                            </td>
+                            <td className="text-end font-monospace">{formatNumber(row.quantity)}</td>
+                            <td>{row.unit || '-'}</td>
+                            <td className="text-end font-monospace">{formatNumber(row.conversion_factor)}</td>
+                            <td className="text-end font-monospace">{formatNumber(row.emission_factor)}</td>
+                            <td>{row.emission_unit || '-'}</td>
+                            <td className="text-end font-monospace fw-semibold">{isIncluded ? formatNumber(row.total_kgCO2e) : '-'}</td>
+                            <td className="text-secondary small">{isIncluded ? (row.warning || '') : row.reason}</td>
+                            <td className="text-center">
+                                <button
+                                    className={`btn btn-sm ${isIncluded ? 'btn-outline-danger' : 'btn-outline-success'}`}
+                                    title={isIncluded ? 'Exclude from calculation' : 'Include in calculation'}
+                                    onClick={() => updateMaterialState(row.id, !isIncluded)}
+                                    disabled={!isIncluded && row.reason === 'Incomplete Data'}
+                                >
+                                    <i className={`bi ${isIncluded ? 'bi-trash' : 'bi-plus-lg'}`} />
+                                </button>
+                            </td>
+                        </tr>
+                    ))}
+                    {rows.length === 0 && (
                         <tr>
-                            <td colSpan={isIncludedSection ? 10 : 9} className="text-center py-4 text-secondary italic opacity-50">No materials found</td>
+                            <td colSpan="10" className="text-center text-secondary py-4">No materials found</td>
                         </tr>
                     )}
                 </tbody>
@@ -203,98 +136,40 @@ const MaterialEmissions = ({ controller }) => {
     );
 
     return (
-        <div className="material-emissions d-flex flex-column h-100">
-            {/* Top Summary Bar */}
-            <div className="material-top-summary px-3 py-2 border-bottom d-flex align-items-center justify-content-between" style={{ backgroundColor: 'transparent', borderColor: 'var(--app-border-light)' }}>
-                <div className="d-flex align-items-center gap-4 py-1" style={{ fontSize: '0.82rem' }}>
-                    <div className="text-light">
-                        Total: <span className="fw-bold">{totalCarbon.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</span> <span className="text-secondary opacity-75">kgCO₂e</span>
-                    </div>
-                    <div className="text-light">
-                        Included: <span className="fw-bold">{materials.length - excludedIds.size} of {materials.length} items</span>
-                    </div>
+        <div className="material-emissions carbon-desktop-page">
+            <div className="carbon-summary-strip mb-3 d-flex align-items-center justify-content-between gap-3">
+                <div className="d-flex gap-4 flex-wrap" style={{ fontSize: '0.84rem' }}>
+                    <span>Total Material Emissions: <strong>{formatNumber(computed.total_kgCO2e)}</strong> kgCO2e</span>
+                    <span>Included: <strong>{computed.included_count}</strong> of <strong>{computed.total_count}</strong> items</span>
                 </div>
-                
-                <button 
-                    className="btn btn-sm py-1 px-3 d-flex align-items-center gap-2 border-0" 
-                    onClick={() => setIsDetailsVisible(!isDetailsVisible)}
-                    style={{ 
-                        fontSize: '0.75rem', 
-                        backgroundColor: 'var(--app-bg-alt)', 
-                        color: 'var(--app-text-primary)',
-                        borderRadius: '4px',
-                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)'
-                    }}
-                >
-                    {isDetailsVisible ? 'Hide Details ▲' : 'Show Details ▼'}
+                <button className="btn btn-sm btn-outline-light" onClick={() => setDetailsVisible((value) => !value)}>
+                    {detailsVisible ? 'Hide Details ▲' : 'Show Details ▼'}
                 </button>
             </div>
 
-            {/* Collapsible Details Row */}
-            {isDetailsVisible && (
-                <div className="d-flex gap-4 px-3 py-2 border-bottom animate-fade-in" style={{ fontSize: '0.78rem', backgroundColor: 'var(--app-bg-alt)', borderColor: 'var(--app-border-light)' }}>
-                    {Object.entries(categoryTotals).map(([cat, total], idx, arr) => (
-                        <React.Fragment key={cat}>
-                            <div className="d-flex flex-column">
-                                <span className="text-muted tiny text-uppercase" style={{ fontSize: '0.65rem', letterSpacing: '0.5px' }}>{cat}</span>
-                                <span className="fw-bold" style={{ color: 'var(--app-text-primary)' }}>{total.toLocaleString(undefined, { maximumFractionDigits: 1 })} <small className="fw-normal opacity-50">kg</small></span>
-                            </div>
-                            {idx < arr.length - 1 && <div className="border-end" style={{ width: '1px', borderColor: 'var(--app-border-light)' }}></div>}
-                        </React.Fragment>
+            {detailsVisible && (
+                <div className="carbon-summary-strip mb-3 d-flex gap-4 flex-wrap" style={{ fontSize: '0.8rem' }}>
+                    {STRUCTURE_CHUNKS.map(([, label]) => (
+                        <span key={label}>{label}: <strong>{formatNumber(computed.cat_totals[label] || 0)}</strong></span>
                     ))}
                 </div>
             )}
 
-            <div className="px-3 pt-3 flex-grow-1 overflow-auto custom-scrollbar">
-                <div className="mb-2 small fw-bold text-light opacity-90">Included in Carbon Calculation</div>
-                {renderTable(included, true)}
-
-                <div className="mb-4 mt-3 small fw-bold text-light opacity-90">Excluded from Carbon Calculation</div>
-                {renderTable(excluded, false)}
+            <div className="carbon-field" style={{ maxWidth: 360 }}>
+                <label className="carbon-label">Search Materials</label>
+                <input
+                    className="form-control form-control-sm"
+                    placeholder="Search materials..."
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                />
             </div>
 
-            <style>{`
-                .material-emissions {
-                    font-size: 0.8rem;
-                }
-                .custom-carbon-table {
-                    border-collapse: separate;
-                    border-spacing: 0;
-                    width: 100%;
-                }
-                .custom-carbon-table th { 
-                    background-color: #2a2a2a !important;
-                    color: #d0d0d0 !important;
-                    font-weight: 500;
-                    font-size: 0.75rem;
-                    padding: 4px 8px !important;
-                    border: 1px solid #3d3d3d !important;
-                    text-align: center;
-                }
-                .custom-carbon-table td {
-                    padding: 4px 8px !important;
-                    font-size: 0.78rem;
-                    border: 1px solid #2d2d2d !important;
-                    vertical-align: middle;
-                }
-                .custom-carbon-table tbody tr:hover {
-                    background-color: rgba(255, 255, 255, 0.03);
-                }
-                .tiny { font-size: 0.65rem; }
-                .custom-scrollbar::-webkit-scrollbar {
-                    width: 6px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-track {
-                    background: transparent;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: var(--app-border-mid);
-                    border-radius: 10px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                    background: var(--app-text-secondary);
-                }
-            `}</style>
+            <div className="carbon-section-title">Included in Carbon Emissions Calculation</div>
+            {renderRows(included, true)}
+
+            <div className="carbon-section-title">Excluded from Carbon Emissions Calculation</div>
+            {renderRows(excluded, false)}
         </div>
     );
 };

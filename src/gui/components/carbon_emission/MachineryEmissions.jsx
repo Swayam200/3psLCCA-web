@@ -1,35 +1,8 @@
 /* eslint-disable no-unused-vars */
+/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect, useMemo } from 'react';
 import { useProjectData } from '../../../contexts/ProjectDataContext';
-
-const ENERGY_SOURCES = [
-    { label: "Diesel", unit: "l/hr", ef: 2.69 },
-    { label: "Electricity (Grid)", unit: "kW", ef: 0.71 },
-    { label: "Electricity (Solar/Renewable)", unit: "kW", ef: 0.0 },
-    { label: "Other", unit: "units/hr", ef: 0.0 },
-];
-
-const DEFAULT_MACHINERY_DATA = [
-    { name: "Backhoe loader (JCB)", source: "Diesel", rate: 5.0, ef: 2.69 },
-    { name: "Bar bending machine", source: "Electricity (Grid)", rate: 3.0, ef: 0.71 },
-    { name: "Bar cutting machine", source: "Electricity (Grid)", rate: 4.0, ef: 0.71 },
-    { name: "Bitumen boiler", source: "Diesel", rate: 1.0, ef: 2.69 },
-    { name: "Bitumen sprayer", source: "Diesel", rate: 5.0, ef: 2.69 },
-    { name: "Concrete pump", source: "Diesel", rate: 12.0, ef: 2.69 },
-    { name: "Crane (crawler)", source: "Diesel", rate: 12.0, ef: 2.69 },
-    { name: "Crane (mobile)", source: "Diesel", rate: 8.0, ef: 2.69 },
-    { name: "Dewatering pump", source: "Diesel", rate: 2.0, ef: 2.69 },
-    { name: "DG set", source: "Diesel", rate: 4.0, ef: 2.69 },
-    { name: "Grouting mixer", source: "Electricity (Grid)", rate: 1.0, ef: 0.71 },
-    { name: "Grouting pump", source: "Electricity (Grid)", rate: 5.0, ef: 0.71 },
-    { name: "Hydraulic excavator", source: "Diesel", rate: 14.0, ef: 2.69 },
-    { name: "Hydraulic stressing jack", source: "Electricity (Grid)", rate: 3.0, ef: 0.71 },
-    { name: "Needle Vibrator", source: "Electricity (Grid)", rate: 1.0, ef: 0.71 },
-    { name: "Paver finisher", source: "Diesel", rate: 7.0, ef: 2.69 },
-    { name: "Road roller", source: "Diesel", rate: 4.0, ef: 2.69 },
-    { name: "Rotary piling rig", source: "Diesel", rate: 15.0, ef: 2.69 },
-    { name: "Welding machine", source: "Electricity (Grid)", rate: 4.0, ef: 0.71 },
-];
+import { computeMachineryDetailedTotal, computeMachineryLumpsumTotal, DEFAULT_MACHINERY_DATA, ENERGY_SOURCES, normalizeMachineryData } from './carbonUtils';
 
 const MachineryEmissions = ({ controller }) => {
     const { projectData, updateProjectData } = useProjectData();
@@ -48,10 +21,25 @@ const MachineryEmissions = ({ controller }) => {
 
     useEffect(() => {
         const carbonData = projectData.carbon_emission_data || {};
-        const machineryData = carbonData.machinery_emissions_data || {};
+        const rawMachineryData = carbonData.machinery_emissions_data || {};
+        const machineryData = normalizeMachineryData(rawMachineryData);
+        const hasSavedDetailedRows = machineryData.detailed.rows.length > 0
+            || rawMachineryData.detailed_entries
+            || rawMachineryData.detailed?.rows;
         if (machineryData.mode) setMode(machineryData.mode);
-        if (machineryData.detailed_entries) setDetailedEntries(machineryData.detailed_entries);
-        if (machineryData.lump_sum) setLumpSum(machineryData.lump_sum);
+        setDetailedEntries(
+            hasSavedDetailedRows
+                ? machineryData.detailed.rows.map((row) => ({ ...row, hours: row.hrs }))
+                : DEFAULT_MACHINERY_DATA.map((row) => ({ ...row, hours: 8, days: 1 }))
+        );
+        setLumpSum({
+            elec_kwh_per_day: machineryData.lumpsum.elec_consumption_per_day,
+            elec_days: machineryData.lumpsum.elec_days,
+            elec_ef: machineryData.lumpsum.elec_ef,
+            fuel_litres_per_day: machineryData.lumpsum.fuel_consumption_per_day,
+            fuel_days: machineryData.lumpsum.fuel_days,
+            fuel_ef: machineryData.lumpsum.fuel_ef,
+        });
         if (machineryData.remarks) setRemarks(machineryData.remarks);
     }, [projectData]);
 
@@ -110,40 +98,66 @@ const MachineryEmissions = ({ controller }) => {
     };
 
     const saveToEngine = (newMode, entries, ls, rem) => {
+        const detailedRows = entries.map((entry) => ({
+            name: entry.name || '',
+            source: entry.source || 'Diesel',
+            rate: parseFloat(entry.rate) || 0,
+            hrs: parseFloat(entry.hrs ?? entry.hours) || 0,
+            days: parseFloat(entry.days) || 0,
+            ef: parseFloat(entry.ef) || 0,
+        }));
+        const lumpsum = {
+            elec_consumption_per_day: parseFloat(ls.elec_consumption_per_day ?? ls.elec_kwh_per_day) || 0,
+            elec_days: parseFloat(ls.elec_days) || 0,
+            elec_ef: parseFloat(ls.elec_ef) || 0,
+            fuel_consumption_per_day: parseFloat(ls.fuel_consumption_per_day ?? ls.fuel_litres_per_day) || 0,
+            fuel_days: parseFloat(ls.fuel_days) || 0,
+            fuel_ef: parseFloat(ls.fuel_ef) || 0,
+        };
+        const desktopMode = newMode === 'lump_sum' ? 'lumpsum' : newMode;
+        const total = desktopMode === 'detailed'
+            ? computeMachineryDetailedTotal(detailedRows)
+            : computeMachineryLumpsumTotal(lumpsum);
         const prev = projectData.carbon_emission_data || {};
         updateProjectData('carbon_emission_data', {
             ...prev,
             machinery_emissions_data: {
-                mode: newMode,
+                mode: desktopMode,
+                detailed: { rows: detailedRows },
+                lumpsum,
                 detailed_entries: entries,
                 lump_sum: ls,
                 remarks: rem,
-                total_kgCO2e: newMode === 'detailed' ? 
-                    entries.reduce((sum, e) => sum + (e.rate * e.hours * e.days * e.ef), 0) :
-                    (ls.elec_kwh_per_day * ls.elec_days * ls.elec_ef) + (ls.fuel_litres_per_day * ls.fuel_days * ls.fuel_ef)
+                total_kgCO2e: total,
             }
         });
     };
 
     const detailedTotal = useMemo(() => {
-        return detailedEntries.reduce((sum, e) => sum + (e.rate * e.hours * e.days * e.ef), 0);
+        return computeMachineryDetailedTotal(detailedEntries);
     }, [detailedEntries]);
 
     const detailedDieselTotal = useMemo(() => {
-        return detailedEntries.filter(e => e.source === 'Diesel').reduce((sum, e) => sum + (e.rate * e.hours * e.days * e.ef), 0);
+        return detailedEntries.filter(e => e.source === 'Diesel').reduce((sum, e) => sum + (e.rate * (e.hrs ?? e.hours) * e.days * e.ef), 0);
     }, [detailedEntries]);
 
     const detailedElecTotal = useMemo(() => {
-        return detailedEntries.filter(e => e.source.startsWith('Electricity')).reduce((sum, e) => sum + (e.rate * e.hours * e.days * e.ef), 0);
+        return detailedEntries.filter(e => e.source.startsWith('Electricity')).reduce((sum, e) => sum + (e.rate * (e.hrs ?? e.hours) * e.days * e.ef), 0);
     }, [detailedEntries]);
 
     const lumpSumTotal = useMemo(() => {
-        return (lumpSum.elec_kwh_per_day * lumpSum.elec_days * lumpSum.elec_ef) + 
-               (lumpSum.fuel_litres_per_day * lumpSum.fuel_days * lumpSum.fuel_ef);
+        return computeMachineryLumpsumTotal({
+            elec_consumption_per_day: lumpSum.elec_kwh_per_day,
+            elec_days: lumpSum.elec_days,
+            elec_ef: lumpSum.elec_ef,
+            fuel_consumption_per_day: lumpSum.fuel_litres_per_day,
+            fuel_days: lumpSum.fuel_days,
+            fuel_ef: lumpSum.fuel_ef,
+        });
     }, [lumpSum]);
 
     return (
-        <div className="machinery-emissions d-flex flex-column text-light" style={{ backgroundColor: 'var(--app-bg-main)', fontFamily: '"Segoe UI", sans-serif', color: 'var(--app-text-primary)' }}>
+        <div className="machinery-emissions carbon-desktop-page d-flex flex-column" style={{ backgroundColor: 'var(--app-bg-main)', fontFamily: '"Segoe UI", sans-serif', color: 'var(--app-text-primary)' }}>
             <style>{`
                 .machinery-summary-bar {
                     background-color: var(--app-bg-card);
@@ -215,23 +229,6 @@ const MachineryEmissions = ({ controller }) => {
                     font-size: 0.75rem;
                     pointer-events: none;
                 }
-                .machinery-sticky-summary {
-                    position: sticky;
-                    bottom: -15px; /* Offset to sit nicely in the container padding */
-                    left: 0;
-                    right: 0;
-                    background-color: var(--app-bg-card);
-                    color: var(--app-text-primary);
-                    padding: 10px 20px;
-                    border-radius: 4px;
-                    font-weight: 700;
-                    font-size: 0.95rem;
-                    display: inline-block;
-                    z-index: 100;
-                    margin-top: 25px;
-                    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-                    border: 1px solid var(--app-border-mid);
-                }
                 .machinery-divider {
                     height: 1px;
                     background: linear-gradient(to right, #444, transparent);
@@ -293,43 +290,29 @@ const MachineryEmissions = ({ controller }) => {
 
             `}</style>
 
-            {/* Note: Summary bar removed from top and replaced with specific stats row below */}
+            <div className="carbon-summary-strip mb-3 d-flex justify-content-end">
+                <strong>Total Machinery/Equipment Emissions: {(mode === 'detailed' ? detailedTotal : lumpSumTotal).toFixed(3)} kg CO₂e</strong>
+            </div>
 
             {/* Mode Toggle Section */}
-            <div className="px-3 mb-3 d-flex align-items-center gap-4">
-                <span className="fw-bold" style={{ fontSize: '0.85rem', color: 'var(--app-text-primary)' }}>Input Method:</span>
+            <div className="mb-3 d-flex align-items-center gap-4">
+                <span className="carbon-label mb-0">Input Method:</span>
                 <div className="d-flex gap-4">
                     <label className="custom-radio" style={{ color: 'var(--app-text-primary)' }}>
                         <input type="radio" checked={mode === 'detailed'} onChange={() => { setMode('detailed'); saveToEngine('detailed', detailedEntries, lumpSum, remarks); }} />
                         Detailed Equipment List
                     </label>
                     <label className="custom-radio" style={{ color: 'var(--app-text-primary)' }}>
-                        <input type="radio" checked={mode === 'lump_sum'} onChange={() => { setMode('lump_sum'); saveToEngine('lump_sum', detailedEntries, lumpSum, remarks); }} />
+                        <input type="radio" checked={mode === 'lumpsum'} onChange={() => { setMode('lumpsum'); saveToEngine('lumpsum', detailedEntries, lumpSum, remarks); }} />
                         Lump Sum
                     </label>
                 </div>
             </div>
 
-            <div className="d-flex flex-column px-3">
+            <div className="d-flex flex-column">
                 {mode === 'detailed' ? (
                     <>
-                        {/* Default No. of Days Box */}
-                        <div className="machinery-qgroupbox mb-3">
-                            <div className="machinery-section-title">Default No. of Days</div>
-                            <div className="machinery-section-subtitle mb-2">Set a default number of working days then click Apply to All Rows.</div>
-                            <div className="d-flex align-items-center gap-2" style={{ maxWidth: '400px' }}>
-                                <div className="position-relative flex-grow-1">
-                                    <input 
-                                        type="number" 
-                                        className="machinery-input-field pe-5" 
-                                        value={applyDaysVal}
-                                        onChange={e => setApplyDaysVal(parseInt(e.target.value) || 0)}
-                                    />
-                                    <span className="position-absolute end-0 top-50 translate-middle-y pe-2 text-secondary small">days</span>
-                                </div>
-                                <button className="machinery-btn-secondary py-2" style={{ whiteSpace: 'nowrap' }} onClick={handleApplyDays}>Apply to All Rows</button>
-                            </div>
-                        </div>
+                        <div className="carbon-section-title">Detailed Equipment List</div>
 
                         {/* Grouped Table Header */}
                         <div className="machinery-table-header-container" style={{ border: '1px solid var(--app-border-mid)', borderRadius: '4px 4px 0 0', backgroundColor: 'var(--app-bg-alt)' }}>
@@ -407,8 +390,8 @@ const MachineryEmissions = ({ controller }) => {
                                         />
                                     </div>
                                     <div className="col-2 px-2 d-flex align-items-center justify-content-between">
-                                        <span className="fw-bold flex-grow-1 text-center" style={{ color: '#9adc32', fontSize: '0.85rem' }}>
-                                            {(e.rate * e.hours * e.days * e.ef).toFixed(3)}
+                                        <span className="fw-bold flex-grow-1 text-center" style={{ color: 'var(--app-text-primary)', fontSize: '0.85rem' }}>
+                                            {(e.rate * (e.hrs ?? e.hours) * e.days * e.ef).toFixed(3)}
                                         </span>
                                         <button className="btn btn-link btn-sm text-danger p-0" title="Delete Row" onClick={() => handleDeleteEntry(idx)}>
                                             <i className="bi bi-trash"></i>
@@ -455,6 +438,7 @@ const MachineryEmissions = ({ controller }) => {
                     </>
                 ) : (
                     <div className="pe-2 pb-4">
+                        <div className="carbon-section-title">Lump Sum</div>
                         {/* Electricity Section */}
                         <div className="mb-4">
                             <div className="machinery-section-title">Electricity Consumption</div>
@@ -561,17 +545,17 @@ const MachineryEmissions = ({ controller }) => {
             </div>
 
             {/* Final Total Summary - Full Width Box */}
-            <div className="mx-3 mb-3">
-                <div className="p-2 px-3 rounded d-flex justify-content-end align-items-center" style={{ backgroundColor: 'var(--app-bg-card)', border: '1px solid var(--app-border-mid)' }}>
+            <div className="mb-3">
+                <div className="carbon-summary-strip d-flex justify-content-end align-items-center">
                     <div className="fw-bold" style={{ fontSize: '13px', color: 'var(--app-text-primary)' }}>
-                        Total Machinery Emissions: {(mode === 'detailed' ? detailedTotal : lumpSumTotal).toFixed(3)} kg CO₂e
+                        Total Machinery/Equipment Emissions: {(mode === 'detailed' ? detailedTotal : lumpSumTotal).toFixed(3)} kg CO₂e
                     </div>
                 </div>
             </div>
 
             {/* Remarks Section */}
-            <div className="px-3 pb-3">
-                <div className="fw-bold mb-2" style={{ fontSize: '0.85rem', color: 'var(--app-text-primary)' }}>Remarks / Notes</div>
+            <div className="pb-3">
+                <div className="carbon-section-title">Remarks / Notes</div>
                 <div className="remarks-toolbar">
                     <button className="remarks-btn fw-bold">B</button>
                     <button className="remarks-btn fst-italic">I</button>

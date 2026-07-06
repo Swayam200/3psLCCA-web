@@ -1,4 +1,6 @@
 /* eslint-disable no-unused-vars */
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect } from 'react'
 import { Routes, Route, useNavigate, useLocation, Navigate, useParams } from 'react-router-dom'
 import HomePage from './gui/components/Homepage'
@@ -190,12 +192,15 @@ function ProjectViewWrapper({ projectData, setProjectData, logs, setLogs, isLock
     'Sub Structure': <ConstructionWorkData key="cw_sub" data={projectData.construction_work_data} onUpdate={(d) => updateProjectData('construction_work_data', d)} initialTab="SubStructure" setActiveNode={handleSetActiveNode} />,
     'Super Structure': <ConstructionWorkData key="cw_super" data={projectData.construction_work_data} onUpdate={(d) => updateProjectData('construction_work_data', d)} initialTab="SuperStructure" setActiveNode={handleSetActiveNode} />,
     'Miscellaneous': <ConstructionWorkData key="cw_misc" data={projectData.construction_work_data} onUpdate={(d) => updateProjectData('construction_work_data', d)} initialTab="Miscellaneous" setActiveNode={handleSetActiveNode} />,
-    'Carbon Emission Data': <CarbonEmissionContainer key="ce_main" data={projectData.carbon_emission_data} onUpdate={(d) => updateProjectData('carbon_emission_data', d)} setActiveNode={handleSetActiveNode} />,
+    'Carbon Emissions Data': <CarbonEmissionContainer key="ce_main" data={projectData.carbon_emission_data} onUpdate={(d) => updateProjectData('carbon_emission_data', d)} setActiveNode={handleSetActiveNode} />,
+    'Carbon Emission Data': <CarbonEmissionContainer key="ce_main_legacy" data={projectData.carbon_emission_data} onUpdate={(d) => updateProjectData('carbon_emission_data', d)} setActiveNode={handleSetActiveNode} />,
+    'Social Cost of Carbon': <CarbonEmissionContainer key="ce_social" data={projectData.carbon_emission_data} onUpdate={(d) => updateProjectData('carbon_emission_data', d)} initialTab="SocialCost" setActiveNode={handleSetActiveNode} />,
     'Material Emissions': <CarbonEmissionContainer key="ce_material" data={projectData.carbon_emission_data} onUpdate={(d) => updateProjectData('carbon_emission_data', d)} initialTab="Material" setActiveNode={handleSetActiveNode} />,
     'Transportation Emissions': <CarbonEmissionContainer key="ce_transport" data={projectData.carbon_emission_data} onUpdate={(d) => updateProjectData('carbon_emission_data', d)} initialTab="Transportation" setActiveNode={handleSetActiveNode} />,
-    'Machinery Emissions': <CarbonEmissionContainer key="ce_machinery" data={projectData.carbon_emission_data} onUpdate={(d) => updateProjectData('carbon_emission_data', d)} initialTab="Machinery" setActiveNode={handleSetActiveNode} />,
-    'Traffic Diversion Emissions': <CarbonEmissionContainer key="ce_traffic" data={projectData.carbon_emission_data} onUpdate={(d) => updateProjectData('carbon_emission_data', d)} initialTab="Traffic" setActiveNode={handleSetActiveNode} />,
-    'Social Cost of Carbon': <CarbonEmissionContainer key="ce_social" data={projectData.carbon_emission_data} onUpdate={(d) => updateProjectData('carbon_emission_data', d)} initialTab="SocialCost" setActiveNode={handleSetActiveNode} />,
+    'Machinery/Equipment Emissions': <CarbonEmissionContainer key="ce_machinery" data={projectData.carbon_emission_data} onUpdate={(d) => updateProjectData('carbon_emission_data', d)} initialTab="Machinery" setActiveNode={handleSetActiveNode} />,
+    'Machinery Emissions': <CarbonEmissionContainer key="ce_machinery_legacy" data={projectData.carbon_emission_data} onUpdate={(d) => updateProjectData('carbon_emission_data', d)} initialTab="Machinery" setActiveNode={handleSetActiveNode} />,
+    'Traffic Rerouting Emissions': <CarbonEmissionContainer key="ce_traffic" data={projectData.carbon_emission_data} onUpdate={(d) => updateProjectData('carbon_emission_data', d)} initialTab="Traffic" setActiveNode={handleSetActiveNode} />,
+    'Traffic Diversion Emissions': <CarbonEmissionContainer key="ce_traffic_legacy" data={projectData.carbon_emission_data} onUpdate={(d) => updateProjectData('carbon_emission_data', d)} initialTab="Traffic" setActiveNode={handleSetActiveNode} />,
     'Maintenance and Repair': <MaintenanceAndRepair key="maintenance" addLog={addLog} />,
     'Recycling': <Recycling key="recycling" addLog={addLog} />,
     'Demolition': <Demolition key="demolition" addLog={addLog} />,

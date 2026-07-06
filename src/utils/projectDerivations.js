@@ -1,11 +1,12 @@
 import { normalizeProjectData } from './projectSchema.js';
-
-const STRUCTURE_CHUNKS = [
-    ['foundation_data', 'Foundation'],
-    ['substructure_data', 'Sub Structure'],
-    ['superstructure_data', 'Super Structure'],
-    ['miscellaneous_data', 'Miscellaneous'],
-];
+import {
+    computeMachineryTotal,
+    computeMaterialEmissions,
+    computeTrafficReroutingData,
+    computeTransportEmissions,
+    normalizeMachineryData,
+    parseNumber,
+} from '../gui/components/carbon_emission/carbonUtils.js';
 
 const VEHICLE_TYPES = [
     'small_cars',
@@ -17,12 +18,6 @@ const VEHICLE_TYPES = [
     'hcv',
     'mcv',
 ];
-
-export const parseNumber = (value, fallback = 0) => {
-    if (value === null || value === undefined || value === '') return fallback;
-    const parsed = Number(String(value).replace(/,/g, '').replace('%', '').trim());
-    return Number.isFinite(parsed) ? parsed : fallback;
-};
 
 export const getSectionsTotal = (sections) => {
     if (!Array.isArray(sections)) return 0;
@@ -42,35 +37,7 @@ export const getRecyclingTotal = (recyclingData) => {
 
 export const getMaterialCarbonRows = (projectData) => {
     const project = normalizeProjectData(projectData);
-    const carbonData = project.carbon_emission_data || {};
-    const excludedIds = new Set(carbonData.material_emissions_data?.excluded_ids || []);
-
-    return STRUCTURE_CHUNKS.flatMap(([chunkId, category]) => {
-        const sections = Array.isArray(project[chunkId]) ? project[chunkId] : [];
-        return sections.flatMap((section) => {
-            const component = section?.name || '';
-            const rows = Array.isArray(section?.rows) ? section.rows : [];
-            return rows.filter((row) => !row?.state?.in_trash).map((row) => {
-                const id = `${chunkId}-${row?.id}`;
-                const quantity = parseNumber(row?.qty);
-                const conversionFactor = parseNumber(row?.conversionFactor, 1) || 1;
-                const emissionFactor = parseNumber(row?.carbonEmission?.factor);
-                const totalKgCO2e = quantity * conversionFactor * emissionFactor;
-                return {
-                    id,
-                    name: row?.workName || 'Unnamed Material',
-                    category,
-                    component,
-                    quantity,
-                    unit: row?.unit || '',
-                    conversion_factor: conversionFactor,
-                    emission_factor: emissionFactor,
-                    total_kgCO2e: totalKgCO2e,
-                    included: !excludedIds.has(id),
-                };
-            });
-        });
-    });
+    return computeMaterialEmissions(project).rows;
 };
 
 export const deriveConstructionWorkData = (projectData) => {
@@ -94,26 +61,18 @@ export const deriveConstructionWorkData = (projectData) => {
 export const deriveCarbonEmissionData = (projectData) => {
     const project = normalizeProjectData(projectData);
     const carbonData = project.carbon_emission_data || {};
-    const materialRows = getMaterialCarbonRows(project);
-    const includedMaterialRows = materialRows.filter((row) => row.included);
-    const materialCategoryTotals = includedMaterialRows.reduce((acc, row) => {
-        acc[row.category] = (acc[row.category] || 0) + row.total_kgCO2e;
-        return acc;
-    }, {});
-    const materialTotal = includedMaterialRows.reduce((sum, row) => sum + row.total_kgCO2e, 0);
-
+    const material = computeMaterialEmissions(project);
+    const stripRaw = (row) => {
+        const next = { ...row };
+        delete next.raw;
+        return next;
+    };
+    const transportComputed = computeTransportEmissions(project);
+    const machineryComputed = normalizeMachineryData(carbonData.machinery_emissions_data || {});
+    const trafficRerouting = computeTrafficReroutingData(project);
     const existingMaterial = carbonData.material_emissions_data || {};
     const transport = carbonData.transport_emissions_data || carbonData.transportation_emissions_data || {};
     const machinery = carbonData.machinery_emissions_data || {};
-    const diversion = carbonData.diversion_emissions_data || {};
-    const webMode = diversion.mode || 'direct';
-    const desktopMode = webMode === 'calculate' ? 'Calculate by Vehicle' : 'Enter Directly';
-    const diversionTotal = parseNumber(
-        diversion.total_calculated_emissions ??
-        diversion.total_direct_emissions ??
-        diversion.total_kgCO2e_per_day ??
-        diversion.direct_value
-    );
     const social = carbonData.social_cost_data || {};
     const socialCostLocal = parseNumber(
         social.result?.cost_of_carbon_local ??
@@ -125,29 +84,38 @@ export const deriveCarbonEmissionData = (projectData) => {
         ...carbonData,
         material_emissions_data: {
             ...existingMaterial,
-            rows: materialRows,
-            category_totals: materialCategoryTotals,
-            total_kgCO2e: materialTotal,
+            rows: material.rows.map(stripRaw),
+            included_items: material.includedRows.map(stripRaw),
+            excluded_items: material.excludedRows.map(stripRaw),
+            category_totals: material.cat_totals,
+            cat_totals: material.cat_totals,
+            total_kgCO2e: material.total_kgCO2e,
+            included_count: material.included_count,
+            total_count: material.total_count,
+            excluded_ids: material.excluded_ids,
         },
         transport_emissions_data: {
             ...transport,
-            total_kgCO2e: parseNumber(transport.total_kgCO2e),
+            ...transportComputed,
+            total_kgCO2e: transportComputed.total_kgCO2e,
         },
         transportation_emissions_data: {
             ...transport,
-            total_kgCO2e: parseNumber(transport.total_kgCO2e),
+            ...transportComputed,
+            total_kgCO2e: transportComputed.total_kgCO2e,
         },
         machinery_emissions_data: {
             ...machinery,
-            total_kgCO2e: parseNumber(machinery.total_kgCO2e),
+            ...machineryComputed,
+            total_kgCO2e: computeMachineryTotal(machineryComputed),
         },
         diversion_emissions_data: {
-            ...diversion,
-            mode: webMode,
-            calculation_mode: desktopMode,
-            total_kgCO2e_per_day: diversionTotal,
-            total_calculated_emissions: webMode === 'calculate' ? diversionTotal : parseNumber(diversion.total_calculated_emissions),
-            total_direct_emissions: webMode === 'calculate' ? parseNumber(diversion.total_direct_emissions) : diversionTotal,
+            ...(carbonData.diversion_emissions_data || carbonData.diversion_emissions || {}),
+            ...trafficRerouting,
+        },
+        diversion_emissions: {
+            ...(carbonData.diversion_emissions || carbonData.diversion_emissions_data || {}),
+            ...trafficRerouting,
         },
         social_cost_data: {
             ...social,

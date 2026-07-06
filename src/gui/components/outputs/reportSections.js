@@ -1,0 +1,31 @@
+export const REPORT_SECTIONS = {
+    TITLE_PAGE: "Title page",
+    INPUT_DATA: "Input data",
+    LCCA_RESULTS: "LCCA results",
+};
+
+export const SECTION_KEYS = {
+    KEY_SHOW_BRIDGE_DESC: "show_bridge_desc",
+    KEY_SHOW_FINANCIAL: "show_financial",
+    KEY_SHOW_CONSTRUCTION: "show_construction",
+    KEY_SHOW_LCC_ASSUMPTIONS: "show_lcc_assumptions",
+    KEY_SHOW_USE_STAGE: "show_use_stage",
+    KEY_SHOW_AVG_TRAFFIC: "show_avg_traffic",
+    KEY_SHOW_ROAD_TRAFFIC: "show_road_traffic",
+    KEY_SHOW_PEAK_HOUR: "show_peak_hour",
+    KEY_SHOW_HUMAN_INJURY: "show_human_injury",
+    KEY_SHOW_VEHICLE_DAMAGE: "show_vehicle_damage",
+    KEY_SHOW_TYRE_COST: "show_tyre_cost",
+    KEY_SHOW_FUEL_OIL: "show_fuel_oil",
+    KEY_SHOW_NEW_VEHICLE: "show_new_vehicle",
+    KEY_SHOW_SOCIAL_CARBON: "show_social_carbon",
+    KEY_SHOW_MATERIAL_EMISSION: "show_material_emission",
+    KEY_SHOW_USE_EMISSION: "show_use_emission",
+    KEY_SHOW_VEHICLE_EMISSION: "show_vehicle_emission",
+    KEY_SHOW_ONSITE_EMISSION: "show_onsite_emission",
+    KEY_SHOW_TRANSPORT_EMISSION: "show_transport_emission",
+    KEY_SHOW_RECYCLING: "show_recycling",
+    KEY_SHOW_TITLE_PAGE: "show_title_page",
+    KEY_SHOW_INTRODUCTION: "show_introduction",
+    KEY_SHOW_LCCA_RESULTS: "show_lcca_results",
+};

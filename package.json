@@ -4,9 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/prepare-wasm-assets.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/prepare-wasm-assets.mjs",
     "build": "vite build",
     "test": "node --test",
+    "test:wasm": "playwright test tests/wasm-static.spec.js",
+    "lint:wasm": "eslint scripts/*.mjs src/lib/lccaApi.js src/lib/lccaEngine/*.js src/wasm/smoke.js vite.config.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -20,6 +24,7 @@
     "jspdf-autotable": "^5.0.7",
     "jszip": "^3.10.1",
     "pako": "^2.1.0",
+    "pyodide": "314.0.0",
     "react": "^19.2.4",
     "react-bootstrap": "^2.10.10",
     "react-dom": "^19.2.4",
@@ -30,6 +35,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.55.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
