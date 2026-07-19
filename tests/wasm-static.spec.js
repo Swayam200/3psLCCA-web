@@ -28,6 +28,13 @@ test('CDN-first: engine runs with native parity using only allow-listed origins'
   expect(requestedUrls.every(allowedOrigin)).toBe(true)
 })
 
+test('app shell renders at the deployed base path', async ({ page }) => {
+  // Regression: BrowserRouter needs the Vite base as its basename, or the
+  // router matches nothing under subdirectory hosting and renders a blank page.
+  await page.goto('./')
+  await expect(page.locator('#root > *').first()).toBeVisible({ timeout: 15_000 })
+})
+
 test('bundled fallback: engine stays fully static when CDN origins are unreachable', async ({ page }) => {
   await page.route(CDN_URL_PATTERN, (route) => route.abort())
 

@@ -60,6 +60,12 @@ const wasmStaticAssets = () => {
         cpSync(join(pyodideRoot, file), join(pyodideOut, file))
       }
       cpSync(generatedRoot, join(outputRoot, 'lcca-wasm'), { recursive: true })
+      // GitHub Pages SPA fallback: serve the app shell for deep links
+      // (e.g. refreshing /project/:id), which Pages would otherwise 404.
+      const indexHtml = join(outputRoot, 'index.html')
+      if (existsSync(indexHtml)) {
+        cpSync(indexHtml, join(outputRoot, '404.html'))
+      }
     },
   }
 }
