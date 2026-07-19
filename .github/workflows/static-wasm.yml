@@ -69,3 +69,58 @@ jobs:
         with:
           name: 3pslcca-static-dist
           path: dist
+
+  deploy-pages:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/feat/wasm-cdn-engine'
+    needs: static-wasm
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out the WebAssembly-enabled core
+        uses: actions/checkout@v4
+        with:
+          repository: Swayam200/3psLCCA-core
+          ref: feat/wasm-static-runtime
+          path: 3psLCCA-gui-python-venv/3psLCCA-core
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python build tools
+        run: python -m pip install build setuptools-scm
+
+      - name: Install web dependencies
+        run: npm ci
+
+      - name: Build for GitHub Pages subdirectory hosting
+        env:
+          LCCA_CORE_PATH: 3psLCCA-gui-python-venv/3psLCCA-core
+          LCCA_PYTHON: python
+          VITE_BASE_PATH: /3psLCCA-web/
+        run: npm run build
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

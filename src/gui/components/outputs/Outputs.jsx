@@ -421,10 +421,15 @@ const Outputs = ({ addLog, navTrigger }) => {
             addLog(`Loading LCCA calculation engine (${engineDescription})...`);
             const initialized = await initializeLccaEngine();
             const engineStatus = await getLccaEngineStatus();
+            const assetSources = initialized?.assetSources || engineStatus?.assetSources;
             const nextEngineMetadata = {
                 source: getLccaEngineMode(),
                 coreVersion: initialized?.coreVersion || engineStatus?.coreVersion || 'unknown',
                 pyodideVersion: initialized?.pyodideVersion || engineStatus?.pyodideVersion || 'unknown',
+                assetSource: !assetSources ? null
+                    : assetSources.pyodide === 'cdn' && assetSources.wheel === 'cdn' ? 'CDN'
+                    : assetSources.pyodide === 'bundled' && assetSources.wheel === 'bundled' ? 'bundled'
+                    : 'CDN + bundled',
             };
             setEngineMetadata(nextEngineMetadata);
             setCalculationPhase('calculating');
@@ -559,6 +564,7 @@ const Outputs = ({ addLog, navTrigger }) => {
                 data-testid="lcca-engine-indicator"
             >
                 Calculation engine: {getLccaEngineMode() === 'wasm' ? 'Browser WebAssembly' : 'Development FastAPI backend'}
+                {engineMetadata.assetSource && ` (${engineMetadata.assetSource})`}
                 {engineMetadata.coreVersion && ` | Core ${engineMetadata.coreVersion}`}
             </div>
 

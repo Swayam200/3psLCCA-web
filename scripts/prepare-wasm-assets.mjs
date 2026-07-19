@@ -48,9 +48,22 @@ if (wheels.length !== 1) {
 }
 
 const wheel = wheels[0]
-const wheelBytes = readFileSync(resolve(wheelBuildRoot, wheel))
+// Wheel builds are not byte-reproducible (zip timestamps), so when the core repo
+// publishes this exact wheel version (wasm-demo/ is served from its GitHub Pages
+// CDN), bundle the published copy: the manifest sha256 then matches the CDN file
+// and the runtime's CDN integrity check can pass instead of always falling back.
+const publishedWheel = resolve(coreRoot, 'wasm-demo', wheel)
+const wheelSourcePath = existsSync(publishedWheel)
+  ? publishedWheel
+  : resolve(wheelBuildRoot, wheel)
+const wheelBytes = readFileSync(wheelSourcePath)
 const checksum = createHash('sha256').update(wheelBytes).digest('hex')
-copyFileSync(resolve(wheelBuildRoot, wheel), resolve(outputRoot, wheel))
+copyFileSync(wheelSourcePath, resolve(outputRoot, wheel))
+process.stdout.write(
+  wheelSourcePath === publishedWheel
+    ? `Bundling the CDN-published wheel from ${publishedWheel}.\n`
+    : 'Bundling the freshly built wheel (no matching CDN-published copy found).\n',
+)
 
 const reference = spawnSync(
   python,

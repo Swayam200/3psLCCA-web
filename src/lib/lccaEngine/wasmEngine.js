@@ -2,6 +2,9 @@ let worker
 let nextRequestId = 1
 let initializePromise
 let status = { state: 'idle', mode: 'wasm' }
+// After a failed initialization, retry without CDN sources so a flaky CDN
+// cannot wedge the engine in a fail-retry loop.
+let disableCdn = false
 const pending = new Map()
 
 const rejectPending = (error) => {
@@ -53,10 +56,11 @@ const request = (type, payload = {}) => new Promise((resolve, reject) => {
 
 export const initializeLccaEngine = () => {
   if (!initializePromise) {
-    initializePromise = request('initialize').then((result) => {
+    initializePromise = request('initialize', { disableCdn }).then((result) => {
       status = { state: 'ready', mode: 'wasm', ...result }
       return result
     }).catch((error) => {
+      disableCdn = true
       resetWorker(error)
       throw error
     })

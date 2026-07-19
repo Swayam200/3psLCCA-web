@@ -19,5 +19,10 @@ test('static dist compiles the real 3psLCCA report through SwiftLaTeX WebAssembl
   const pageOrigin = new URL(page.url()).origin
   expect(requestedUrls.some((url) => url.includes(':8000'))).toBe(false)
   expect(requestedUrls.some((url) => url.includes('swiftlatex.com'))).toBe(false)
-  expect(requestedUrls.every((url) => url.startsWith(pageOrigin))).toBe(true)
+  // Engine assets may come from the allow-listed CDNs; everything else —
+  // including all SwiftLaTeX/TeX Live report assets — must stay same-origin.
+  const cdnHosts = ['cdn.jsdelivr.net', 'swayam200.github.io']
+  const allowedOrigin = (url) => url.startsWith(pageOrigin)
+    || cdnHosts.includes(new URL(url).hostname)
+  expect(requestedUrls.every(allowedOrigin)).toBe(true)
 })
