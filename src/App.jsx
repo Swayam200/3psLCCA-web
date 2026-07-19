@@ -516,10 +516,13 @@ function App() {
   };
 
   const handleGoogleLogin = () => {
+    // Resolve against the Vite base so redirects work under subdirectory
+    // hosting (e.g. /3psLCCA-web/ on GitHub Pages), not just the origin root.
+    const appBase = new URL(import.meta.env.BASE_URL, window.location.origin).href;
     account.createOAuth2Session(
         'google',
-        window.location.origin, // Success URL (goes back to Homepage, which triggers checkSession)
-        window.location.origin + '/login' // Failure URL
+        appBase, // Success URL (goes back to Homepage, which triggers checkSession)
+        `${appBase}login` // Failure URL
     );
   };
 
