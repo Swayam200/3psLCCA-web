@@ -222,7 +222,6 @@ export const buildReportModel = (project = {}, calculation = {}) => {
     calculation: {
       source: calculation.source || 'unknown',
       coreVersion: calculation.coreVersion || calculation.core_version || 'unknown',
-      pyodideVersion: calculation.pyodideVersion || calculation.pyodide_version || 'unknown',
       calculatedAt: calculation.calculated_at || 'unknown',
     },
   }

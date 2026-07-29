@@ -15,8 +15,6 @@ import {
     calculateLcca,
     getLccaEngineDescription,
     getLccaEngineMode,
-    getLccaEngineStatus,
-    initializeLccaEngine,
 } from '../../../lib/lccaApi';
 
 const D3PieChart = ({ data }) => {
@@ -418,13 +416,9 @@ const Outputs = ({ addLog, navTrigger }) => {
 
         try {
             const engineDescription = await getLccaEngineDescription();
-            addLog(`Loading LCCA calculation engine (${engineDescription})...`);
-            const initialized = await initializeLccaEngine();
-            const engineStatus = await getLccaEngineStatus();
+            addLog(`Contacting the ${engineDescription}...`);
             const nextEngineMetadata = {
                 source: getLccaEngineMode(),
-                coreVersion: initialized?.coreVersion || engineStatus?.coreVersion || 'unknown',
-                pyodideVersion: initialized?.pyodideVersion || engineStatus?.pyodideVersion || 'unknown',
             };
             setEngineMetadata(nextEngineMetadata);
             setCalculationPhase('calculating');
@@ -558,7 +552,7 @@ const Outputs = ({ addLog, navTrigger }) => {
                 style={{ fontSize: '0.82rem', color: 'var(--app-text-secondary)' }}
                 data-testid="lcca-engine-indicator"
             >
-                Calculation engine: {getLccaEngineMode() === 'wasm' ? 'Browser WebAssembly' : 'Development FastAPI backend'}
+                Calculation engine: FastAPI backend
                 {engineMetadata.coreVersion && ` | Core ${engineMetadata.coreVersion}`}
             </div>
 
@@ -575,7 +569,7 @@ const Outputs = ({ addLog, navTrigger }) => {
                 onClick={handleProceed}
             >
                 {calculationPhase === 'loading'
-                    ? 'Loading calculation engine...'
+                    ? 'Contacting calculation backend...'
                     : calculationPhase === 'calculating'
                         ? 'Calculating...'
                         : 'Proceed with Calculation ▸'}

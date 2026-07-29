@@ -491,7 +491,7 @@ const addAppendix = (doc, report, config) => {
     
     const text = `Methodology: The Lifecycle Cost Analysis follows the ISO 15686-5 standard. All future costs are discounted to present values using the specified discount rate. Environmental costs are estimated based on the Social Cost of Carbon as defined in the project inputs. Social costs account for road user delays and safety impacts during construction and maintenance events.
 
-Calculation engine: ${report.calculation.source}. Core version: ${report.calculation.coreVersion}. Pyodide version: ${report.calculation.pyodideVersion}. Calculated at: ${report.calculation.calculatedAt}.
+Calculation engine: ${report.calculation.source}. Core version: ${report.calculation.coreVersion}. Calculated at: ${report.calculation.calculatedAt}.
 
 Software: Generated using 3psLCCA Web Application developed for the FOSSEE project, IIT Bombay. This tool provides a collaborative environment for lifecycle engineering of bridge structures.`;
     

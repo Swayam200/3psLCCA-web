@@ -22,7 +22,7 @@ const results = {
   },
 }
 
-test('report PDF contains canonical project sections and Wasm provenance', async () => {
+test('report PDF contains canonical project sections and calculation provenance', async () => {
   const project = structuredClone(projectFixture)
   project.general_info = {
     project_name: 'PDF Regression Bridge',
@@ -41,9 +41,8 @@ test('report PDF contains canonical project sections and Wasm provenance', async
     null,
     selections,
     {
-      source: 'wasm',
+      source: 'backend',
       coreVersion: 'test-core',
-      pyodideVersion: '314.0.0',
       calculated_at: '2026-06-24T00:00:00Z',
     },
     { save: false, returnArrayBuffer: true },
@@ -53,5 +52,5 @@ test('report PDF contains canonical project sections and Wasm provenance', async
   assert.ok(generated.arrayBuffer.byteLength > 20_000)
   assert.match(pdfText, /PDF Regression Bridge/)
   assert.match(pdfText, /Construction Data/)
-  assert.match(pdfText, /Calculation engine: wasm/)
+  assert.match(pdfText, /Calculation engine: backend/)
 })

@@ -1,237 +1,139 @@
-# 3psLCCA Web - Static WebAssembly Runtime
+# 3psLCCA Web
 
-Run the existing Python core in the browser with Pyodide/CPython WebAssembly.
+Web interface for **Life Cycle Cost Analysis (LCCA) of bridge projects** — the
+browser counterpart of the 3psLCCA desktop application, built with React and
+Vite.
 
-## Abstract
+Users enter bridge, traffic, financial, construction, carbon-emission,
+maintenance, recycling, and demolition data page by page (mirroring the
+desktop app's schema), run the analysis through the
+[`3psLCCA-core`](https://github.com/3psLCCA/3psLCCA-core) Python engine, and
+get interactive charts, cost-breakdown tables, and a downloadable PDF report.
 
-`3psLCCA-web` is a React/Vite interface for Life Cycle Cost Analysis of bridge
-projects. The static WebAssembly runtime packages the existing
-`3psLCCA-core` Python calculation engine into the browser, so production builds
-do not need FastAPI or any Python server.
+## Architecture
 
-`npm run build` creates a static `dist/` folder containing the React app, the
-Web Worker, the self-hosted Pyodide runtime, the `3psLCCA-core` wheel, and
-reference data used by the WebAssembly smoke test. That folder can be served by
-any static host.
+```mermaid
+flowchart LR
+    A["React SPA (Vite)"] -- "project JSON" --> B["FastAPI backend (backend/)"]
+    B --> C["three_ps_lcca_core engine"]
+    C --> B --> A
+    A -- "auth + project sync (optional)" --> D["Appwrite"]
+    A -- "offline-first storage" --> E["localStorage"]
+```
 
-FastAPI remains available only as an explicit development fallback.
+- **Calculations** run on a small FastAPI backend that wraps the
+  `three_ps_lcca_core` Python engine — see [docs/backend-setup.md](docs/backend-setup.md).
+- **Accounts and cloud sync** are handled by Appwrite and are entirely
+  optional — see [docs/appwrite-setup.md](docs/appwrite-setup.md). Without
+  Appwrite the app runs in **guest mode**: projects are stored offline-first
+  in the browser's localStorage.
+- **Reports** are generated client-side with jsPDF.
 
 ## Features
 
-- **Static client-side calculation.** The production app runs calculations in
-  the browser from static files.
-- **Self-hosted Pyodide runtime.** No external Python CDN is required at
-  runtime.
-- **Packaged `3psLCCA-core` wheel.** The build creates and ships the Python core
-  as a pure-Python wheel.
-- **Web Worker execution.** The Python runtime runs away from the main browser
-  UI thread.
-- **Native CPython parity smoke test.** Browser WebAssembly results are compared
-  against native CPython reference outputs.
-- **Report provenance.** Generated reports record the calculation source, core
-  version, Pyodide version, and calculation timestamp.
+- **Desktop schema parity** — page-by-page data entry (General Information,
+  Bridge Data, Construction Work, Traffic, Financial, Carbon Emissions,
+  Maintenance & Repair, Recycling, Demolition) normalized to the same project
+  schema as the Python desktop app.
+- **Guest mode & offline-first storage** — works with zero configuration;
+  projects persist in the browser and sync to the cloud when signed in
+  (last-write-wins conflict resolution).
+- **Authentication** — email/password and Google OAuth via Appwrite.
+- **`.3ps` project import/export** — exchange project archives with the
+  desktop application.
+- **Construction Excel import/export** and a soft-deletion (trash) workflow
+  for construction materials.
+- **Results dashboard** — sustainability-pillar and stage charts (D3),
+  itemized cost-breakdown tables, validation messages, and PDF report
+  download.
 
-## Getting Started
+## Quickstart
 
-Clone the WebAssembly-enabled web branch and the matching core branch:
+Prerequisites: Node.js 22+, Python 3.12+ (for the calculation backend).
 
 ```bash
-git clone -b feat/wasm-static-web https://github.com/Swayam200/3psLCCA-web.git
-git clone -b feat/wasm-static-runtime https://github.com/Swayam200/3psLCCA-core.git
-
-cd 3psLCCA-web
+# 1. Frontend
 npm ci
+npm run dev            # http://localhost:5173
+
+# 2. Calculation backend (separate terminal) — see docs/backend-setup.md
+cd backend
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt      # needs a 3psLCCA-core checkout, see the doc
+uvicorn app.main:app --reload --port 8000
 ```
 
-### Run the development app
+Open the app, click **Continue as Guest**, create a project, fill in the data
+pages, and run the calculation from the **Results** page.
 
-```bash
-LCCA_CORE_PATH=../3psLCCA-core npm run dev
-```
+To enable login and cloud sync, follow
+[docs/appwrite-setup.md](docs/appwrite-setup.md) and fill in `.env`
+(`cp .env.example .env`).
 
-Open the local Vite URL printed by the terminal, usually:
+## Environment variables
 
-```text
-http://localhost:5173/
-```
+All variables are read by Vite at **build/dev-server start** — restart
+`npm run dev` (or rebuild) after changing `.env`. See
+[.env.example](.env.example) for full descriptions.
 
-### Build the static site
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `VITE_LCCA_API_URL` | no (default `http://localhost:8000`) | Calculation backend URL |
+| `VITE_APPWRITE_ENDPOINT` | only for login | Appwrite API endpoint |
+| `VITE_APPWRITE_PROJECT_ID` | only for login | Appwrite project ID |
+| `VITE_APPWRITE_DATABASE_ID` | only for login | Appwrite database ID |
+| `VITE_APPWRITE_COLLECTION_ID` | only for login | Appwrite collection ID |
+| `VITE_BASE_PATH` | no (default `/`) | Base path for subdirectory hosting |
 
-```bash
-LCCA_CORE_PATH=../3psLCCA-core npm run build
-```
-
-The build output is written to:
-
-```text
-dist/
-```
-
-### Serve the static output
-
-```bash
-python3 -m http.server 4173 --directory dist
-```
-
-Open:
-
-```text
-http://127.0.0.1:4173/
-```
-
-At this point the app is running from static files only.
-
-## Verify WebAssembly is Working
-
-Run the static build and browser parity test:
-
-```bash
-LCCA_CORE_PATH=../3psLCCA-core npm run build
-npm run test:wasm
-```
-
-The test opens the static smoke page and checks that the browser result matches
-native CPython reference calculations.
-
-You can also verify it manually after serving `dist/`:
-
-```text
-http://127.0.0.1:4173/wasm-smoke.html
-```
-
-Expected visible proof:
-
-```json
-{
-  "nativeParity": true,
-  "indiaParity": true,
-  "repeatStable": true,
-  "source": "wasm"
-}
-```
-
-### Manual app proof
-
-1. Open the app.
-2. Go to `Outputs`.
-3. Confirm the engine indicator says:
-
-   ```text
-   Calculation engine: Browser WebAssembly
-   ```
-
-4. Click `Proceed with Calculation`.
-5. Confirm the results page appears.
-6. Click `Download Report`.
-7. Generate the PDF report.
-8. Confirm the report appendix includes:
-
-   ```text
-   Calculation engine: wasm
-   Core version: ...
-   Pyodide version: ...
-   ```
-
-## Runtime Flow
-
-```mermaid
-flowchart TD
-    A["npm run build"] --> B["dist/"]
-    B --> C["React app"]
-    B --> D["Pyodide Wasm runtime"]
-    B --> E["3psLCCA-core wheel"]
-    C --> F["Web Worker"]
-    F --> D
-    D --> E
-    E --> G["Calculation results"]
-```
-
-## Technical Notes
-
-### Environment variables
-
-| Variable | Purpose |
-| --- | --- |
-| `LCCA_CORE_PATH` | Path to the local `3psLCCA-core` repository used to build the wheel. |
-| `LCCA_PYTHON` | Optional Python executable override for wheel/reference generation. |
-| `VITE_BASE_PATH` | Base path for static subdirectory hosting, such as `/3pslcca/`. |
-| `VITE_LCCA_ENGINE=backend` | Development-only switch for the FastAPI backend adapter. |
-
-### Production default
-
-Production uses the WebAssembly engine by default:
-
-```text
-VITE_LCCA_ENGINE=wasm
-```
-
-The backend adapter is not used unless explicitly selected during development:
-
-```bash
-VITE_LCCA_ENGINE=backend VITE_LCCA_API_URL=http://localhost:8000 npm run dev
-```
-
-### Static hosting
-
-The `dist/` folder is static-host ready. It can be served by GitHub Pages,
-Vercel, Netlify, Cloudflare Pages, or any ordinary static file server. Hosting
-and CDN packaging details are intentionally kept separate from this getting
-started guide.
-
-For subdirectory hosting, build with:
-
-```bash
-VITE_BASE_PATH=/3pslcca/ LCCA_CORE_PATH=../3psLCCA-core npm run build
-```
-
-## Available Scripts
+## Scripts
 
 | Command | Description |
 | --- | --- |
-| `npm run dev` | Start the Vite development server. |
-| `npm run build` | Prepare Wasm assets and build the static site into `dist/`. |
-| `npm run preview` | Preview the production build locally with Vite. |
-| `npm test` | Run JavaScript unit tests. |
-| `npm run test:wasm` | Run the static browser WebAssembly parity test. |
-| `npm run lint:wasm` | Lint the WebAssembly integration files. |
+| `npm run dev` | Start the Vite development server |
+| `npm run build` | Build the static frontend into `dist/` |
+| `npm run preview` | Preview the production build |
+| `npm test` | Run JavaScript unit tests (`node --test`) |
+| `npm run lint` | Run ESLint over the project |
+
+Backend tests: `cd backend && pytest -q` (see
+[docs/backend-setup.md](docs/backend-setup.md)).
+
+## Project structure
+
+```text
+backend/                  FastAPI calculation backend
+  app/adapters/           web project JSON -> core engine schema adapter
+  tests/                  adapter + API tests
+docs/                     setup guides (Appwrite, backend)
+src/
+  contexts/               React context for project data
+  gui/components/         data-entry pages, homepage, outputs/results
+    outputs/              results dashboard, report model + jsPDF generator
+  lib/                    Appwrite client, storage service, calculation API client
+  utils/                  project schema, normalizers, derivations, import/export
+tests/                    JS unit tests (node --test)
+```
+
+## Deployment notes
+
+- The frontend build (`dist/`) is static and can be served from any static
+  host. Build with `VITE_BASE_PATH=/subdir/` when hosting under a
+  subdirectory.
+- The calculation backend must be deployed and reachable; set
+  `VITE_LCCA_API_URL` at build time and add the frontend's origin to the CORS
+  allow-list in `backend/app/main.py`.
+- When using Appwrite, register every deployed hostname as a Web platform
+  (see [docs/appwrite-setup.md](docs/appwrite-setup.md)).
 
 ## Troubleshooting
 
-### `Unable to build 3psLCCA-core`
+**"Could not reach the calculation backend"** — the FastAPI backend isn't
+running (or `VITE_LCCA_API_URL` points to the wrong place). See
+[docs/backend-setup.md](docs/backend-setup.md).
 
-Set `LCCA_CORE_PATH` to the matching local core repository:
+**Login errors mentioning "Register your new client … as a new Web
+platform"** — the current hostname isn't registered in Appwrite; see the
+troubleshooting section of [docs/appwrite-setup.md](docs/appwrite-setup.md).
 
-```bash
-LCCA_CORE_PATH=/absolute/path/to/3psLCCA-core npm run build
-```
-
-Also confirm Python build tools are installed:
-
-```bash
-python3 -m pip install build setuptools-scm
-```
-
-### Playwright browser is missing
-
-Install Chromium once:
-
-```bash
-npx playwright install chromium
-```
-
-Then rerun:
-
-```bash
-npm run test:wasm
-```
-
-### App tries to use FastAPI
-
-Unset the backend engine override and rebuild:
-
-```bash
-unset VITE_LCCA_ENGINE
-LCCA_CORE_PATH=../3psLCCA-core npm run build
-```
-
-The production default is Browser WebAssembly.
+**App loads but login is missing/disabled** — the `VITE_APPWRITE_*` variables
+were not set when the dev server/build started; the app is in guest mode.

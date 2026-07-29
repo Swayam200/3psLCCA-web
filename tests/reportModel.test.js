@@ -28,9 +28,8 @@ test('report model connects canonical web data to desktop-equivalent sections', 
   }
 
   const model = buildReportModel(buildCalculationProjectInputs(populated), {
-    source: 'wasm',
+    source: 'backend',
     coreVersion: 'test-core',
-    pyodideVersion: 'test-pyodide',
   })
 
   assert.equal(model.project.name, 'Report Bridge')
@@ -39,5 +38,5 @@ test('report model connects canonical web data to desktop-equivalent sections', 
   assert.equal(model.constructionRows[0].material, 'Pile foundation')
   assert.ok(model.materialIncluded.length > 0)
   assert.equal(model.transportRows[0].vehicle, 'Truck')
-  assert.equal(model.calculation.source, 'wasm')
+  assert.equal(model.calculation.source, 'backend')
 })
