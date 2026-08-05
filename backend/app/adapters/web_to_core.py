@@ -9,7 +9,10 @@ from typing import Any
 
 MODULE_PATH = Path(__file__).resolve()
 # backend/app/adapters/web_to_core.py -> repository root is three levels up.
-REPO_ROOT = MODULE_PATH.parents[3]
+# Guarded because this module is also executed in the browser (Pyodide), where
+# it lives at a shallower virtual path and the repository is not present.
+_PARENTS = MODULE_PATH.parents
+REPO_ROOT = _PARENTS[3] if len(_PARENTS) > 3 else Path.cwd()
 # Development convenience: pick up a sibling checkout of the core engine when
 # it is not installed as a package.
 CORE_SRC = REPO_ROOT.parent / "3psLCCA-gui-python-venv" / "3psLCCA-core" / "src"
