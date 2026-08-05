@@ -627,6 +627,20 @@ const Outputs = ({ addLog, navTrigger }) => {
                     </Button>
                 </div>
 
+                <div
+                    className="mb-4"
+                    style={{ fontSize: '0.82rem', color: 'var(--app-text-secondary)' }}
+                    data-testid="lcca-engine-provenance"
+                >
+                    Calculated with: {(engineMetadata.source || projectData?.outputs_data?.engine?.source) === 'browser'
+                        ? 'In-browser engine (3psLCCA-core via CDN)'
+                        : (engineMetadata.source || projectData?.outputs_data?.engine?.source) === 'backend'
+                            ? 'FastAPI backend'
+                            : 'previously saved results'}
+                    {engineMetadata.coreVersion && ` | Core ${engineMetadata.coreVersion}`}
+                    {engineMetadata.calculatedAt && ` | ${new Date(engineMetadata.calculatedAt).toLocaleString()}`}
+                </div>
+
                 <h4 className="mb-4" style={{ color: 'var(--app-text-primary)' }}>At a Glance</h4>
                 <Row className="mb-5">
                     {summaryCards.map((card, idx) => (
