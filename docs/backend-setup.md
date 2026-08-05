@@ -1,10 +1,15 @@
 # Calculation Backend Setup
 
-All LCCA calculations run on a small FastAPI backend (in `backend/`) that
-wraps the [`3psLCCA-core`](https://github.com/3psLCCA/3psLCCA-core) Python
-engine. The frontend sends the project JSON to the backend, which adapts it to
+The FastAPI backend (in `backend/`) is the **optional fallback** calculation
+engine: by default the app calculates in the browser via the published
+3psLCCA-core CDN engine, and switches to this backend automatically only when
+that engine cannot load. It is also handy for development and testing, and it
+provides the native reference for `npm run verify:parity`.
+
+The backend wraps the [`3psLCCA-core`](https://github.com/3psLCCA/3psLCCA-core)
+Python engine. The frontend sends the project JSON, the adapter converts it to
 the core engine's schema, runs `run_full_lcc_analysis`, and returns the
-results.
+results — the exact same adapter the in-browser engine uses.
 
 ## Prerequisites
 

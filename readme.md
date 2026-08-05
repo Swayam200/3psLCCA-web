@@ -14,15 +14,23 @@ get interactive charts, cost-breakdown tables, and a downloadable PDF report.
 
 ```mermaid
 flowchart LR
-    A["React SPA (Vite)"] -- "project JSON" --> B["FastAPI backend (backend/)"]
-    B --> C["three_ps_lcca_core engine"]
-    C --> B --> A
+    A["React SPA (Vite)"] -- "project JSON" --> F["In-browser engine (Pyodide/WASM, CDN)"]
+    F --> C["three_ps_lcca_core wheel"]
+    A -. "automatic fallback" .-> B["FastAPI backend (backend/, optional)"]
+    B --> C2["three_ps_lcca_core engine"]
     A -- "auth + project sync (optional)" --> D["Appwrite"]
     A -- "offline-first storage" --> E["localStorage"]
 ```
 
-- **Calculations** run on a small FastAPI backend that wraps the
-  `three_ps_lcca_core` Python engine — see [docs/backend-setup.md](docs/backend-setup.md).
+- **Calculations run in the browser** by default: the app loads the official
+  [3psLCCA-core browser engine](https://3pslcca.github.io/3psLCCA-core/)
+  (Pyodide + the versioned `three_ps_lcca_core` wheel) from the CDN,
+  integrity-pinned to the published release hash, and feeds it through the
+  same web→core adapter the backend uses. No server is required.
+- **The FastAPI backend is an optional fallback**: if the CDN engine cannot
+  load (offline, CDN outage), the app switches to it automatically — see
+  [docs/backend-setup.md](docs/backend-setup.md). Both paths produce
+  identical results (`npm run verify:parity` proves it field by field).
 - **Accounts and cloud sync** are handled by Appwrite and are entirely
   optional — see [docs/appwrite-setup.md](docs/appwrite-setup.md). Without
   Appwrite the app runs in **guest mode**: projects are stored offline-first
@@ -49,22 +57,27 @@ flowchart LR
 
 ## Quickstart
 
-Prerequisites: Node.js 22+, Python 3.12+ (for the calculation backend).
+Prerequisites: Node.js 22+.
 
 ```bash
-# 1. Frontend
 npm ci
 npm run dev            # http://localhost:5173
+```
 
-# 2. Calculation backend (separate terminal) — see docs/backend-setup.md
+Open the app, click **Continue as Guest**, create a project, fill in the data
+pages, and run the calculation from the **Results** page. The first
+calculation downloads the engine (~15 MB, cached afterwards) and runs it in
+your browser — no backend needed.
+
+Optionally, run the FastAPI fallback backend as well (Python 3.12+; see
+[docs/backend-setup.md](docs/backend-setup.md)):
+
+```bash
 cd backend
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt      # needs a 3psLCCA-core checkout, see the doc
 uvicorn app.main:app --reload --port 8000
 ```
-
-Open the app, click **Continue as Guest**, create a project, fill in the data
-pages, and run the calculation from the **Results** page.
 
 To enable login and cloud sync, follow
 [docs/appwrite-setup.md](docs/appwrite-setup.md) and fill in `.env`
@@ -78,7 +91,11 @@ All variables are read by Vite at **build/dev-server start** — restart
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `VITE_LCCA_API_URL` | no (default `http://localhost:8000`) | Calculation backend URL |
+| `VITE_LCCA_ENGINE` | no (default browser-first) | `browser` or `backend`: pin one engine, disable fallback |
+| `VITE_LCCA_ENGINE_URL` | no | Override the published engine release |
+| `VITE_LCCA_ENGINE_SRI` | no | Integrity hash for a custom engine URL |
+| `VITE_LCCA_PYODIDE_URL` | no | Override the Pyodide runtime URL |
+| `VITE_LCCA_API_URL` | no (default `http://localhost:8000`) | Fallback backend URL |
 | `VITE_APPWRITE_ENDPOINT` | only for login | Appwrite API endpoint |
 | `VITE_APPWRITE_PROJECT_ID` | only for login | Appwrite project ID |
 | `VITE_APPWRITE_DATABASE_ID` | only for login | Appwrite database ID |
@@ -93,6 +110,7 @@ All variables are read by Vite at **build/dev-server start** — restart
 | `npm run build` | Build the static frontend into `dist/` |
 | `npm run preview` | Preview the production build |
 | `npm test` | Run JavaScript unit tests (`node --test`) |
+| `npm run verify:parity` | Prove the in-browser engine matches native CPython field by field |
 | `npm run lint` | Run ESLint over the project |
 
 Backend tests: `cd backend && pytest -q` (see
@@ -104,7 +122,8 @@ Backend tests: `cd backend && pytest -q` (see
 backend/                  FastAPI calculation backend
   app/adapters/           web project JSON -> core engine schema adapter
   tests/                  adapter + API tests
-docs/                     setup guides (Appwrite, backend)
+docs/                     setup guides (Appwrite, backend) + AI integration notes
+ai-demo/                  standalone AI-editing prototype (zero deps, not wired in)
 src/
   contexts/               React context for project data
   gui/components/         data-entry pages, homepage, outputs/results
@@ -114,14 +133,30 @@ src/
 tests/                    JS unit tests (node --test)
 ```
 
+## AI integration (exploratory)
+
+[docs/ai-in-web-applications.md](docs/ai-in-web-applications.md) covers how AI
+features work in web applications generally, and where they would fit 3psLCCA
+on both desktop and web.
+
+[ai-demo/](ai-demo/) is a standalone, runnable prototype of the main pattern —
+natural-language editing of construction materials via tool calling — over a
+small subset of the project schema. It has zero dependencies and is **not**
+wired into the app:
+
+```bash
+node ai-demo/server.js
+```
+
 ## Deployment notes
 
-- The frontend build (`dist/`) is static and can be served from any static
-  host. Build with `VITE_BASE_PATH=/subdir/` when hosting under a
-  subdirectory.
-- The calculation backend must be deployed and reachable; set
-  `VITE_LCCA_API_URL` at build time and add the frontend's origin to the CORS
-  allow-list in `backend/app/main.py`.
+- The app is **fully static**: `dist/` can be served from any static host
+  (GitHub Pages, Vercel, Netlify, …) and calculations run in the visitor's
+  browser. Build with `VITE_BASE_PATH=/subdir/` when hosting under a
+  subdirectory. `.github/workflows/deploy-pages.yml` deploys to GitHub Pages.
+- Deploying the FastAPI backend is optional (it serves as the calculation
+  fallback); if you do, set `VITE_LCCA_API_URL` at build time and add the
+  frontend's origin to the CORS allow-list in `backend/app/main.py`.
 - When using Appwrite, register every deployed hostname as a Web platform
   (see [docs/appwrite-setup.md](docs/appwrite-setup.md)).
 

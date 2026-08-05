@@ -1,0 +1,61 @@
+name: Deploy to GitHub Pages
+
+# Test deployment of the browser-first build. Calculations run entirely
+# in the visitor's browser via the published 3psLCCA-core CDN engine, so
+# no backend is deployed. Kept off main so PR #10 is unaffected.
+on:
+  push:
+    branches: ["feat/cdn-calc-engine"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Build for GitHub Pages subdirectory hosting
+        env:
+          VITE_BASE_PATH: /3psLCCA-web/
+          # Appwrite web client config is public by design (it ships in the
+          # served JS bundle); access control comes from the platform
+          # allow-list and collection permissions in the Appwrite console.
+          VITE_APPWRITE_ENDPOINT: https://fra.cloud.appwrite.io/v1
+          VITE_APPWRITE_PROJECT_ID: 6a1a84de0003e5358117
+          VITE_APPWRITE_DATABASE_ID: 6a1a8582002a3d1538b0
+          VITE_APPWRITE_COLLECTION_ID: project_data
+        run: npm run build
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
