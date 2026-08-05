@@ -41,7 +41,7 @@ const installFakeDom = ({ failUrls = [] } = {}) => {
     },
   };
 
-  return { requested };
+  return { requested, scripts };
 };
 
 const installFakeEngine = ({ initError } = {}) => {
@@ -75,13 +75,18 @@ test('engine URLs default to the published upstream release', () => {
 
 test('initialising loads pyodide then the engine, and reports versions', async (t) => {
   t.after(cleanup);
-  const { requested } = installFakeDom();
+  const { requested, scripts } = installFakeDom();
   installFakeEngine();
 
   const stages = [];
   const result = await initializeCdnEngine((message) => stages.push(message));
 
   assert.deepEqual(requested, [getPyodideUrl(), getEngineUrl()]);
+  // The engine script is integrity-pinned to the published release hash;
+  // Pyodide has no published hash, so it loads without one.
+  assert.equal(scripts[0].integrity, undefined);
+  assert.match(scripts[1].integrity, /^sha256-[A-Za-z0-9+/]+=*$/);
+  assert.equal(scripts[1].crossOrigin, 'anonymous');
   assert.equal(result.status, 'ready');
   assert.equal(result.engineVersion, '1.0.0');
   assert.equal(result.pyodideVersion, '314.0.2');

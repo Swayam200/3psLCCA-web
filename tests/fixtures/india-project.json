@@ -1,0 +1,316 @@
+{
+  "bridge_data": {
+    "bridge_name": "Regression Bridge",
+    "design_life": 50,
+    "analysis_period": 50,
+    "duration_construction_months": 18,
+    "working_days_per_month": 22,
+    "days_per_month": 30
+  },
+  "financial_data": {
+    "discount_rate": 6.7,
+    "inflation_rate": 5.15,
+    "interest_rate": 7.75,
+    "investment_ratio": 0.5
+  },
+  "foundation_data": [
+    {
+      "name": "Foundation",
+      "rows": [
+        {
+          "id": "foundation-1",
+          "workName": "Pile foundation",
+          "rate": 1000,
+          "qty": 100,
+          "conversionFactor": 1,
+          "carbonEmission": {
+            "factor": 2
+          }
+        }
+      ]
+    }
+  ],
+  "superstructure_data": [
+    {
+      "name": "Superstructure",
+      "rows": [
+        {
+          "id": "superstructure-1",
+          "workName": "Deck",
+          "rate": 2000,
+          "qty": 100,
+          "conversionFactor": 1,
+          "carbonEmission": {
+            "factor": 3
+          }
+        }
+      ]
+    }
+  ],
+  "carbon_emission_data": {
+    "material_emissions_data": {
+      "total_kgCO2e": 500
+    },
+    "transport_emissions_data": {
+      "total_kgCO2e": 100
+    },
+    "machinery_emissions_data": {
+      "total_kgCO2e": 50
+    },
+    "diversion_emissions_data": {
+      "mode": "direct",
+      "total_direct_emissions": 25
+    },
+    "social_cost_data": {
+      "result": {
+        "cost_of_carbon_local": 0.08
+      }
+    }
+  },
+  "maintenance_repair_data": {
+    "routine_inspection_cost": 0.1,
+    "routine_inspection_freq": 1,
+    "periodic_maintenance_cost": 0.55,
+    "periodic_maintenance_carbon_cost": 0.55,
+    "periodic_maintenance_freq": 5,
+    "major_inspection_cost": 0.5,
+    "major_inspection_freq": 5,
+    "major_repair_cost": 10,
+    "major_repair_carbon_cost": 0.55,
+    "major_repair_freq": 20,
+    "major_repair_duration": 3,
+    "bearing_exp_joint_cost": 12.5,
+    "bearing_exp_joint_freq": 25,
+    "bearing_exp_joint_duration": 2
+  },
+  "demolition_data": {
+    "demolition_cost": 10,
+    "demolition_carbon_cost": 10,
+    "demolition_duration": 1
+  },
+  "recycling_data": {
+    "included": [
+      {
+        "recoveredValue": 5000
+      }
+    ],
+    "total_recovered_value": 5000
+  },
+  "traffic_data": {
+    "calculation_mode": "INDIA",
+    "vehicles": {
+      "small_cars": {
+        "vehicles_per_day": 100,
+        "accident_percentage": 100,
+        "pwr": 0
+      },
+      "big_cars": {
+        "vehicles_per_day": 0,
+        "accident_percentage": 0,
+        "pwr": 0
+      },
+      "two_wheelers": {
+        "vehicles_per_day": 0,
+        "accident_percentage": 0,
+        "pwr": 0
+      },
+      "o_buses": {
+        "vehicles_per_day": 0,
+        "accident_percentage": 0,
+        "pwr": 0
+      },
+      "d_buses": {
+        "vehicles_per_day": 0,
+        "accident_percentage": 0,
+        "pwr": 0
+      },
+      "lcv": {
+        "vehicles_per_day": 0,
+        "accident_percentage": 0,
+        "pwr": 0
+      },
+      "hcv": {
+        "vehicles_per_day": 0,
+        "accident_percentage": 0,
+        "pwr": 7.22
+      },
+      "mcv": {
+        "vehicles_per_day": 0,
+        "accident_percentage": 0,
+        "pwr": 8.0
+      }
+    },
+    "severity": {
+      "severity_minor": 60,
+      "severity_major": 30,
+      "severity_fatal": 10
+    },
+    "alternate_road": {
+      "alternate_road_carriageway": "Two Lane (Two Way)",
+      "carriage_width_in_m": 7,
+      "hourly_capacity": 2400
+    },
+    "road_params": {
+      "road_roughness_mm_per_km": 2000,
+      "road_rise_m_per_km": 0,
+      "road_fall_m_per_km": 0,
+      "additional_reroute_distance_km": 2,
+      "additional_travel_time_min": 10,
+      "crash_rate_accidents_per_million_km": 0.5,
+      "work_zone_multiplier": 0.5
+    },
+    "peak_distribution": {
+      "hour_1": 0.1,
+      "hour_2": 0.1
+    },
+    "force_free_flow": true,
+    "wpi_profile": "2024",
+    "wpi_year": "2024",
+    "wpi_data": {
+      "small_cars": {
+        "petrol": 154.3,
+        "diesel": 167.4,
+        "engine_oil": 190.2,
+        "other_oil": 156.8,
+        "grease": 156.8,
+        "property_damage": 129.0,
+        "tyre_cost": 111.5,
+        "spare_parts": 129.0,
+        "fixed_depreciation": 129.6,
+        "commodity_holding_cost": 150.4,
+        "passenger_cost": 154,
+        "crew_cost": 154,
+        "fatal": 144.0,
+        "major": 144.0,
+        "minor": 144.0,
+        "vot_cost": 154
+      },
+      "big_cars": {
+        "petrol": 154.3,
+        "diesel": 167.4,
+        "engine_oil": 190.2,
+        "other_oil": 156.8,
+        "grease": 156.8,
+        "property_damage": 129.0,
+        "tyre_cost": 111.5,
+        "spare_parts": 129.0,
+        "fixed_depreciation": 129.6,
+        "commodity_holding_cost": 150.4,
+        "passenger_cost": 154,
+        "crew_cost": 154,
+        "fatal": 144.0,
+        "major": 144.0,
+        "minor": 144.0,
+        "vot_cost": 154
+      },
+      "two_wheelers": {
+        "petrol": 154.3,
+        "diesel": 167.4,
+        "engine_oil": 190.2,
+        "other_oil": 156.8,
+        "grease": 156.8,
+        "property_damage": 129.0,
+        "tyre_cost": 117.9,
+        "spare_parts": 129.0,
+        "fixed_depreciation": 129.6,
+        "commodity_holding_cost": 150.4,
+        "passenger_cost": 154,
+        "crew_cost": 154,
+        "fatal": 144.0,
+        "major": 144.0,
+        "minor": 144.0,
+        "vot_cost": 154
+      },
+      "o_buses": {
+        "petrol": 154.3,
+        "diesel": 167.4,
+        "engine_oil": 190.2,
+        "other_oil": 156.8,
+        "grease": 156.8,
+        "property_damage": 129.0,
+        "tyre_cost": 114.1,
+        "spare_parts": 129.0,
+        "fixed_depreciation": 129.6,
+        "commodity_holding_cost": 150.4,
+        "passenger_cost": 154,
+        "crew_cost": 154,
+        "fatal": 144.0,
+        "major": 144.0,
+        "minor": 144.0,
+        "vot_cost": 154
+      },
+      "d_buses": {
+        "petrol": 154.3,
+        "diesel": 167.4,
+        "engine_oil": 190.2,
+        "other_oil": 156.8,
+        "grease": 156.8,
+        "property_damage": 129.0,
+        "tyre_cost": 114.1,
+        "spare_parts": 129.0,
+        "fixed_depreciation": 129.6,
+        "commodity_holding_cost": 150.4,
+        "passenger_cost": 154,
+        "crew_cost": 154,
+        "fatal": 144.0,
+        "major": 144.0,
+        "minor": 144.0,
+        "vot_cost": 154
+      },
+      "lcv": {
+        "petrol": 154.3,
+        "diesel": 167.4,
+        "engine_oil": 190.2,
+        "other_oil": 156.8,
+        "grease": 156.8,
+        "property_damage": 129.0,
+        "tyre_cost": 114.1,
+        "spare_parts": 116.0,
+        "fixed_depreciation": 129.6,
+        "commodity_holding_cost": 150.4,
+        "passenger_cost": 154,
+        "crew_cost": 154,
+        "fatal": 144.0,
+        "major": 144.0,
+        "minor": 144.0,
+        "vot_cost": 154
+      },
+      "hcv": {
+        "petrol": 154.3,
+        "diesel": 167.4,
+        "engine_oil": 190.2,
+        "other_oil": 156.8,
+        "grease": 156.8,
+        "property_damage": 129.0,
+        "tyre_cost": 114.1,
+        "spare_parts": 116.0,
+        "fixed_depreciation": 129.6,
+        "commodity_holding_cost": 150.4,
+        "passenger_cost": 154,
+        "crew_cost": 154,
+        "fatal": 144.0,
+        "major": 144.0,
+        "minor": 144.0,
+        "vot_cost": 154
+      },
+      "mcv": {
+        "petrol": 154.3,
+        "diesel": 167.4,
+        "engine_oil": 190.2,
+        "other_oil": 156.8,
+        "grease": 156.8,
+        "property_damage": 129.0,
+        "tyre_cost": 114.1,
+        "spare_parts": 116.0,
+        "fixed_depreciation": 129.6,
+        "commodity_holding_cost": 150.4,
+        "passenger_cost": 154,
+        "crew_cost": 154,
+        "fatal": 144.0,
+        "major": 144.0,
+        "minor": 144.0,
+        "vot_cost": 154
+      }
+    }
+  }
+}

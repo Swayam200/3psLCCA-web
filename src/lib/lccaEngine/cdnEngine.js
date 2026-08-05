@@ -14,18 +14,27 @@
  *   VITE_LCCA_PYODIDE_URL  URL of the matching pyodide.js
  */
 
-const DEFAULT_ENGINE_URL = 'https://3pslcca.github.io/3psLCCA-core/release/v1.0.0/3pslccacore.js'
+const DEFAULT_ENGINE_URL = 'https://3pslcca.github.io/3psLCCA-core/release/v1.0.2/3pslccacore.js'
+// Subresource-integrity hash published on the release page for the URL above;
+// the browser refuses to run the script if the fetched bytes don't match.
+const DEFAULT_ENGINE_SRI = 'sha256-riQ+g+lkFBbz1VzpMSbp5YozEAjy92QYwmzpuETwiPg='
 const DEFAULT_PYODIDE_URL = 'https://cdn.jsdelivr.net/pyodide/v314.0.2/full/pyodide.js'
 const SCRIPT_TIMEOUT_MS = 30_000
 
 export const getEngineUrl = () => import.meta.env?.VITE_LCCA_ENGINE_URL || DEFAULT_ENGINE_URL
 export const getPyodideUrl = () => import.meta.env?.VITE_LCCA_PYODIDE_URL || DEFAULT_PYODIDE_URL
+// Integrity only applies to the URL it was computed for: a custom engine URL
+// needs its own hash (VITE_LCCA_ENGINE_SRI) or runs without the check.
+export const getEngineIntegrity = () => {
+  if (import.meta.env?.VITE_LCCA_ENGINE_SRI) return import.meta.env.VITE_LCCA_ENGINE_SRI
+  return getEngineUrl() === DEFAULT_ENGINE_URL ? DEFAULT_ENGINE_SRI : undefined
+}
 
 let enginePromise
 let pyodideRuntime
 
 /** Inject a classic <script> tag once, resolving when it has executed. */
-const loadScript = (url) => new Promise((resolve, reject) => {
+const loadScript = (url, { integrity } = {}) => new Promise((resolve, reject) => {
   const existing = document.querySelector(`script[data-lcca-src="${url}"]`)
   if (existing) {
     if (existing.dataset.lccaLoaded === 'true') {
@@ -41,6 +50,10 @@ const loadScript = (url) => new Promise((resolve, reject) => {
   script.src = url
   script.async = true
   script.dataset.lccaSrc = url
+  if (integrity) {
+    script.integrity = integrity
+    script.crossOrigin = 'anonymous'
+  }
 
   const timer = setTimeout(
     () => reject(new Error(`Timed out after ${SCRIPT_TIMEOUT_MS / 1000}s loading ${url}`)),
@@ -77,7 +90,7 @@ export const initializeCdnEngine = (onStatus = () => {}) => {
       await loadScript(getPyodideUrl())
 
       onStatus('Loading 3psLCCA calculation engine...')
-      await loadScript(getEngineUrl())
+      await loadScript(getEngineUrl(), { integrity: getEngineIntegrity() })
 
       const engine = globalThis.ThreePsLccaCore
       if (!engine) {
