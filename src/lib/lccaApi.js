@@ -1,11 +1,29 @@
 /**
- * LCCA calculation API client.
+ * LCCA calculation API.
  *
- * Calculations run on the FastAPI backend (see backend/README.md), which
- * wraps the `three_ps_lcca_core` Python engine. Configure the backend URL
- * with VITE_LCCA_API_URL (defaults to http://localhost:8000).
+ * Two interchangeable engines produce identical responses:
+ *
+ *  - "browser": the published 3psLCCA-core engine (Pyodide via CDN) with the
+ *    shared web->core adapter loaded into it. No server needed.
+ *  - "backend": the FastAPI backend (backend/), reached over HTTP.
+ *
+ * Default behaviour is browser-first: if the CDN engine cannot load or
+ * initialise (offline, CDN outage), the app falls back to the backend for the
+ * rest of the session. VITE_LCCA_ENGINE=browser|backend pins one engine and
+ * disables the fallback.
  */
-const LCCA_API_BASE = (import.meta.env.VITE_LCCA_API_URL || 'http://localhost:8000').replace(/\/$/, '')
+const LCCA_API_BASE = (import.meta.env?.VITE_LCCA_API_URL || 'http://localhost:8000').replace(/\/$/, '')
+const FORCED_ENGINE = String(import.meta.env?.VITE_LCCA_ENGINE || '').toLowerCase()
+
+let mode = FORCED_ENGINE === 'backend' ? 'backend' : 'browser'
+
+// Test seam: node's test runner cannot import browserEngine.js (it uses
+// Vite-only `?raw` imports), so the loader is injectable.
+let loadBrowserEngine = () => import('./lccaEngine/browserEngine.js')
+export const __setBrowserEngineLoaderForTests = (loader) => {
+  loadBrowserEngine = loader
+  mode = FORCED_ENGINE === 'backend' ? 'backend' : 'browser'
+}
 
 const requestJson = async (path, payload) => {
   let response
@@ -28,18 +46,58 @@ const requestJson = async (path, payload) => {
   return response.json()
 }
 
-export const initializeLccaEngine = async () => ({ status: 'ready' })
-export const calculateLcca = (request) => requestJson('/api/lcca/calculate', {
-  project: request.project,
-  analysis_period_years: request.analysisPeriodYears,
+const backendRequest = (path, request) => requestJson(path, {
+  project: request?.project ?? {},
+  analysis_period_years: request?.analysisPeriodYears ?? 50,
   debug: false,
 })
-export const validateLcca = (request) => requestJson('/api/lcca/validate', {
-  project: request.project,
-  analysis_period_years: request.analysisPeriodYears,
-  debug: false,
-})
-export const getLccaEngineStatus = async () => ({ state: 'ready', mode: 'backend' })
+
+const fallBackToBackend = (error, onStatus) => {
+  if (FORCED_ENGINE === 'browser') throw error
+  console.warn(`[lccaApi] In-browser engine unavailable (${error?.message}); using the backend.`)
+  onStatus?.('In-browser engine unavailable; switching to the calculation backend...')
+  mode = 'backend'
+}
+
+/**
+ * Prepare whichever engine will run the next calculation.
+ * @param {(message: string) => void} [onStatus] progress messages (browser
+ *   engine start-up stages; the backend is ready immediately).
+ */
+export const initializeLccaEngine = async (onStatus) => {
+  if (mode === 'browser') {
+    try {
+      const engine = await loadBrowserEngine()
+      return await engine.initializeBrowserEngine(onStatus)
+    } catch (error) {
+      fallBackToBackend(error, onStatus)
+    }
+  }
+  return { status: 'ready' }
+}
+
+const run = async (method, browserCall, backendPath, request) => {
+  if (mode === 'browser') {
+    try {
+      const engine = await loadBrowserEngine()
+      return await engine[browserCall](request)
+    } catch (error) {
+      // The bridge returns calculation/validation problems as JSON, so a
+      // throw here means the engine itself is broken - fall back.
+      fallBackToBackend(error, request?.onStatus)
+    }
+  }
+  return backendRequest(backendPath, request)
+}
+
+export const calculateLcca = (request) => run('calculate', 'calculateLcca', '/api/lcca/calculate', request)
+export const validateLcca = (request) => run('validate', 'validateLcca', '/api/lcca/validate', request)
+
+export const getLccaEngineMode = () => mode
+export const getLccaEngineStatus = async () => ({ state: 'ready', mode })
+export const getLccaEngineDescription = async () => (
+  mode === 'browser'
+    ? 'in-browser 3psLCCA-core engine (CDN)'
+    : `calculation backend (${LCCA_API_BASE})`
+)
 export const terminateLccaEngine = () => {}
-export const getLccaEngineDescription = async () => `calculation backend (${LCCA_API_BASE})`
-export const getLccaEngineMode = () => 'backend'
