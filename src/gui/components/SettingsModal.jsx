@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, Form, Tabs, Tab } from 'react-bootstrap';
 import Select from 'react-select';
@@ -7,6 +6,12 @@ import ProfileAvatar from './ProfileAvatar';
 import { getProfiles, saveProfile, deleteProfile, getActiveProfile } from '../utils/profileStorage';
 
 const countryOptions = countriesData.map(c => ({ value: c.COUNTRY, label: c.COUNTRY }));
+
+// The AI settings tab only exists in builds made with VITE_AI_ENABLED=true.
+// The comparison stays inline so Vite folds it to a literal and drops the
+// dynamic import (and the whole AI package) from flag-off bundles.
+const AI_ENABLED = import.meta.env.VITE_AI_ENABLED === 'true';
+const AiSettingsTabLazy = AI_ENABLED ? React.lazy(() => import('./ai/AiSettingsTab.jsx')) : null;
 
 const getCustomSelectStyles = (isDark, brandColor) => ({
     control: (provided, state) => ({
@@ -435,6 +440,15 @@ const SettingsModal = ({ show, handleClose, isDarkMode, theme, initialUserName, 
                         </div>
                     </Modal.Body>
                 </Tab>
+                {AiSettingsTabLazy && (
+                    <Tab eventKey="ai" title="AI Assistant">
+                        <Modal.Body className="px-4 py-2" style={{ minHeight: '350px' }}>
+                            <React.Suspense fallback={null}>
+                                <AiSettingsTabLazy theme={theme} />
+                            </React.Suspense>
+                        </Modal.Body>
+                    </Tab>
+                )}
             </Tabs>
 
             <Modal.Footer className="d-flex justify-content-between align-items-center">

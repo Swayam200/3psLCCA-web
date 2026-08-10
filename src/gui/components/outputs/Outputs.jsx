@@ -18,6 +18,16 @@ import {
     initializeLccaEngine,
 } from '../../../lib/lccaApi';
 
+// The AI assistant only exists in builds made with VITE_AI_ENABLED=true. The
+// comparison must stay inline (not a shared constant) so Vite folds it to a
+// literal and drops the dynamic import — and with it the whole src/lib/ai
+// package — from flag-off bundles (enforced by tests/ai/bundleExclusion.test.js).
+const AI_ENABLED = import.meta.env.VITE_AI_ENABLED === 'true';
+const AiPanelLazy = AI_ENABLED ? React.lazy(() => import('../ai/AiPanel.jsx')) : null;
+const AiPanelSlot = () => (AiPanelLazy ? (
+    <React.Suspense fallback={null}><AiPanelLazy /></React.Suspense>
+) : null);
+
 const D3PieChart = ({ data }) => {
     const svgRef = useRef();
     const tooltipRef = useRef();
@@ -578,6 +588,8 @@ const Outputs = ({ addLog, navTrigger }) => {
                         ? 'Calculating...'
                         : 'Proceed with Calculation ▸'}
             </Button>
+
+            <div className="mt-4"><AiPanelSlot /></div>
         </div>
     );
 
@@ -640,6 +652,8 @@ const Outputs = ({ addLog, navTrigger }) => {
                     {engineMetadata.coreVersion && ` | Core ${engineMetadata.coreVersion}`}
                     {engineMetadata.calculatedAt && ` | ${new Date(engineMetadata.calculatedAt).toLocaleString()}`}
                 </div>
+
+                <AiPanelSlot />
 
                 <h4 className="mb-4" style={{ color: 'var(--app-text-primary)' }}>At a Glance</h4>
                 <Row className="mb-5">

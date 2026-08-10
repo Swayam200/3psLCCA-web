@@ -133,16 +133,19 @@ src/
 tests/                    JS unit tests (node --test)
 ```
 
-## AI integration (exploratory)
+## AI assistant (optional)
 
-[docs/ai-in-web-applications.md](docs/ai-in-web-applications.md) covers how AI
-features work in web applications generally, and where they would fit 3psLCCA
-on both desktop and web.
+An opt-in, **read-only** AI assistant on the Results page answers questions
+about computed results (totals, cost drivers, validation messages). It ships
+only in builds made with `VITE_AI_ENABLED=true`, works offline through a free
+rules engine by default, and supports Gemini/Claude via bring-your-own-key or
+an organisation proxy. Setup and contributor docs:
+[docs/ai-setup.md](docs/ai-setup.md).
 
-[ai-demo/](ai-demo/) is a standalone, runnable prototype of the main pattern —
-natural-language editing of construction materials via tool calling — over a
-small subset of the project schema. It has zero dependencies and is **not**
-wired into the app:
+Deeper background: [docs/ai-in-web-applications.md](docs/ai-in-web-applications.md)
+(how AI features in web apps work), [docs/ai-integration-plan.md](docs/ai-integration-plan.md)
+(the phased roadmap), and [ai-demo/](ai-demo/) — a standalone zero-dependency
+prototype of the editing pattern planned for later phases:
 
 ```bash
 node ai-demo/server.js
