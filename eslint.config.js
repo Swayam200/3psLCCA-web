@@ -24,4 +24,10 @@ export default defineConfig([
       globals: { ...globals.browser, ...globals.node },
     },
   },
+  {
+    // ai-demo/ is a standalone Node server; only its public/ folder is browser code.
+    files: ['ai-demo/**/*.js'],
+    ignores: ['ai-demo/public/**/*.js'],
+    languageOptions: { globals: globals.node },
+  },
 ])
