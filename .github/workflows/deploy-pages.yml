@@ -3,9 +3,13 @@ name: Deploy to GitHub Pages
 # Test deployment of the browser-first build. Calculations run entirely
 # in the visitor's browser via the published 3psLCCA-core CDN engine, so
 # no backend is deployed. Kept off main so PR #10 is unaffected.
+#
+# This lineage continues feat/cdn-calc-engine and adds the read-only AI
+# assistant (docs/ai-setup.md), enabled at build time below. Local models
+# download from the Hugging Face CDN in the visitor's browser on first use.
 on:
   push:
-    branches: ["feat/cdn-calc-engine"]
+    branches: ["feat/ai-assistant"]
   workflow_dispatch:
 
 jobs:
@@ -28,6 +32,9 @@ jobs:
       - name: Build for GitHub Pages subdirectory hosting
         env:
           VITE_BASE_PATH: /3psLCCA-web/
+          # Ship the read-only AI assistant in this test deployment. Without
+          # this flag none of the AI code enters the bundle (test-enforced).
+          VITE_AI_ENABLED: "true"
           # Appwrite web client config is public by design (it ships in the
           # served JS bundle); access control comes from the platform
           # allow-list and collection permissions in the Appwrite console.
