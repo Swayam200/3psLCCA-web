@@ -282,6 +282,13 @@ documented for the community."*
 
 ## 3.5 UI workstream — the floating assistant (parallel to Phase 2)
 
+> **Status: shipped** (branch `feat/ai-floating-fab`). Delivered as specced —
+> vector logo FAB (`AiLogoMark.jsx`) with breathe/hover/orbit/pulse states,
+> corner sheet, `useAiAssistant()` hook shared with the Results-page cue,
+> ProjectLayout mount inside the flag gate, page-aware chips
+> (`pageChips.js`), modal hiding via a `body.modal-open` observer. Deferred:
+> draggable/remembered FAB position (fixed bottom-right for now).
+
 Phase 1 embedded the assistant as a panel inside the Results page — right for
 proving the pipeline, wrong as a home: it is invisible from every other page,
 and Phase 2's whole point is editing data on *any* page.
