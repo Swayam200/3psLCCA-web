@@ -3,6 +3,13 @@ import ProjectNavbar from './ProjectNavbar';
 import Sidebar from './Sidebar';
 import { FaLock } from 'react-icons/fa';
 
+// The AI assistant only exists in builds made with VITE_AI_ENABLED=true. The
+// comparison must stay inline (not a shared constant) so Vite folds it to a
+// literal and drops the dynamic import — and with it the whole src/lib/ai
+// package — from flag-off bundles (enforced by tests/ai/bundleExclusion.test.js).
+const AI_ENABLED = import.meta.env.VITE_AI_ENABLED === 'true';
+const AiFabLazy = AI_ENABLED ? React.lazy(() => import('./ai/AiFab.jsx')) : null;
+
 const LockedOverlay = () => {
     const [showBanner, setShowBanner] = React.useState(false);
     const [timer, setTimer] = React.useState(null);
@@ -94,6 +101,11 @@ const ProjectLayout = ({ children, activeNode, setActiveNode, onBackToHome, onNe
                     </div>
                 </div>
             </div>
+            {AiFabLazy && (
+                <React.Suspense fallback={null}>
+                    <AiFabLazy activeNode={activeNode} />
+                </React.Suspense>
+            )}
         </div>
     );
 };

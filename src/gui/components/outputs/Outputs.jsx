@@ -23,9 +23,9 @@ import {
 // literal and drops the dynamic import — and with it the whole src/lib/ai
 // package — from flag-off bundles (enforced by tests/ai/bundleExclusion.test.js).
 const AI_ENABLED = import.meta.env.VITE_AI_ENABLED === 'true';
-const AiPanelLazy = AI_ENABLED ? React.lazy(() => import('../ai/AiPanel.jsx')) : null;
-const AiPanelSlot = () => (AiPanelLazy ? (
-    <React.Suspense fallback={null}><AiPanelLazy /></React.Suspense>
+const AiCueLazy = AI_ENABLED ? React.lazy(() => import('../ai/AiResultsCue.jsx')) : null;
+const AiCueSlot = (props) => (AiCueLazy ? (
+    <React.Suspense fallback={null}><AiCueLazy {...props} /></React.Suspense>
 ) : null);
 
 const D3PieChart = ({ data }) => {
@@ -589,7 +589,7 @@ const Outputs = ({ addLog, navTrigger }) => {
                         : 'Proceed with Calculation ▸'}
             </Button>
 
-            <div className="mt-4"><AiPanelSlot /></div>
+            <div className="mt-4"><AiCueSlot label="Ask the AI assistant about this project" /></div>
         </div>
     );
 
@@ -653,7 +653,7 @@ const Outputs = ({ addLog, navTrigger }) => {
                     {engineMetadata.calculatedAt && ` | ${new Date(engineMetadata.calculatedAt).toLocaleString()}`}
                 </div>
 
-                <AiPanelSlot />
+                <div className="mb-4"><AiCueSlot /></div>
 
                 <h4 className="mb-4" style={{ color: 'var(--app-text-primary)' }}>At a Glance</h4>
                 <Row className="mb-5">

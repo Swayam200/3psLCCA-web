@@ -1,7 +1,15 @@
 # AI Assistant Setup
 
-3psLCCA-web includes an **optional, read-only AI assistant** on the Results
-page. It answers questions about the current project in plain language —
+3psLCCA-web includes an **optional, read-only AI assistant** that floats in
+the bottom-right corner of every project page — a launcher built from the
+3psLCCA logo (the three pillar circles breathe when idle, orbit while
+thinking, and pulse when an answer arrives; all animation honors
+`prefers-reduced-motion`). Clicking it opens a corner sheet; the Results page
+also shows a slim "Ask the AI assistant" cue that opens the same sheet. The
+suggestion chips follow the page you are on — the Financial Data page
+suggests rate questions, construction pages suggest material questions.
+
+It answers questions about the current project in plain language —
 computed results (totals, cost drivers, pillar splits, validation messages)
 **and any field of the project's own data**. The app builds a schema-driven
 index of every entered input and computed line item (materials, bridge
