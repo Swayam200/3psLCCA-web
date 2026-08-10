@@ -280,6 +280,47 @@ documented for the community."*
 
 ---
 
+## 3.5 UI workstream — the floating assistant (parallel to Phase 2)
+
+Phase 1 embedded the assistant as a panel inside the Results page — right for
+proving the pipeline, wrong as a home: it is invisible from every other page,
+and Phase 2's whole point is editing data on *any* page.
+
+**Target: a floating assistant anchored bottom-right, built as a play on the
+3psLCCA logo** (three overlapping circles — orange, green, purple — the three
+pillars).
+
+1. **The launcher (FAB).** Recreate the logo's three circles as real vector
+   shapes (the shipped logo is a raster; a ~20-line SVG reproduces it) so
+   they can animate:
+   - *Idle:* the three circles sit in the logo arrangement, gently breathing
+     (slow scale pulse, `prefers-reduced-motion` respected).
+   - *Hover:* circles separate slightly and re-overlap — the logo "opens".
+   - *Thinking:* the circles orbit a common centre — the natural spinner,
+     and it IS the brand mark.
+   - *Answer ready (panel closed):* one soft pulse + a badge dot.
+   - *Per-tier tint (optional, subtle):* rules answered → green emphasis,
+     encoder → purple, cloud → orange; the route pills stay authoritative.
+2. **The sheet.** Clicking the FAB opens a card (spring scale+fade from the
+   FAB corner, ~200 ms) with exactly today's panel content: chips, prompt
+   box, route pills with confidence, answers. Esc / outside-click closes.
+   On narrow screens it becomes a bottom sheet.
+3. **App-wide mount.** The FAB moves out of Outputs.jsx into ProjectLayout,
+   inside the same `VITE_AI_ENABLED` lazy gate, so it floats over every data
+   page — the prerequisite for Phase 2's "edit from anywhere". Page-aware
+   chips (Foundation page → material questions) come free from the existing
+   intent catalogue.
+4. **Placement rules.** Bottom-right, above the page scroll, never overlapping
+   modals (hidden while any modal is open); z-index below toasts; position
+   remembered per browser.
+
+Implementation notes: pure CSS/SVG animation (no animation library — the
+bundle discipline stays), one new `AiFab.jsx` + a `useAiAssistant()` hook
+extracted from today's panel so panel and sheet share all logic. The Results
+page keeps a slim "Ask about these results" affordance that opens the same
+sheet. Estimated as one focused PR, independent of (and mergeable before)
+Phase 2's write tools.
+
 ## 4. Cross-cutting rules (all phases)
 
 - **Testing:** deterministic parts (router, validators, executor, diff,
