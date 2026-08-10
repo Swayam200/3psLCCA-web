@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>3psLCCA — AI CRUD demo</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>🌉</text></svg>" />
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="mark">3ps</span>
+    <div>
+      <h1>LCCA — AI editing demo</h1>
+      <p id="projectMeta">loading…</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <button id="settingsBtn" class="badge" title="AI settings">⚙ <span id="providerBadge">rules</span></button>
+    <button id="undoBtn" class="btn ghost">Undo</button>
+    <button id="resetBtn" class="btn ghost">Reset data</button>
+  </div>
+</header>
+
+<main class="layout">
+  <!-- ------------------------------------------------ left: CRUD ------- -->
+  <section class="col-main">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Construction work data</h2>
+        <div class="tabs" id="sectionTabs"></div>
+      </div>
+      <div id="tableWrap" class="table-wrap"></div>
+      <div class="panel-foot">
+        <button id="addBtn" class="btn primary">+ Add material</button>
+        <button id="trashBtn" class="btn ghost">Trash <span id="trashCount" class="pill">0</span></button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Analysis parameters</h2></div>
+      <div id="paramGrid" class="param-grid"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Change log</h2></div>
+      <ul id="auditList" class="audit"></ul>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------- right: AI + out ---- -->
+  <section class="col-side">
+    <div class="panel ai">
+      <div class="panel-head">
+        <h2>Ask for a change</h2>
+        <span id="aiModel" class="muted-sm"></span>
+      </div>
+      <div class="chips" id="chips"></div>
+      <textarea id="prompt" rows="3" placeholder="e.g. increase all foundation rates by 8% and set the discount rate to 8"></textarea>
+      <button id="runBtn" class="btn primary wide">Run</button>
+      <div id="aiOut" class="ai-out"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Life-cycle result</h2><span id="calcNote" class="muted-sm"></span></div>
+      <div id="results"></div>
+    </div>
+  </section>
+</main>
+
+<!-- ------------------------------------------------------- add/edit ---- -->
+<dialog id="rowDialog">
+  <form method="dialog" id="rowForm">
+    <h3 id="rowDialogTitle">Add material</h3>
+    <label>Work name<input name="workName" required /></label>
+    <div class="row2">
+      <label>Quantity<input name="qty" type="number" step="any" min="0" required /></label>
+      <label>Unit<input name="unit" value="m³" required /></label>
+    </div>
+    <div class="row2">
+      <label>Rate (INR)<input name="rate" type="number" step="any" min="0" required /></label>
+      <label>Carbon factor (tCO₂e/unit)<input name="carbonFactor" type="number" step="any" min="0" value="0" /></label>
+    </div>
+    <label>Source<input name="source" placeholder="e.g. Bihar SoR 2025" /></label>
+    <div class="dialog-actions">
+      <button value="cancel" class="btn ghost" type="submit" formnovalidate>Cancel</button>
+      <button value="save" class="btn primary" type="submit">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ------------------------------------------------------- settings ---- -->
+<dialog id="settingsDialog">
+  <h3>AI settings</h3>
+
+  <label>How should prompts be handled?
+    <select id="modeSelect"></select>
+  </label>
+  <p id="modeBlurb" class="hint"></p>
+
+  <div id="keyBlock">
+    <label>Provider
+      <select id="providerSelect"></select>
+    </label>
+
+    <label>API key
+      <span class="key-row">
+        <input id="apiKeyInput" type="password" autocomplete="off" spellcheck="false"
+               placeholder="paste your own key" />
+        <button id="revealBtn" class="icon-btn" type="button" title="Show / hide">👁</button>
+      </span>
+    </label>
+
+    <label>Model <span class="hint-inline">(blank = provider default)</span>
+      <input id="modelInput" type="text" autocomplete="off" spellcheck="false" placeholder="" />
+    </label>
+
+    <fieldset class="storage">
+      <legend>Keep this key</legend>
+      <label class="radio"><input type="radio" name="storage" value="local" />
+        <span><b>On this browser</b> — survives closing the tab. Stored in
+        <code>localStorage</code>, unencrypted.</span></label>
+      <label class="radio"><input type="radio" name="storage" value="session" />
+        <span><b>Until I close the tab</b> — <code>sessionStorage</code>. Safer default
+        on a shared machine.</span></label>
+      <label class="radio"><input type="radio" name="storage" value="none" />
+        <span><b>Don't keep it</b> — held in memory only, gone on refresh.</span></label>
+    </fieldset>
+
+    <div class="warn">
+      <strong>Read this before pasting a key.</strong>
+      <ul>
+        <li>The key is sent to <em>this local server</em>, which forwards it to the
+            provider and never writes it to disk or logs.</li>
+        <li>Saved keys live in your browser in plain text. Any script running on
+            this page could read them. Only do this on a machine you trust.</li>
+        <li>Use a key with a <em>spending limit</em>, scoped to this experiment.
+            Revoke it when you're done.</li>
+        <li>This is a demo pattern for a local tool. A deployed product should keep
+            keys server-side and never ask the browser for one.</li>
+      </ul>
+    </div>
+
+    <div class="dialog-actions" style="justify-content:space-between">
+      <button id="testKeyBtn" class="btn ghost" type="button">Test key</button>
+      <button id="clearKeyBtn" class="btn ghost" type="button">Clear key</button>
+    </div>
+    <p id="testResult" class="hint"></p>
+  </div>
+
+  <div class="dialog-actions">
+    <button id="settingsClose" class="btn primary" type="button">Done</button>
+  </div>
+</dialog>
+
+<dialog id="trashDialog">
+  <h3>Trash</h3>
+  <div id="trashList"></div>
+  <div class="dialog-actions"><button id="trashClose" class="btn ghost">Close</button></div>
+</dialog>
+
+<script type="module" src="/app.js"></script>
+</body>
+</html>
