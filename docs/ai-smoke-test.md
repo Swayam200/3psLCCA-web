@@ -141,3 +141,20 @@ exactly which field matched), and read-only.
 
 The battery at the bottom of Round 1 remains the canonical eval set — extend
 it as real phrasings arrive.
+
+---
+
+# Round 3 candidates — hosted General Information failures (2026-08-12)
+
+Two real queries against the hosted deployment, both diagnosed structurally
+(offline repro against the production index code; full analysis in
+`ai-integration-plan.md` §3.6):
+
+| Query | Result | Root cause |
+| --- | --- | --- |
+| Who's assessing this project? | encoder 83% → **Project description** (wrong field) | right entry indexed as "Contact person" (storage key), screen says "Assessor's Name"; no margin check let a vague match through |
+| Which organisation is responsible for the evaluation? | refused (best entry below gate) | right entry indexed as "Agency name"; the question is nearly verbatim the field's on-screen *hint*, which the index never sees |
+
+These join the battery for the Round 3 re-run after the field manifest +
+cross-encoder rerank land (§3.6 R1/R2). Do NOT fix with synonyms or rules —
+they are the acceptance test for the structural change.

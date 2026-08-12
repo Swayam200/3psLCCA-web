@@ -328,6 +328,143 @@ page keeps a slim "Ask about these results" affordance that opens the same
 sheet. Estimated as one focused PR, independent of (and mergeable before)
 Phase 2's write tools.
 
+## 3.6 Retrieval v2 and the learning loop (reshapes Phase 2–4 sequencing)
+
+Two hosted-deployment failures on the General Information page motivated this
+section. Both were reproduced offline against the real index code; the
+diagnosis below is measured, not guessed.
+
+| Query | What happened | Root cause |
+| --- | --- | --- |
+| "Who's assessing this project?" | encoder 83% → answered **Project description** (wrong field) | The right entry exists but is labelled **"Contact person"** (storage key `contact_person`); the screen says **"Assessor's Name"**. "this project" dragged the query vector to "Project description", which cleared the 81% gate; no margin check, no second look. |
+| "Which organisation is responsible for the evaluation?" | rules no match → encoder no match → refusal | The right entry exists but is labelled **"Agency name"** (storage key `agency_name`); the screen says **"Organisation's Name"** with hint *"Name of the organization responsible for this evaluation"* — the question is nearly **verbatim the hint text**, and the index never sees hints. Lexical coverage: only 1 of 3 content words matched. |
+
+**The structural finding: context completeness is not the problem — vocabulary
+is.** The index contains every entered value, but describes fields in the
+storage schema's language (humanized snake_case keys), while users ask in the
+screen's language (labels and hints they are literally looking at). The
+assistant "knows the answer but not the question." Additionally, the local
+cascade has no component that ever reads the question and a candidate
+*together* — the bi-encoder compresses each side into a vector independently,
+so "roughly related" (83%) and "the answer" are indistinguishable to it.
+
+No hand-written synonyms fix this class of problem; four structural changes do.
+
+### R1 — Field manifest: the app's own vocabulary as shared data
+
+Every data page already knows its fields' display labels and hint text — but
+as JSX props, invisible to everything else. Extract them into **per-page,
+data-only manifest modules** (`id → { label, hint, unit?, type? }`) that the
+form renders FROM and the index reads FROM. Index entries become
+`General information — Organisation's Name ("name of the organization
+responsible for this evaluation"): IIT Bombay` — at which point both failing
+queries match trivially, lexically, before any model runs.
+
+- **Not a synonym table.** Nobody authors question-vocabulary for the AI;
+  these are the exact strings the UI already shows users — which is *why*
+  users phrase questions with them. New fields get labels because the form
+  needs them, and become findable as a side effect.
+- **Modularity preserved:** forms depend on manifest data; the AI package
+  depends on manifest data; neither depends on the other. The manifest also
+  serves non-AI consumers (Phase 2 diff modal labels, report field labels).
+- **Completeness invariant test:** walk every leaf of a fully-populated
+  normalized project; assert each is either indexed or on an explicit
+  exclusion list, and that manifest-covered pages contribute display labels.
+  Coverage gaps can never be silent again.
+- Tokenizer folds spelling-class variants (organisation/organization) — a
+  general normalization, not a word list.
+
+### R2 — Retrieval that reads the question: top-k → rerank → margin
+
+Restructure the encoder tier from "top-1 similarity or refuse" into a
+two-stage retriever, all local and free:
+
+1. **Recall stage (existing E5 bi-encoder):** fetch top-k (~10) candidates —
+   its actual strength.
+2. **Precision stage (new): a cross-encoder reranker** (~20 MB ONNX, e.g. a
+   ms-marco MiniLM cross-encoder via transformers.js) scores each
+   (question, candidate) pair *jointly* — attention across both texts at
+   once. This is the missing component that actually reads the question.
+3. **Acceptance:** reranker gate **plus margin-over-runner-up** (a wrong
+   field that narrowly beats the right one no longer wins silently), and
+   grouped answers when siblings belong together (organisation name +
+   address).
+4. **Calibration exactly like the E5 swap:** run the battery at threshold 0,
+   measure the score distributions, set the gates from data, publish
+   before/after in `ai-smoke-test.md`. The battery grows by the two failures
+   above plus assessor/organisation paraphrases.
+
+Expected collateral wins, to be verified by the battery: the
+"How long is the bridge?"→Footpath regression and the poem false positive are
+both textbook margin/rerank cases.
+
+**Generative tiers become retrieve-then-read:** FunctionGemma and cloud
+providers receive the top-k candidates instead of the whole 600-entry dump —
+better accuracy (less distraction), lower cost, smaller prompts.
+
+### R3 — Learning locally: memory now, models later
+
+The assistant can genuinely improve from its own users, entirely in-browser,
+no services:
+
+1. **Feedback capture.** Every answer gets 👍/👎 and a "show what it
+   considered" expander listing the top-5 candidates; clicking the right one
+   records a labeled pair *(question → field id)* in IndexedDB. Never leaves
+   the browser; viewable and deletable in Settings.
+2. **Query memory (instant learning).** Before retrieval, compare the
+   incoming question's embedding against confirmed past questions; a close
+   match boosts its confirmed field through the ranker. One correction
+   teaches the assistant that phrasing — permanently, per-browser,
+   inspectable, no weights touched.
+3. **Tiny learned ranker.** The acceptance decision combines signals
+   (bi-encoder score, reranker score, lexical overlap, memory similarity) via
+   a logistic regression — a few dozen weights trained in milliseconds of
+   plain JS on the accumulated local feedback. Real machine learning, zero
+   cost, fully local.
+4. **Honest boundary:** transformers.js is inference-only — the browser
+   cannot fine-tune the encoder itself. That is what R4 is for.
+
+### R4 — Community evolution loop (open source, free)
+
+- **Opt-in export** of feedback pairs as *(question, field label)* only — no
+  values, no project data, no PII — reviewed like any contribution via PR
+  into an `evals/` corpus in the repo.
+- The corpus grows the smoke-test battery (regressions become impossible to
+  miss) and becomes **fine-tuning data**: an `ai:finetune` script (Python,
+  contributor hardware or free Colab) fine-tunes E5-small — later
+  FunctionGemma via LoRA, per the Phase 3–4 note in
+  `ai-local-models-research.md` — and publishes versioned weights to Hugging
+  Face. The app adopts a community model by bumping one model id, with the
+  prefs migration already handling threshold resets.
+- Individual users teach their own browser instantly (R3); the community
+  teaches the shared model across releases (R4). Both loops are free and
+  auditable.
+
+### Phase 2 modularity contract (writes stay detachable)
+
+Restating C1 for the write path, as a hard boundary:
+
+- The AI package emits **validated `Proposal` objects**; one adapter applies
+  a confirmed proposal through the same `updateProjectData` path the forms
+  use. Forms import zero AI code; the AI imports zero form components; the
+  field manifest they share is plain data owned by the app.
+- Flag off → zero AI bytes (existing bundle test keeps enforcing it).
+  Assistant toggled off → no listeners, no observers, nothing mounted.
+  Deleting `src/lib/ai/` + `src/gui/components/ai/` must leave every form
+  working untouched.
+
+### Sequencing
+
+- **Phase 2A — manifest + retrieval v2 (R1, R2).** Foundation for everything
+  else; measured by the extended battery. The diff modal needs the manifest's
+  labels anyway, so this is on Phase 2's critical path, not a detour.
+- **Phase 2B — propose-and-confirm writes** (§Phase 2 scope, unchanged,
+  now built on the manifest).
+- **Phase 3 additions — the local learning loop (R3)** joins the existing
+  Phase 3 scope.
+- **Phase 4 additions — the community loop (R4)** joins the existing Phase 4
+  ecosystem scope.
+
 ## 4. Cross-cutting rules (all phases)
 
 - **Testing:** deterministic parts (router, validators, executor, diff,
