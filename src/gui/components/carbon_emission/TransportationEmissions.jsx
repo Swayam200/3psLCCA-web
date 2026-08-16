@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button, Form, Modal, Table } from 'react-bootstrap';
 import { useProjectData } from '../../../contexts/ProjectDataContext';
 import {
@@ -287,24 +287,11 @@ const TransportationEmissions = () => {
     const { projectData, updateProjectData } = useProjectData();
     const [editingEntry, setEditingEntry] = useState(null);
     const transportData = projectData.transport_data || { vehicles: [] };
+    // Display-only derivation — persisted transport_emissions_data is
+    // maintained by normalizeCarbonEmissionData / deriveCarbonEmissionData.
+    // (A write-back effect here fought the normalizer's shape and looped
+    // React; see MaterialEmissions for the same fix.)
     const computed = useMemo(() => computeTransportEmissions(projectData), [projectData]);
-
-    useEffect(() => {
-        const prev = projectData.carbon_emission_data || {};
-        const nextTransportData = {
-            ...(prev.transport_emissions_data || {}),
-            entries: computed.entries,
-            cat_totals: computed.cat_totals,
-            total_kgCO2e: computed.total_kgCO2e,
-            active_vehicle_count: computed.active_vehicle_count,
-        };
-        if (JSON.stringify(prev.transport_emissions_data || {}) === JSON.stringify(nextTransportData)) return;
-        updateProjectData('carbon_emission_data', {
-            ...prev,
-            transport_emissions_data: nextTransportData,
-            transportation_emissions_data: nextTransportData,
-        });
-    }, [computed, projectData.carbon_emission_data, updateProjectData]);
 
     const saveEntry = (entry) => {
         const vehicles = transportData.vehicles || [];

@@ -23,6 +23,7 @@ import { createDefaultProject, normalizeProjectData } from './utils/projectSchem
 import { export3psFile } from './utils/projectExport'
 import { account, ID } from './lib/appwrite'
 import { projectStorageService } from './lib/projectStorageService'
+import { loadGuestSession, saveGuestSession, clearGuestSession } from './lib/guestSession'
 import './App.css'
 
 function ProtectedRoute({ isLoggedIn, children }) {
@@ -265,20 +266,29 @@ function ProjectViewWrapper({ projectData, setProjectData, logs, setLogs, isLock
 function App() {
   const navigate = useNavigate();
 
-  const [isLoggedIn, setIsLoggedIn] = useState(() => sessionStorage.getItem('isLoggedIn') === 'true')
+  // An active guest on this machine resumes straight to the home page instead
+  // of the auth page; logging out (profile menu) clears the marker.
+  const resumedGuest = loadGuestSession();
+  const [isLoggedIn, setIsLoggedIn] = useState(() => sessionStorage.getItem('isLoggedIn') === 'true' || !!resumedGuest)
   const [projectData, setProjectData] = useState(() => createDefaultProject())
 
   const [logs, setLogs] = useState(() => {
     const saved = localStorage.getItem('logs')
     return saved ? JSON.parse(saved) : []
   })
-  const [userName, setUserName] = useState(() => sessionStorage.getItem('userName') || '')
+  const [userName, setUserName] = useState(() => sessionStorage.getItem('userName') || resumedGuest?.name || '')
   const [isLocked, setIsLocked] = useState(false)
 
   useEffect(() => {
     // Clear legacy localStorage keys to ensure new sessions launch on the Login page
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('userName');
+
+    // Resuming from the guest marker: stamp this tab's session as a guest so
+    // storage/sync code (sessionStorage 'isGuest' checks) behaves as before.
+    if (sessionStorage.getItem('isLoggedIn') !== 'true' && loadGuestSession()) {
+      sessionStorage.setItem('isGuest', 'true');
+    }
 
     // Check for active Appwrite session on mount if not logged in
     const checkSession = async () => {
@@ -475,6 +485,7 @@ function App() {
     setIsLoggedIn(true)
     setUserName(name)
     sessionStorage.setItem('isGuest', isGuest)
+    if (isGuest) saveGuestSession(name)
     addLog(isGuest ? `Guest user '${name}' logged in.` : `User '${name}' logged in.`)
     navigate('/')
   }
@@ -488,6 +499,7 @@ function App() {
         console.error('Logout error', e);
       }
     }
+    clearGuestSession();
     setIsLoggedIn(false);
     sessionStorage.removeItem('isGuest');
     addLog('Logged out successfully.');

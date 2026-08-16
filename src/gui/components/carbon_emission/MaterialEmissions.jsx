@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useProjectData } from '../../../contexts/ProjectDataContext';
 import { computeMaterialEmissions, formatNumber, STRUCTURE_CHUNKS } from './carbonUtils';
 
@@ -7,33 +7,12 @@ const MaterialEmissions = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [detailsVisible, setDetailsVisible] = useState(false);
 
+    // Display-only derivation. The persisted material_emissions_data is
+    // maintained by normalizeCarbonEmissionData on every project write and by
+    // deriveCarbonEmissionData at calculation time — writing this view-model
+    // back from an effect fought the normalizer's shape and looped React
+    // ("Maximum update depth exceeded", which froze sidebar navigation).
     const computed = useMemo(() => computeMaterialEmissions(projectData), [projectData]);
-    const serializeRow = (row) => {
-        const next = { ...row };
-        delete next.raw;
-        return next;
-    };
-
-    useEffect(() => {
-        const prev = projectData.carbon_emission_data || {};
-        const nextMaterialData = {
-            ...(prev.material_emissions_data || {}),
-            rows: computed.rows.map(serializeRow),
-            included_items: computed.includedRows.map(serializeRow),
-            excluded_items: computed.excludedRows.map(serializeRow),
-            excluded_ids: computed.excluded_ids,
-            category_totals: computed.cat_totals,
-            cat_totals: computed.cat_totals,
-            total_kgCO2e: computed.total_kgCO2e,
-            included_count: computed.included_count,
-            total_count: computed.total_count,
-        };
-        if (JSON.stringify(prev.material_emissions_data || {}) === JSON.stringify(nextMaterialData)) return;
-        updateProjectData('carbon_emission_data', {
-            ...prev,
-            material_emissions_data: nextMaterialData,
-        });
-    }, [computed, projectData.carbon_emission_data, updateProjectData]);
 
     const updateMaterialState = (materialId, include) => {
         const row = computed.rows.find((item) => item.id === materialId);
