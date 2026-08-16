@@ -1,6 +1,6 @@
 # Ricke et al. (Country-Level SCC) on the web — architecture plan
 
-Owner: Ricky (SOC page) · Plan: Swayam/Claude · Status: proposed, 2026-08-16
+Owner: Ricky (SOC page) · Plan: Swayam/Claude · Status: implemented (steps 1–6), 2026-08-16
 
 ## Where the three implementations stand
 

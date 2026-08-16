@@ -4,8 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/build-cscc-db.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/build-cscc-db.mjs",
     "build": "vite build",
+    "pretest": "node scripts/build-cscc-db.mjs",
     "test": "node --test \"tests/**/*.test.js\"",
     "test:demo": "node --test ai-demo/test.js",
     "verify:parity": "node scripts/verify-engine-parity.mjs",
