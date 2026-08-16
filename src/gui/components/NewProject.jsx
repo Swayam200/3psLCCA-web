@@ -3,9 +3,11 @@ import React, { useState } from 'react';
 import { Modal, Button, Form } from 'react-bootstrap';
 import Select from 'react-select';
 import { COUNTRIES, CURRENCIES, COUNTRY_TO_CURRENCY } from './utils/countriesdata';
+import { materialCatalog } from './utils/materialCatalog';
 
 const countryOptions = COUNTRIES.map(c => ({ value: c, label: c }));
 const currencyOptions = CURRENCIES.map(c => ({ value: c, label: c }));
+const sorOptions = Object.keys(materialCatalog).map(key => ({ value: key, label: key }));
 const unitOptions = [
     { value: 'Metric (SI)', label: 'Metric (SI)' },
     { value: 'Imperial (US)', label: 'Imperial (US)' }
@@ -85,6 +87,7 @@ const NewProject = ({ show, handleClose, onProjectOpen, onProjectCreate, isDarkM
     const [country, setCountry] = useState(null);
     const [currency, setCurrency] = useState(null);
     const [unitSystem, setUnitSystem] = useState({ value: 'Metric (SI)', label: 'Metric (SI)' });
+    const [sorDatabase, setSorDatabase] = useState(null); // optional
     const [validated, setValidated] = useState(false);
 
     const brandColor = theme?.activeIconColor || '#8bc34a';
@@ -119,6 +122,7 @@ const NewProject = ({ show, handleClose, onProjectOpen, onProjectCreate, isDarkM
             country: country.value,
             currency: currency.value,
             unitSystem: unitSystem.value,
+            sorDatabase: sorDatabase?.value || '',
             createdAt: new Date().toLocaleString()
         };
 
@@ -126,6 +130,7 @@ const NewProject = ({ show, handleClose, onProjectOpen, onProjectCreate, isDarkM
         setCountry(null);
         setCurrency(null);
         setUnitSystem({ value: 'Metric (SI)', label: 'Metric (SI)' });
+        setSorDatabase(null);
         setValidated(false);
 
         handleClose();
@@ -272,6 +277,27 @@ const NewProject = ({ show, handleClose, onProjectOpen, onProjectCreate, isDarkM
                                     Cannot be changed after project creation.
                                 </Form.Text>
                             )}
+                        </Form.Group>
+
+                        <Form.Group className="mb-3">
+                            <Form.Label className="fw-bold mb-1" style={{ fontSize: '0.85rem', color: colors.text }}>
+                                Material Suggestions (SOR) <span style={{ fontWeight: 'normal', color: colors.textMuted }}>— optional</span>
+                            </Form.Label>
+                            <Select
+                                options={sorOptions}
+                                value={sorDatabase}
+                                onChange={setSorDatabase}
+                                placeholder="— None (choose later) —"
+                                styles={customSelectStyles}
+                                menuPlacement="auto"
+                                menuPortalTarget={document.body}
+                                menuPosition="fixed"
+                                maxMenuHeight={180}
+                                isClearable
+                            />
+                            <Form.Text style={{ fontSize: '0.75rem', color: colors.textMuted, display: 'block', marginTop: '2px' }}>
+                                Auto-suggests material names, rates, and emission factors. Can be set or changed anytime in General Information.
+                            </Form.Text>
                         </Form.Group>
 
                         <div className="d-flex justify-content-end gap-3 mt-3">

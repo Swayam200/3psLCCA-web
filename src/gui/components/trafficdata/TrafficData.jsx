@@ -55,6 +55,29 @@ const WPI_GROUPS = [
     { label: 'Value of Time Cost (INR)', span: 1 },
 ];
 
+// The WPI table is wider than any viewport and taller than the fold, so it
+// lives in a fixed-size shell that scrolls both ways internally while the
+// group header, column header, Common-to-All row, and vehicle-name column
+// all stay pinned. Deterministic header heights (42 + 66 → pin at 108) are
+// what keep the sticky offsets honest — the previous hardcoded 49px drifted
+// from the real row height and left a broken hollow band. border-collapse
+// must be `separate`: collapsed borders detach from sticky cells on scroll.
+const WPI_TABLE_CSS = `
+.wpi-table-shell { max-height: 560px; overflow: auto; border: 1px solid var(--app-border-mid); border-radius: 4px; }
+.wpi-sticky-table { border-collapse: separate; border-spacing: 0; table-layout: fixed; min-width: 1900px; background: var(--app-bg-card); color: var(--app-text-primary); font-size: 0.85rem; margin: 0; }
+.wpi-sticky-table th, .wpi-sticky-table td { border-right: 1px solid var(--app-border-mid); border-bottom: 1px solid var(--app-border-mid); }
+.wpi-sticky-table thead th { background: var(--app-bg-alt); color: var(--app-text-primary); text-align: center; vertical-align: middle; }
+.wpi-corner { position: sticky; left: 0; top: 0; z-index: 6; width: 150px; min-width: 150px; background: var(--app-bg-alt); }
+.wpi-group { position: sticky; top: 0; z-index: 3; height: 42px; font-weight: 600; padding: 4px 8px; white-space: nowrap; }
+.wpi-col { position: sticky; top: 42px; z-index: 3; height: 66px; width: 108px; font-weight: 500; padding: 4px 6px; font-size: 0.8rem; line-height: 1.25; overflow: hidden; }
+.wpi-rowlabel { position: sticky; left: 0; z-index: 2; width: 150px; min-width: 150px; background: var(--app-bg-card); font-weight: 700; text-align: left; padding: 6px 6px 6px 12px; white-space: nowrap; vertical-align: middle; }
+.wpi-pin td { position: sticky; top: 108px; z-index: 2; background: var(--app-bg-alt); }
+.wpi-pin td.wpi-rowlabel { z-index: 4; background: var(--app-bg-alt); }
+.wpi-value { text-align: right; padding: 7px 12px; color: var(--app-text-secondary); font-variant-numeric: tabular-nums; }
+.wpi-check { display: flex; align-items: center; justify-content: center; height: 34px; }
+.wpi-sticky-table input.form-control { min-width: 108px; }
+`;
+
 // Load WPI Database from local JSON
 const WPI_DATABASE = {};
 if (wpiDb && wpiDb.entries) {
@@ -692,32 +715,32 @@ const TrafficData = () => {
                 </div>
             </div>
 
-            <div className="table-responsive mb-4" style={{ maxHeight: '560px', overflow: 'auto', border: '1px solid var(--app-border-mid)', borderRadius: '4px' }}>
-                <table className="table table-bordered table-sm text-center align-middle" style={{ minWidth: '1900px', tableLayout: 'fixed', backgroundColor: 'var(--app-bg-card)', borderColor: 'var(--app-border-mid)', marginBottom: 0 }}>
+            <div className="mb-4 wpi-table-shell">
+                <style>{WPI_TABLE_CSS}</style>
+                <table className="wpi-sticky-table">
                     <thead>
                         <tr>
-                            <th rowSpan="2" style={{ position: 'sticky', left: 0, top: 0, width: '150px', zIndex: 5, backgroundColor: 'var(--app-bg-alt)', borderColor: 'var(--app-border-mid)' }} />
+                            <th rowSpan="2" className="wpi-corner" />
                             {WPI_GROUPS.map((group) => (
-                                <th key={group.label} colSpan={group.span} style={{ position: 'sticky', top: 0, zIndex: 3, backgroundColor: 'var(--app-bg-alt)', color: 'var(--app-text-primary)', borderColor: 'var(--app-border-mid)', fontWeight: 600, padding: '14px 8px' }}>
-                                    {group.label}
-                                </th>
+                                <th key={group.label} colSpan={group.span} className="wpi-group">{group.label}</th>
                             ))}
                         </tr>
-                        <tr>{WPI_COLUMNS.map(col => <th key={col.key} style={{ position: 'sticky', top: '49px', zIndex: 3, width: '108px', backgroundColor: 'var(--app-bg-alt)', color: 'var(--app-text-primary)', borderColor: 'var(--app-border-mid)', fontWeight: 500, padding: '10px 8px', whiteSpace: 'normal' }}>{col.label}</th>)}</tr>
+                        <tr>{WPI_COLUMNS.map(col => <th key={col.key} className="wpi-col">{col.label}</th>)}</tr>
                     </thead>
                     <tbody>
                         {['Common to All', ...VEHICLES.map(v => v.label)].map((rowLabel, rIdx) => {
                             const vKey = rIdx === 0 ? null : VEHICLES[rIdx - 1].key;
                             return (
-                                <tr key={rowLabel}><td className="fw-bold text-start ps-3" style={{ position: 'sticky', left: 0, zIndex: 2, width: '150px', whiteSpace: 'nowrap', backgroundColor: 'var(--app-bg-card)' }}>{rowLabel}</td>
+                                <tr key={rowLabel} className={vKey ? undefined : 'wpi-pin'}>
+                                    <td className="wpi-rowlabel">{rowLabel}</td>
                                     {WPI_COLUMNS.map(col => (
                                         <td key={col.key} className="p-0">
                                             {vKey ? (
-                                                <div className="text-end px-3 py-2" style={{ minWidth: '108px', color: 'var(--app-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
+                                                <div className="wpi-value">
                                                     {getWpiValue(form.wpi_data, vKey, col.key).toFixed(4)}
                                                 </div>
                                             ) : (
-                                                <div className="d-flex align-items-center justify-content-center" style={{ height: '36px' }}>
+                                                <div className="wpi-check">
                                                     <input type="checkbox" aria-label={`Common to all ${col.label}`} checked={Boolean(form.wpi_common_state[col.key])} readOnly />
                                                 </div>
                                             )}
@@ -816,18 +839,19 @@ const TrafficData = () => {
                                 </div>
                             </div>
                             <div className="fw-bold mb-2">Adjust WPI Ratios:</div>
-                            <div className="table-responsive" style={{ border: '1px solid var(--app-border-mid)', borderRadius: '4px' }}>
-                                <table className="table table-bordered table-sm text-center align-middle mb-0" style={{ minWidth: '1900px', tableLayout: 'fixed' }}>
+                            <div className="wpi-table-shell" style={{ maxHeight: '52vh' }}>
+                                <style>{WPI_TABLE_CSS}</style>
+                                <table className="wpi-sticky-table">
                                     <thead>
                                         <tr>
-                                            <th rowSpan="2" style={{ width: '150px', backgroundColor: 'var(--app-bg-alt)' }} />
-                                            {WPI_GROUPS.map((group) => <th key={group.label} colSpan={group.span} style={{ backgroundColor: 'var(--app-bg-alt)', padding: '12px 8px' }}>{group.label}</th>)}
+                                            <th rowSpan="2" className="wpi-corner" />
+                                            {WPI_GROUPS.map((group) => <th key={group.label} colSpan={group.span} className="wpi-group">{group.label}</th>)}
                                         </tr>
-                                        <tr>{WPI_COLUMNS.map((column) => <th key={column.key} style={{ width: '108px', backgroundColor: 'var(--app-bg-alt)', padding: '10px 8px', whiteSpace: 'normal' }}>{column.label}</th>)}</tr>
+                                        <tr>{WPI_COLUMNS.map((column) => <th key={column.key} className="wpi-col">{column.label}</th>)}</tr>
                                     </thead>
                                     <tbody>
-                                        <tr>
-                                            <td className="fw-bold text-start ps-3">Common to All</td>
+                                        <tr className="wpi-pin">
+                                            <td className="wpi-rowlabel">Common to All</td>
                                             {WPI_COLUMNS.map((column) => (
                                                 <td key={column.key}>
                                                     <input
@@ -856,7 +880,7 @@ const TrafficData = () => {
                                         </tr>
                                         {VEHICLES.map((vehicle, vehicleIndex) => (
                                             <tr key={vehicle.key}>
-                                                <td className="fw-bold text-start ps-3">{vehicle.label}</td>
+                                                <td className="wpi-rowlabel">{vehicle.label}</td>
                                                 {WPI_COLUMNS.map((column) => {
                                                     const locked = wpiEditor.commonState[column.key] && vehicleIndex > 0;
                                                     return (

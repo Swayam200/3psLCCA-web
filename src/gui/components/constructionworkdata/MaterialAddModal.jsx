@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import darbhangaData from '../utils/material_database/INDIA_Bihar_Darbhanga_2025.json';
 import mumbaiData from '../utils/material_database/INDIA_Maharashtra_Mumbai_2023.json';
+import { searchMaterials, resolveDbKey, isSearchableQuery } from './materialSearch.js';
 
 const DB_MAP = {
     "INDIA/Bihar/Darbhanga-2025": darbhangaData,
@@ -82,9 +83,12 @@ function UnitDropdown({ value, onChange }) {
 }
 
 const MaterialAddModal = ({ sectionName, onClose, onAdd, projectData, editData }) => {
-    // Robust resolution of the selected database key
-    const sorDbKey = projectData?.general_info?.sor_database || projectData?.bridge_data?.sor_database || projectData?.sor_database || '';
-    const dbData = DB_MAP[sorDbKey];
+    // Robust resolution of the selected database key (tolerates case/space
+    // drift in stored values — an exact-lookup miss used to mean "no
+    // suggestions ever" with zero feedback).
+    const rawDbKey = projectData?.general_info?.sor_database || projectData?.bridge_data?.sor_database || projectData?.sor_database || '';
+    const sorDbKey = resolveDbKey(Object.keys(DB_MAP), rawDbKey);
+    const dbData = sorDbKey ? DB_MAP[sorDbKey] : undefined;
 
     // Basic fields
     const [workName, setWorkName] = useState(editData ? editData.workName : '');
@@ -110,81 +114,39 @@ const MaterialAddModal = ({ sectionName, onClose, onAdd, projectData, editData }
     const [selectedIndex, setSelectedIndex] = useState(-1);
     const suggestionRef = useRef(null);
 
-    const suggestions = useMemo(() => {
-        if (!dbData || !workName || workName.length < 2) return [];
+    // Window chrome: the dialog drags by its header and the □ button
+    // maximizes/restores. (The old — and □ buttons were wired to onClose.)
+    const [maximized, setMaximized] = useState(false);
+    const [offset, setOffset] = useState({ x: 0, y: 0 });
+    const dragRef = useRef(null);
 
-        // GUI-style normalization: Lowercase, replace special chars with spaces, collapse spaces
-        const normalize = (text) => {
-            if (!text) return "";
-            return text.toLowerCase()
-                .replace(/[(),\-/]/g, ' ')
-                .replace(/\s+/g, ' ')
-                .trim();
+    const startDrag = (e) => {
+        if (maximized || e.button !== 0 || e.target.closest('[data-window-button]')) return;
+        e.preventDefault();
+        const start = { x: e.clientX, y: e.clientY, baseX: offset.x, baseY: offset.y };
+        dragRef.current = start;
+        const onMove = (ev) => {
+            if (!dragRef.current) return;
+            setOffset({ x: start.baseX + ev.clientX - start.x, y: start.baseY + ev.clientY - start.y });
         };
-
-        const tokenize = (text) => {
-            const norm = normalize(text);
-            return norm ? norm.split(' ') : [];
+        const onUp = () => {
+            dragRef.current = null;
+            window.removeEventListener('pointermove', onMove);
+            window.removeEventListener('pointerup', onUp);
         };
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', onUp);
+    };
 
-        // GUI-style token matching: handles concatenated units like "500mm" -> ["500", "mm"]
-        const tokenMatches = (tok, itemNorm) => {
-            if (itemNorm.includes(tok)) return true;
-            const parts = tok.match(/[a-z]+|\d+/g);
-            if (parts && parts.length > 1) {
-                return parts.every(p => itemNorm.includes(p));
-            }
-            return false;
-        };
+    const suggestions = useMemo(
+        () => searchMaterials(dbData, workName, sectionName),
+        [dbData, workName, sectionName],
+    );
 
-        const queryTokens = tokenize(workName);
-        if (queryTokens.length === 0) return [];
-
-        const results = [];
-        const normSection = sectionName.toLowerCase();
-
-        dbData.forEach(sheet => {
-            const sheetNorm = sheet.sheetName.toLowerCase();
-            const typeNorm = sheet.type.toLowerCase();
-
-            // Prioritize if section name matches sheet name or type (e.g. "Girders" vs "Girder")
-            const isRelevantSection = normSection.includes(sheetNorm) || sheetNorm.includes(normSection) ||
-                normSection.includes(typeNorm) || typeNorm.includes(normSection);
-
-            sheet.data.forEach(item => {
-                const itemNorm = normalize(item.name);
-                const allTokensMatch = queryTokens.every(tok => tokenMatches(tok, itemNorm));
-
-                if (allTokensMatch) {
-                    results.push({
-                        ...item,
-                        sheetName: sheet.sheetName,
-                        type: sheet.type,
-                        isRelevantSection
-                    });
-                }
-            });
-        });
-
-        // Sorting priority:
-        // 1. Matches in the current section/type
-        // 2. Starts with the query string
-        // 3. Shorter names first (usually more general/relevant)
-        // 4. Alphabetical
-        return results.sort((a, b) => {
-            if (a.isRelevantSection && !b.isRelevantSection) return -1;
-            if (!a.isRelevantSection && b.isRelevantSection) return 1;
-
-            const aStarts = a.name.toLowerCase().startsWith(workName.toLowerCase());
-            const bStarts = b.name.toLowerCase().startsWith(workName.toLowerCase());
-            if (aStarts && !bStarts) return -1;
-            if (!aStarts && bStarts) return 1;
-
-            if (a.name.length !== b.name.length) return a.name.length - b.name.length;
-
-            return a.name.localeCompare(b.name);
-        }).slice(0, 50);
-    }, [dbData, workName, sectionName]);
+    // The dropdown always answers a searchable query (2+ chars, or "?" to
+    // list everything, desktop-style) — with matches, with "no matches", or
+    // with "no database selected". Silence looked like a bug.
+    const searchActive = showSuggestions && isSearchableQuery(workName);
 
     const handleSelectMaterial = (item) => {
         setWorkName(item.name);
@@ -240,24 +202,43 @@ const MaterialAddModal = ({ sectionName, onClose, onAdd, projectData, editData }
             <div className="modal-backdrop fade show" style={{ zIndex: 1040, backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={onClose}></div>
 
             <div className="modal fade show d-block" tabIndex="-1" style={{ zIndex: 1050 }} role="dialog">
-                <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: '800px' }}>
-                    <div className="modal-content shadow-lg border-0 overflow-hidden" style={{ backgroundColor: 'var(--app-bg-card)', color: 'var(--app-text-primary)', borderRadius: '8px' }}>
+                <div
+                    className={`modal-dialog ${maximized ? '' : 'modal-dialog-centered'}`}
+                    style={maximized
+                        ? { maxWidth: 'none', width: '100vw', height: '100vh', margin: 0 }
+                        : { maxWidth: '800px', transform: `translate(${offset.x}px, ${offset.y}px)` }}
+                >
+                    <div
+                        className="modal-content shadow-lg border-0 overflow-hidden"
+                        style={{ backgroundColor: 'var(--app-bg-card)', color: 'var(--app-text-primary)', borderRadius: maximized ? 0 : '8px', height: maximized ? '100vh' : 'auto' }}
+                    >
 
-                        <div className="d-flex justify-content-between align-items-center px-3 py-2 border-bottom" style={{ backgroundColor: 'var(--app-bg-alt)', borderColor: 'var(--app-border-mid)' }}>
+                        <div
+                            className="d-flex justify-content-between align-items-center px-3 py-2 border-bottom"
+                            style={{ backgroundColor: 'var(--app-bg-alt)', borderColor: 'var(--app-border-mid)', cursor: maximized ? 'default' : 'move', userSelect: 'none', touchAction: 'none' }}
+                            onPointerDown={startDrag}
+                            onDoubleClick={() => setMaximized((value) => !value)}
+                        >
                             <div className="d-flex align-items-center gap-2" style={{ fontSize: '0.9rem' }}>
                                 <span style={{ color: 'var(--app-primary-accent)', fontSize: '1.2rem' }}>⛁</span>
                                 <span>{editData ? 'Edit Material' : 'Add Material'} — {sectionName}</span>
                             </div>
                             <div className="d-flex gap-3 align-items-center" style={{ cursor: 'pointer', fontSize: '1.1rem' }}>
-                                <span className="opacity-75" onClick={onClose}>—</span>
-                                <span className="opacity-75" onClick={onClose}>□</span>
-                                <span onClick={onClose}>✕</span>
+                                <span
+                                    className="opacity-75"
+                                    data-window-button
+                                    title={maximized ? 'Restore' : 'Maximize'}
+                                    onClick={() => setMaximized((value) => !value)}
+                                >
+                                    {maximized ? '❐' : '□'}
+                                </span>
+                                <span data-window-button title="Close" onClick={onClose}>✕</span>
                             </div>
                         </div>
 
-                        <div className="modal-body px-4 py-2" style={{ fontSize: '0.9rem' }}>
+                        <div className="modal-body px-4 py-2" style={{ fontSize: '0.9rem', overflowY: maximized ? 'auto' : 'visible' }}>
                             <div className="mb-3 opacity-75" style={{ fontSize: '0.85rem' }}>
-                                Suggestions from: <span className="fst-italic">{sorDbKey || '— not set (configure in Project Settings)'}</span>
+                                Suggestions from: <span className="fst-italic">{sorDbKey || '— not set (choose an SOR database on the General Information page)'}</span>
                             </div>
 
                             <div className="mb-2 position-relative">
@@ -265,12 +246,23 @@ const MaterialAddModal = ({ sectionName, onClose, onAdd, projectData, editData }
                                 <input
                                     type="text"
                                     className="form-control form-control-sm"
-                                    placeholder="e.g. Ready-mix Concrete M25  (type 2+ chars to search)"
+                                    placeholder="e.g. Ready-mix Concrete M25  (2+ chars to search, ? lists everything)"
                                     value={workName}
                                     onChange={e => { setWorkName(e.target.value); setShowSuggestions(true); setSelectedIndex(-1); }}
                                     onKeyDown={handleKeyDown}
                                     onFocus={() => setShowSuggestions(true)}
                                 />
+                                {searchActive && suggestions.length === 0 && (
+                                    <div
+                                        className="position-absolute w-100 shadow-sm border rounded px-3 py-2"
+                                        style={{ zIndex: 1100, backgroundColor: 'var(--app-bg-card)', borderColor: 'var(--app-border-mid)', fontSize: '0.83rem', color: 'var(--app-text-secondary)' }}
+                                        data-testid="material-search-empty"
+                                    >
+                                        {!dbData
+                                            ? 'No SOR database selected — choose one on the General Information page to get suggestions.'
+                                            : `No matches for “${workName.trim()}” in ${sorDbKey}. Refine the search or fill the fields manually.`}
+                                    </div>
+                                )}
                                 {showSuggestions && suggestions.length > 0 && (
                                     <ul
                                         ref={suggestionRef}

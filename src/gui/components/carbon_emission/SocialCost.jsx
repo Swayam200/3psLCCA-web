@@ -55,14 +55,27 @@ const SocialCost = () => {
         });
     };
 
+    // One-time migration: legacy Ricke / NITI Aayog projects carry their value
+    // forward as a custom entry. Runs only while the stored mode is not yet
+    // custom, so ordinary visits to this page write nothing. User edits save
+    // explicitly below — persisting from a reactive effect is what looped
+    // React elsewhere on this page (see MaterialEmissions).
     useEffect(() => {
-        saveData(custom, currentCost);
+        if ((saved.mode || saved.source) !== SOURCE_CUSTOM) saveData(custom, currentCost);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [custom, currentCost, currency]);
+    }, []);
 
-    const updateCustom = (field, value) => setCustom((prev) => ({ ...prev, [field]: value }));
+    const updateCustom = (field, value) => {
+        const next = { ...custom, [field]: value };
+        setCustom(next);
+        saveData(next, parseNumber(next.entered_value));
+    };
 
-    const resetCustom = () => setCustom({ entered_value: 0, source: '', comments: '' });
+    const resetCustom = () => {
+        const next = { entered_value: 0, source: '', comments: '' };
+        setCustom(next);
+        saveData(next, 0);
+    };
 
     return (
         <div className="carbon-desktop-page">

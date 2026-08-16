@@ -3,12 +3,14 @@ import { normalizeProjectData } from './projectSchema.js';
 /**
  * Maps project-creation form fields to general_info schema.
  */
-export function mapCreationToGeneralInfo({ name, country, currency, unitSystem }) {
+export function mapCreationToGeneralInfo({ name, country, currency, unitSystem, sorDatabase }) {
     return {
         project_name: name || '',
         project_country: country || '',
         project_currency: currency || '',
         unit_system: unitSystem || '',
+        // Optional at creation; settable/changeable later in General Information.
+        sor_database: sorDatabase || '',
     };
 }
 
