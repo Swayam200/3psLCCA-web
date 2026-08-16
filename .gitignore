@@ -31,3 +31,4 @@ backend/.venv
 skills-lock.json
 __pycache__/
 *.pyc
+.claude/

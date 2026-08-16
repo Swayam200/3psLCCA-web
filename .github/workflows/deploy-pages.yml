@@ -1,15 +1,15 @@
 name: Deploy to GitHub Pages
 
-# Test deployment of the browser-first build. Calculations run entirely
-# in the visitor's browser via the published 3psLCCA-core CDN engine, so
-# no backend is deployed. Kept off main so PR #10 is unaffected.
+# Deployment of the browser-first build. Calculations run entirely in the
+# visitor's browser via the published 3psLCCA-core CDN engine, so no backend
+# is deployed.
 #
-# This lineage continues feat/cdn-calc-engine and adds the read-only AI
-# assistant (docs/ai-setup.md), enabled at build time below. Local models
-# download from the Hugging Face CDN in the visitor's browser on first use.
+# This build also ships the read-only AI assistant (docs/ai-setup.md),
+# enabled at build time below. Local models download from the Hugging Face
+# CDN in the visitor's browser on first use.
 on:
   push:
-    branches: ["feat/ai-assistant"]
+    branches: ["main"]
   workflow_dispatch:
 
 jobs:
