@@ -47,12 +47,32 @@ export const resolveDbKey = (dbKeys, rawKey) => {
 /** Minimum query length before searching (desktop parity). */
 export const MIN_QUERY_LENGTH = 2;
 
+/** Desktop parity: this query lists the whole database, name-sorted. */
+export const WILDCARD = '?';
+
+/** True when the query is one the search will answer (2+ chars or "?"). */
+export const isSearchableQuery = (query) => {
+    const trimmed = String(query || '').trim();
+    return trimmed === WILDCARD || trimmed.length >= MIN_QUERY_LENGTH;
+};
+
 /**
  * Search a material database (array of sheets, each {sheetName, type, data})
  * for a query. Returns ranked matches; [] when the query is too short.
+ * A lone "?" returns every item, sorted by name (desktop behavior).
  */
 export const searchMaterials = (dbData, query, sectionName, { limit = 50 } = {}) => {
-    if (!dbData || !query || query.length < MIN_QUERY_LENGTH) return [];
+    if (!dbData || !isSearchableQuery(query)) return [];
+
+    if (String(query).trim() === WILDCARD) {
+        const all = [];
+        dbData.forEach((sheet) => {
+            sheet.data.forEach((item) => {
+                all.push({ ...item, sheetName: sheet.sheetName, type: sheet.type, isRelevantSection: false });
+            });
+        });
+        return all.sort((a, b) => a.name.localeCompare(b.name));
+    }
 
     const queryTokens = tokenize(query);
     if (queryTokens.length === 0) return [];

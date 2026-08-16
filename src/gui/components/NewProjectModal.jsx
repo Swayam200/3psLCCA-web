@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, Form } from 'react-bootstrap';
 import { COUNTRIES, CURRENCIES } from './utils/countriesdata';
+import { materialCatalog } from './utils/materialCatalog';
 
 const UNIT_SYSTEM_OPTIONS = ['Metric (SI)', 'Imperial (US)'];
 
@@ -10,6 +11,7 @@ const NewProjectModal = ({ show, onHide, onCreate }) => {
     const [country, setCountry] = useState('');
     const [currency, setCurrency] = useState('');
     const [unitSystem, setUnitSystem] = useState('Metric (SI)');
+    const [sorDatabase, setSorDatabase] = useState('');
     const [validated, setValidated] = useState(false);
 
     useEffect(() => {
@@ -18,6 +20,7 @@ const NewProjectModal = ({ show, onHide, onCreate }) => {
             setCountry('');
             setCurrency('');
             setUnitSystem('Metric (SI)');
+            setSorDatabase('');
             setValidated(false);
         }
     }, [show]);
@@ -32,6 +35,7 @@ const NewProjectModal = ({ show, onHide, onCreate }) => {
             country,
             currency,
             unitSystem,
+            sorDatabase,
             createdAt: new Date().toLocaleString()
         });
         onHide();
@@ -180,7 +184,7 @@ const NewProjectModal = ({ show, onHide, onCreate }) => {
                         )}
                     </Form.Group>
 
-                    <Form.Group className="mb-0">
+                    <Form.Group className="mb-3">
                         <Form.Label>Unit System</Form.Label>
                         <Form.Select
                             value={unitSystem}
@@ -196,6 +200,24 @@ const NewProjectModal = ({ show, onHide, onCreate }) => {
                         ) : (
                             <div className="help-text">Cannot be changed after project creation.</div>
                         )}
+                    </Form.Group>
+
+                    <Form.Group className="mb-0">
+                        <Form.Label>Material Suggestions (SOR) — optional</Form.Label>
+                        <Form.Select
+                            value={sorDatabase}
+                            onChange={(e) => setSorDatabase(e.target.value)}
+                        >
+                            <option value="">— None (choose later) —</option>
+                            {Object.keys(materialCatalog).map((key) => (
+                                <option key={key} value={key}>{key}</option>
+                            ))}
+                        </Form.Select>
+                        <div className="help-text">
+                            Schedule of Rates database that auto-suggests material names,
+                            rates, and emission factors. Can be set or changed anytime in
+                            General Information.
+                        </div>
                     </Form.Group>
                 </Form>
             </Modal.Body>

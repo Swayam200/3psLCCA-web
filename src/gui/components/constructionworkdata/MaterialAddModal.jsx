@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import darbhangaData from '../utils/material_database/INDIA_Bihar_Darbhanga_2025.json';
 import mumbaiData from '../utils/material_database/INDIA_Maharashtra_Mumbai_2023.json';
-import { searchMaterials, resolveDbKey, MIN_QUERY_LENGTH } from './materialSearch.js';
+import { searchMaterials, resolveDbKey, isSearchableQuery } from './materialSearch.js';
 
 const DB_MAP = {
     "INDIA/Bihar/Darbhanga-2025": darbhangaData,
@@ -143,9 +143,10 @@ const MaterialAddModal = ({ sectionName, onClose, onAdd, projectData, editData }
         [dbData, workName, sectionName],
     );
 
-    // The dropdown always answers a 2+ char query — with matches, with "no
-    // matches", or with "no database selected". Silence looked like a bug.
-    const searchActive = showSuggestions && workName.trim().length >= MIN_QUERY_LENGTH;
+    // The dropdown always answers a searchable query (2+ chars, or "?" to
+    // list everything, desktop-style) — with matches, with "no matches", or
+    // with "no database selected". Silence looked like a bug.
+    const searchActive = showSuggestions && isSearchableQuery(workName);
 
     const handleSelectMaterial = (item) => {
         setWorkName(item.name);
@@ -245,7 +246,7 @@ const MaterialAddModal = ({ sectionName, onClose, onAdd, projectData, editData }
                                 <input
                                     type="text"
                                     className="form-control form-control-sm"
-                                    placeholder="e.g. Ready-mix Concrete M25  (type 2+ chars to search)"
+                                    placeholder="e.g. Ready-mix Concrete M25  (2+ chars to search, ? lists everything)"
                                     value={workName}
                                     onChange={e => { setWorkName(e.target.value); setShowSuggestions(true); setSelectedIndex(-1); }}
                                     onKeyDown={handleKeyDown}

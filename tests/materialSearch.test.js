@@ -8,7 +8,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-    normalize, tokenize, tokenMatches, resolveDbKey, searchMaterials, MIN_QUERY_LENGTH,
+    normalize, tokenize, tokenMatches, resolveDbKey, searchMaterials,
+    isSearchableQuery, MIN_QUERY_LENGTH, WILDCARD,
 } from '../src/gui/components/constructionworkdata/materialSearch.js';
 
 const DB = [
@@ -69,4 +70,23 @@ test('resolveDbKey tolerates case and whitespace drift, rejects unknowns', () =>
 test('searchMaterials survives a missing database', () => {
     assert.deepEqual(searchMaterials(undefined, 'cement', 'Foundation'), []);
     assert.deepEqual(searchMaterials(null, 'cement', 'Foundation'), []);
+});
+
+test('"?" lists the entire database sorted by name (desktop parity)', () => {
+    const hits = searchMaterials(DB, WILDCARD, 'Foundation');
+    assert.equal(hits.length, 4, 'every item from every sheet');
+    const names = hits.map((h) => h.name);
+    assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b)), 'name-sorted');
+    // Whitespace-tolerant, and not subject to the 2-char minimum.
+    assert.equal(searchMaterials(DB, ' ? ', 'Foundation').length, 4);
+});
+
+test('isSearchableQuery accepts "?" and 2+ chars, rejects the rest', () => {
+    assert.equal(isSearchableQuery('?'), true);
+    assert.equal(isSearchableQuery(' ? '), true);
+    assert.equal(isSearchableQuery('ce'), true);
+    assert.equal(isSearchableQuery('c'), false);
+    assert.equal(isSearchableQuery(''), false);
+    assert.equal(isSearchableQuery(null), false);
+    assert.equal(MIN_QUERY_LENGTH, 2);
 });
