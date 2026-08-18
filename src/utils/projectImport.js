@@ -1,6 +1,6 @@
 import JSZip from 'jszip';
 import pako from 'pako';
-import { normalizeProjectData } from './projectSchema';
+import { normalizeProjectData } from './projectSchema.js';
 
 const LCCA_MAGIC = [0x4C, 0x43, 0x43, 0x41]; // "LCCA"
 
@@ -41,7 +41,12 @@ function mapConstructionRow(row, rowIndex, sectionId) {
         },
         scrapRate: row.scrapRate !== undefined ? row.scrapRate : (values.scrap_rate !== undefined ? values.scrap_rate : 0),
         postDemolitionRecoveryPercentage: row.postDemolitionRecoveryPercentage !== undefined ? row.postDemolitionRecoveryPercentage : (values.post_demolition_recovery_percentage !== undefined ? values.post_demolition_recovery_percentage : 0),
-        state: row.state || { in_trash: false }
+        state: row.state || { in_trash: false },
+        // Preserve the source-of-truth desktop fields verbatim so exports and
+        // the LaTeX report engine can reproduce them losslessly (the flat
+        // fields above are the web-editable view).
+        ...(row.values ? { values: row.values } : {}),
+        ...(row.meta ? { meta: row.meta } : {})
     };
 }
 
