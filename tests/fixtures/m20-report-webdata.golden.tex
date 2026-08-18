@@ -1,0 +1,2067 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{mathptmx}
+\usepackage[protrusion=true,expansion=false]{microtype}
+\usepackage[a4paper,top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm]{geometry}
+\usepackage{setspace}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{makecell}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{pdflscape}
+\usepackage{adjustbox}
+\usepackage{caption}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{titlesec}
+\usepackage{etoolbox}
+\usepackage[hidelinks,hypertexnames=false]{hyperref}
+\usepackage{bookmark}
+\usepackage{tikz}
+\usepackage[many]{tcolorbox}
+\usetikzlibrary{calc}
+
+\captionsetup{font=small, labelfont=bf, labelsep=period, skip=4pt}
+\setlist{noitemsep, topsep=4pt, partopsep=0pt}
+\setstretch{1.15}
+\setlength{\parskip}{6pt}
+\setlength{\parindent}{0pt}
+\usepackage{caption}
+\captionsetup{font=small, labelfont=bf, labelsep=period, skip=4pt}
+\fancyhf{}
+\providecommand{\ReportHeaderLogo}{}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+\fancyhead[L]{\small\nouppercase{\leftmark}}
+\fancyhead[R]{\IfFileExists{\ReportHeaderLogo}{\includegraphics[height=0.42cm]{\ReportHeaderLogo}}{\small 3PS LCCA}}
+\fancyfoot[C]{\small Page~\thepage~of~\pageref*{LastPage}}
+\AtBeginDocument{\pagestyle{fancy}}
+\titleformat{\section}{\Large\bfseries\color{blue!55!black}}{\thesection}{0.75em}{}
+\titleformat{\subsection}{\large\bfseries\color{blue!55!black}}{\thesubsection}{0.75em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{blue!55!black}}{\thesubsubsection}{0.75em}{}
+\titlespacing*{\section}{0pt}{18pt}{8pt}
+\titlespacing*{\subsection}{0pt}{14pt}{6pt}
+\titlespacing*{\subsubsection}{0pt}{10pt}{4pt}
+\renewcommand{\contentsname}{Table of Contents}
+\renewcommand{\listtablename}{List of Tables}
+\renewcommand{\listfigurename}{List of Figures}
+\DeclareUnicodeCharacter{20B9}{Rs.}
+\DeclareUnicodeCharacter{2082}{\textsubscript{2}}
+\DeclareUnicodeCharacter{2013}{--}
+\DeclareUnicodeCharacter{2014}{--}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.18}
+\setlength{\LTleft}{0pt}
+\setlength{\LTright}{0pt}
+\setlength{\LTcapwidth}{\textwidth}
+\BeforeBeginEnvironment{tabular}{\begin{adjustbox}{max width=\linewidth}}
+\AfterEndEnvironment{tabular}{\end{adjustbox}}
+\AtBeginEnvironment{tabular}{\footnotesize}
+\sloppy
+\renewcommand{\ReportHeaderLogo}{/Users/swayam200/Developer/3psLCCA-web/vendor/report-runtime/three_ps_lcca_gui/gui/assets/logo/3pslcca_header.png}
+\begin{document}
+\small
+\begin{titlepage}
+\thispagestyle{empty}
+\definecolor{eco}{HTML}{9E9EFF}\definecolor{env}{HTML}{8AD400}\definecolor{soc}{HTML}{FF5A2A}
+\definecolor{ink}{HTML}{1E2630}\definecolor{slate}{HTML}{45505E}\definecolor{body}{HTML}{2B2B2B}
+\definecolor{hair}{HTML}{D9DDE3}\definecolor{ftxt}{HTML}{8A8AA0}\definecolor{cardbg}{HTML}{F5F6F8}
+\newtcolorbox{infocard}{enhanced,colback=cardbg,colframe=hair,boxrule=0.5pt,arc=2.6mm,boxsep=0pt,left=6mm,right=6mm,top=3mm,bottom=3mm}
+\newcommand{\tribar}[1]{\noindent\makebox[\textwidth]{\textcolor{eco}{\rule{0.3333\textwidth}{#1}}\textcolor{env}{\rule{0.3333\textwidth}{#1}}\textcolor{soc}{\rule{0.3334\textwidth}{#1}}}}
+\newcommand{\SecHead}[1]{{\large\bfseries\color{ink}#1}}
+\begin{tikzpicture}[remember picture,overlay]
+  \fill[eco] (current page.north west) rectangle ($(current page.north west)!0.3333!(current page.south west)+(0.6cm,0)$);
+  \fill[env] ($(current page.north west)!0.3333!(current page.south west)$) rectangle ($(current page.north west)!0.6667!(current page.south west)+(0.6cm,0)$);
+  \fill[soc] ($(current page.north west)!0.6667!(current page.south west)$) rectangle ($(current page.south west)+(0.6cm,0)$);
+\end{tikzpicture}
+\vspace*{0.45cm}
+\noindent\begin{minipage}[c]{0.48\textwidth}\raggedright
+\IfFileExists{/var/folders/gn/8zlt_1jj7fl9yys69vclsv4h0000gn/T/3ps_lcca_agency_logo.png}{%
+  \includegraphics[height=1.5cm,keepaspectratio]{/var/folders/gn/8zlt_1jj7fl9yys69vclsv4h0000gn/T/3ps_lcca_agency_logo.png}%
+}{%
+\begin{tcolorbox}[enhanced,colback=cardbg,colframe=hair,boxrule=0.5pt,arc=1.5mm,width=4cm,height=1.5cm,valign=center,halign=center]
+{\fontsize{11}{13}\selectfont\color{ftxt}{[}Agency Logo{]}}
+\end{tcolorbox}%
+}%
+\end{minipage}\hfill
+\begin{minipage}[c]{0.48\textwidth}\raggedleft
+\IfFileExists{/Users/swayam200/Developer/3psLCCA-web/vendor/report-runtime/three_ps_lcca_gui/gui/assets/logo/3pslcca_header.png}{%
+  \includegraphics[height=1.0cm,keepaspectratio]{/Users/swayam200/Developer/3psLCCA-web/vendor/report-runtime/three_ps_lcca_gui/gui/assets/logo/3pslcca_header.png}%
+}{%
+\begin{tcolorbox}[enhanced,colback=cardbg,colframe=hair,boxrule=0.5pt,arc=1.5mm,width=4cm,height=1.0cm,valign=center,halign=center]
+{\fontsize{11}{13}\selectfont\color{ftxt}{[}3psLCCA Logo{]}}
+\end{tcolorbox}%
+}%
+\end{minipage}
+\vspace{0.45cm}
+\noindent{\fontsize{24}{28}\selectfont\bfseries\color{ink}Bridge Life Cycle Cost Analysis Report\par}
+\vspace{2mm}
+\vspace{3mm}
+\tribar{1.6pt}
+\vspace{2mm}
+\vspace{0.3cm}
+\begin{infocard}
+\SecHead{Project information}\par\vspace{2mm}
+\renewcommand{\arraystretch}{1.3}
+\noindent\begin{tabular}{@{}>{\bfseries\color{slate}}p{3.6cm}>{\color{body}}p{\dimexpr\linewidth-4.0cm\relax}@{}}
+Project name: & M\_20\_2L\_OF\_S \\
+Project code: & M\_20\_2L\_OF\_S \\
+Project description: & Mumbai | 20m | 2 Lane | One side Footpath | Steel Bridge \\
+Prepared using: & 3psLCCA (\href{https://osdag.iitb.ac.in/3pslcca}{osdag.iitb.ac.in/3pslcca}) \\
+\end{tabular}
+\end{infocard}
+\vfill
+\noindent\begin{minipage}[t]{0.47\textwidth}
+{\bfseries\color{ink}Evaluated by}\par\vspace{2.5mm}
+\renewcommand{\arraystretch}{1.15}\begin{tabular}{@{}>{\bfseries\color{slate}}p{2.5cm}>{\color{body}}p{4.5cm}@{}}
+Name: & Prof. Siddhartha Ghosh and team \\
+Organization: & IIT Bombay \\
+Address: & Civil Engineering Department, IIT Bombay \\
+Email: & sghosh@civil.iitb.ac.in \\
+Phone: &  \\
+\end{tabular}\par\vspace{1cm}{\color{hair}\rule{0.8\linewidth}{0.5pt}}\par{\footnotesize\color{ftxt}Signature}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.47\textwidth}
+{\bfseries\color{ink}Reviewed by}\par\vspace{2.5mm}
+\renewcommand{\arraystretch}{1.15}\begin{tabular}{@{}>{\bfseries\color{slate}}p{2.5cm}>{\color{body}}p{4.5cm}@{}}
+Name: &  \\
+Organization: &  \\
+Address: &  \\
+Email: &  \\
+Phone: &  \\
+\end{tabular}\par\vspace{1cm}{\color{hair}\rule{0.8\linewidth}{0.5pt}}\par{\footnotesize\color{ftxt}Signature}
+\end{minipage}
+\vfill
+\noindent{\color{hair}\rule{\textwidth}{0.6pt}}\\[3mm]
+\noindent\begin{minipage}[t]{0.5\textwidth}
+{\bfseries\color{slate}3psLCCA}\\
+{\bfseries\color{slate}Osdag, IIT Bombay}\\
+\href{https://osdag.iitb.ac.in/3pslcca}{osdag.iitb.ac.in/3pslcca}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.46\textwidth}
+{\footnotesize\color{ftxt}Generated using 3psLCCA. The software is provided without any warranty, express or implied. The life cycle cost analysis (LCCA) results depend on user-provided inputs. The evaluating agency is solely responsible for the accuracy of the input data and for any use of the results.\par}
+\end{minipage}
+\end{titlepage}
+
+\clearpage
+\pagenumbering{roman}
+\tableofcontents
+\clearpage
+\addcontentsline{toc}{section}{List of Tables}
+\listoftables
+\clearpage
+\addcontentsline{toc}{section}{List of Figures}
+\listoffigures
+\clearpage
+\pagenumbering{arabic}
+
+\section{Introduction to Life Cycle Cost Assessment}
+
+\par\medskip Life Cycle Cost is the total cost incurred by the bridge throughout its life. This report presents Life Cycle Cost Assessment (LCCA) based on the Three Pillars of Sustainability{-}Life Cycle Cost (3PS{-}LCC) framework, which considers the economic, social, and environmental pillars over the selected analysis period. The various life{-}cycle stages and sustainability pillars considered in the 3PS{-}LCC framework are illustrated in Figure 1.\par\medskip
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.82\textwidth]{../pdf_generation_v3/images/image_1.png}
+\caption{3PS-LCC framework}
+\end{figure}
+
+\clearpage
+\section{Input data}
+\subsection{Bridge geometry and description}
+\begin{table}[H]%
+\centering%
+\caption{Bridge Data Summary}%
+\label{tab:bridge_data}%
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.40\linewidth}>{\raggedleft\arraybackslash}p{0.40\linewidth}}%
+\toprule%
+\multicolumn{2}{l}{\textbf{Bridge Identification}} \\%
+\midrule%
+Name of the Bridge&Templatefile\_Mumbai\_SteelBridge\\%
+Owner&\textemdash\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Location}} \\%
+\midrule%
+Country&India\\%
+Bridge Alignment \& Location&Mumbai\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Technical Specifications}} \\%
+\midrule%
+Type of Bridge&Girder\\%
+Span&20 (m)\\%
+Carriageway Width&9 (m)\\%
+Number of Lanes&2\\%
+Vehicle Path Direction&One Way\\%
+Footpath&Footpath at one side\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Life Cycle}} \\%
+\midrule%
+Design Life&100 (years)\\%
+Analysis Period&100 (years)\\%
+Year of Construction&2025\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Construction Schedule}} \\%
+\midrule%
+Duration of Construction&4 (months)\\%
+Working Days per Month&26 (days)\\%
+Days per Month&30 (days)\\%
+\bottomrule%
+\end{tabular}%
+\end{table}
+
+\subsection{Financial inputs}
+\begin{table}[H]%
+\centering%
+\caption{Financial Data Summary}%
+\label{tab:financial_data}%
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.40\linewidth}>{\raggedleft\arraybackslash}p{0.40\linewidth}}%
+\toprule%
+\multicolumn{2}{l}{\textbf{Financial Data}} \\%
+\midrule%
+Discount Rate&6.7 (\%)\\%
+Source: Discount Rate&\textemdash\\%
+Inflation Rate&5.15 (\%)\\%
+Source: Inflation Rate&\textemdash\\%
+Interest Rate&7.75 (\%)\\%
+Source: Interest Rate&\textemdash\\%
+Investment Ratio&0.5\\%
+Source: Investment Ratio&\textemdash\\%
+\bottomrule%
+\end{tabular}%
+\end{table}
+
+\subsection{Construction data}
+\begingroup
+\footnotesize
+\centering
+\setlength{\tabcolsep}{4pt}
+\setlength{\LTleft}{\fill}
+\setlength{\LTright}{\fill}
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.34\linewidth}>{\raggedleft\arraybackslash}p{0.09\linewidth}>{\centering\arraybackslash}p{0.09\linewidth}>{\raggedleft\arraybackslash}p{0.10\linewidth}>{\centering\arraybackslash}p{0.14\linewidth}>{\raggedleft\arraybackslash}p{0.10\linewidth}}%
+\caption{Structure Work Data: Foundation}\label{tab:str_foundation}\\%
+\midrule%
+\textbf{Material}&\textbf{Quantity}&\textbf{Unit}&\textbf{Rate/Unit}&\textbf{Rate Source}&\textbf{Total (INR)}\\%
+\midrule%
+\endfirsthead%
+\multicolumn{6}{l}{\textit{Continued from previous page}}\\%
+\midrule%
+\textbf{Material}&\textbf{Quantity}&\textbf{Unit}&\textbf{Rate/Unit}&\textbf{Rate Source}&\textbf{Total (INR)}\\%
+\midrule%
+\endhead%
+\midrule%
+\multicolumn{6}{r}{\textit{Continued on next page}}\\%
+\endfoot%
+\bottomrule%
+\endlastfoot%
+\multicolumn{6}{l}{\textbf{Excavation}}\\%
+\midrule%
+Excavation for foundation (pile cap depth + thickness of PCC)$^{\dagger}$&22.26&m³&557.00&\multicolumn{1}{c}{\textemdash}&12,401.05\\%
+Excavation for foundation (pile cap depth + thickness of PCC) (Dump)$^{\dagger}$&22.26&m³&0.00&\multicolumn{1}{c}{\textemdash}&0.00\\%
+\midrule%
+\multicolumn{6}{l}{\textbf{Pile}}\\%
+\midrule%
+Boring and concreting in pile M35$^{\dagger}$&40.00&m&10,497.00&\multicolumn{1}{c}{\textemdash}&419,880.00\\%
+Reinforcement in pile$^{\dagger}$&2.84&t&88,341.00&\multicolumn{1}{c}{\textemdash}&251,153.46\\%
+Plain Cement Concrete (M15)$^{\dagger}$&1.44&m³&5,216.00&\hspace{0.35em}Maha PWD SOR&7,531.90\\%
+\midrule%
+\multicolumn{6}{l}{\textbf{Pile Cap}}\\%
+\midrule%
+Concreting of pile cap (M35)$^{\dagger}$&15.16&m³&6,529.00&\hspace{0.35em}Maha PWD SOR&98,992.70\\%
+Reinforcement in pile cap$^{\dagger}$&0.97&t&88,341.00&\multicolumn{1}{c}{\textemdash}&86,132.47\\%
+\end{longtable}
+\par\smallskip\footnotesize All rates and totals in INR.\quad\textemdash\,Database value (default);\quad$^{\#}$\,Manually entered;\quad$^{\S}$\,Modified from database;\quad$^{\dagger}$\,Imported from Excel;\quad$^{\ddagger}$\,Imported from Excel and modified
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.34\linewidth}>{\raggedleft\arraybackslash}p{0.09\linewidth}>{\centering\arraybackslash}p{0.09\linewidth}>{\raggedleft\arraybackslash}p{0.10\linewidth}>{\centering\arraybackslash}p{0.14\linewidth}>{\raggedleft\arraybackslash}p{0.10\linewidth}}%
+\caption{Structure Work Data: Sub{-}Structure}\label{tab:str_sub_structure}\\%
+\midrule%
+\textbf{Material}&\textbf{Quantity}&\textbf{Unit}&\textbf{Rate/Unit}&\textbf{Rate Source}&\textbf{Total (INR)}\\%
+\midrule%
+\endfirsthead%
+\multicolumn{6}{l}{\textit{Continued from previous page}}\\%
+\midrule%
+\textbf{Material}&\textbf{Quantity}&\textbf{Unit}&\textbf{Rate/Unit}&\textbf{Rate Source}&\textbf{Total (INR)}\\%
+\midrule%
+\endhead%
+\midrule%
+\multicolumn{6}{r}{\textit{Continued on next page}}\\%
+\endfoot%
+\bottomrule%
+\endlastfoot%
+\multicolumn{6}{l}{\textbf{Pier}}\\%
+\midrule%
+Concreting in pier M35$^{\dagger}$&8.27&m³&9,296.70&\multicolumn{1}{c}{\textemdash}&76,883.71\\%
+Reinforcement in pier$^{\dagger}$&1.77&t&88,341.00&\multicolumn{1}{c}{\textemdash}&156,451.91\\%
+\midrule%
+\multicolumn{6}{l}{\textbf{Pier Cap}}\\%
+\midrule%
+Concreting of pier cap M35$^{\dagger}$&15.11&m³&9,574.00&\hspace{0.35em}Maha PWD SOR&144,695.21\\%
+Reinforcement in pier cap$^{\dagger}$&1.69&t&88,341.00&\multicolumn{1}{c}{\textemdash}&149,649.65\\%
+\midrule%
+\multicolumn{6}{l}{\textbf{Pedestal}}\\%
+\midrule%
+Concreting of pedestal M35$^{\dagger}$&0.22&m³&7,853.00&\hspace{0.35em}Maha PWD SOR&1,696.25\\%
+Reinforcement in pedestal$^{\dagger}$&0.03&t&88,341.00&\multicolumn{1}{c}{\textemdash}&2,862.25\\%
+\midrule%
+\multicolumn{6}{l}{\textbf{Bearings}}\\%
+\midrule%
+POT{-} PTFE bearing$^{\dagger}$&975.85&t&214.00&\hspace{0.35em}Maha PWD SOR&208,830.84\\%
+\end{longtable}
+\par\smallskip\footnotesize All rates and totals in INR.\quad\textemdash\,Database value (default);\quad$^{\#}$\,Manually entered;\quad$^{\S}$\,Modified from database;\quad$^{\dagger}$\,Imported from Excel;\quad$^{\ddagger}$\,Imported from Excel and modified
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.34\linewidth}>{\raggedleft\arraybackslash}p{0.09\linewidth}>{\centering\arraybackslash}p{0.09\linewidth}>{\raggedleft\arraybackslash}p{0.10\linewidth}>{\centering\arraybackslash}p{0.14\linewidth}>{\raggedleft\arraybackslash}p{0.10\linewidth}}%
+\caption{Structure Work Data: Super Structure}\label{tab:str_super_structure}\\%
+\midrule%
+\textbf{Material}&\textbf{Quantity}&\textbf{Unit}&\textbf{Rate/Unit}&\textbf{Rate Source}&\textbf{Total (INR)}\\%
+\midrule%
+\endfirsthead%
+\multicolumn{6}{l}{\textit{Continued from previous page}}\\%
+\midrule%
+\textbf{Material}&\textbf{Quantity}&\textbf{Unit}&\textbf{Rate/Unit}&\textbf{Rate Source}&\textbf{Total (INR)}\\%
+\midrule%
+\endhead%
+\midrule%
+\multicolumn{6}{r}{\textit{Continued on next page}}\\%
+\endfoot%
+\bottomrule%
+\endlastfoot%
+\multicolumn{6}{l}{\textbf{Girder}}\\%
+\midrule%
+Structural Steel main Girder (Fe 410 B)$^{\dagger}$&23.29&t&107,164.00&\hspace{0.35em}Maha PWD SOR&2,496,119.61\\%
+Coating on structural steel$^{\dagger}$&418.96&m²&177.00&\multicolumn{1}{c}{\textemdash}&74,155.81\\%
+\midrule%
+\multicolumn{6}{l}{\textbf{Deck Slab}}\\%
+\midrule%
+Concreting in deck slab M35$^{\dagger}$&48.30&m³&12,579.65&\multicolumn{1}{c}{\textemdash}&607,597.09\\%
+Reinforcement in deck slab$^{\dagger}$&5.80&t&88,341.00&\multicolumn{1}{c}{\textemdash}&512,024.44\\%
+Steel Decking Sheet (310 MPA)$^{\dagger}$&1.77&t&66,368.00&\hspace{0.35em}Maha PWD SOR&117,770.02\\%
+\midrule%
+\multicolumn{6}{l}{\textbf{Cross Bracings}}\\%
+\midrule%
+Steel Cross Bracing$^{\dagger}$&2.70&t&97,759.00&\hspace{0.35em}Maha PWD SOR&263,663.64\\%
+\end{longtable}
+\par\smallskip\footnotesize All rates and totals in INR.\quad\textemdash\,Database value (default);\quad$^{\#}$\,Manually entered;\quad$^{\S}$\,Modified from database;\quad$^{\dagger}$\,Imported from Excel;\quad$^{\ddagger}$\,Imported from Excel and modified
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.34\linewidth}>{\raggedleft\arraybackslash}p{0.09\linewidth}>{\centering\arraybackslash}p{0.09\linewidth}>{\raggedleft\arraybackslash}p{0.10\linewidth}>{\centering\arraybackslash}p{0.14\linewidth}>{\raggedleft\arraybackslash}p{0.10\linewidth}}%
+\caption{Structure Work Data: Miscellaneous}\label{tab:str_misc}\\%
+\midrule%
+\textbf{Material}&\textbf{Quantity}&\textbf{Unit}&\textbf{Rate/Unit}&\textbf{Rate Source}&\textbf{Total (INR)}\\%
+\midrule%
+\endfirsthead%
+\multicolumn{6}{l}{\textit{Continued from previous page}}\\%
+\midrule%
+\textbf{Material}&\textbf{Quantity}&\textbf{Unit}&\textbf{Rate/Unit}&\textbf{Rate Source}&\textbf{Total (INR)}\\%
+\midrule%
+\endhead%
+\midrule%
+\multicolumn{6}{r}{\textit{Continued on next page}}\\%
+\endfoot%
+\bottomrule%
+\endlastfoot%
+\multicolumn{6}{l}{\textbf{Railing  \& Crash Barrier \& Median}}\\%
+\midrule%
+Steel railing$^{\dagger}$&20.00&m&3,870.00&\multicolumn{1}{c}{\textemdash}&77,400.00\\%
+Crash barrier M30$^{\dagger}$&40.00&m&4,234.00&\multicolumn{1}{c}{\textemdash}&169,360.00\\%
+Median M30$^{\dagger}$&20.00&m&4,234.00&\hspace{0.35em}Maha PWD SOR&84,680.00\\%
+\midrule%
+\multicolumn{6}{l}{\textbf{Asphalt, Utilities and Other Materials}}\\%
+\midrule%
+Strip Seal Expansion Joint (Catering to maximum horizontal movement upto 70mm)$^{\dagger}$&10.50&m&13,295.00&\hspace{0.35em}Maha PWD SOR&139,597.50\\%
+Asphalt wearing course (12mm)$^{\dagger}$&210.00&m²&496.00&\hspace{0.35em}Maha PWD SOR&104,160.00\\%
+Yellow and white thermoplastic roadmarking strip (2.5 mm)$^{\dagger}$&2.00&m²&666.00&\hspace{0.35em}Maha PWD SOR&1,332.00\\%
+Anti corrosive paint for reinforcement (CPCC)$^{\dagger}$&13.11&t&11,287.00&\hspace{0.35em}Maha PWD SOR&147,988.37\\%
+\midrule%
+\multicolumn{6}{l}{\textbf{Waterproofing}}\\%
+\midrule%
+Waterproofing for pile cap$^{\dagger}$&30.40&m²&432.00&\multicolumn{1}{c}{\textemdash}&13,132.80\\%
+Waterproofing for deck slab$^{\dagger}$&210.00&m²&246.00&\multicolumn{1}{c}{\textemdash}&51,660.00\\%
+\end{longtable}
+\par\smallskip\footnotesize All rates and totals in INR.\quad\textemdash\,Database value (default);\quad$^{\#}$\,Manually entered;\quad$^{\S}$\,Modified from database;\quad$^{\dagger}$\,Imported from Excel;\quad$^{\ddagger}$\,Imported from Excel and modified
+\normalsize
+\endgroup
+
+\subsection{Maintenance data}
+\begin{table}[H]%
+\centering%
+\caption{Maintenance Data Summary}%
+\label{tab:maintenance_data}%
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.40\linewidth}>{\raggedleft\arraybackslash}p{0.40\linewidth}}%
+\toprule%
+\multicolumn{2}{l}{\textbf{Routine Maintenance}} \\%
+\midrule%
+Routine Inspection Cost&0.1 (\% of initial construction cost)\\%
+Routine Inspection Frequency&1 (year)\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Periodic Maintenance}} \\%
+\midrule%
+Periodic Maintenance Cost&0.55 (\% of initial construction cost)\\%
+Periodic Maintenance Carbon Cost&0.55 (\% of initial construction cost)\\%
+Periodic Maintenance Frequency&5 (year)\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Major Inspection}} \\%
+\midrule%
+Major Inspection Cost&0.5 (\% of initial construction cost)\\%
+Major Inspection Frequency&5 (year)\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Major Repair}} \\%
+\midrule%
+Major Repair Cost&10 (\% of initial construction cost)\\%
+Major Repair Carbon Cost&0.55 (\% of initial construction cost)\\%
+Major Repair Frequency&60 (year)\\%
+Major Repair Duration&3 (months)\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Bearings \& Expansion Joints}} \\%
+\midrule%
+Bearing \& Expansion Joint Replacement Cost&12.5 (\% of initial construction cost)\\%
+Bearing \& Expansion Joint Replacement Frequency&25 (year)\\%
+Bearing \& Expansion Joint Replacement Duration&2 (days)\\%
+\bottomrule%
+\end{tabular}%
+\end{table}
+
+\subsection{Traffic data}
+\subsubsection{Traffic and Road Data}
+\noindent Table~\ref{tab:traffic_and_road_data} presents the traffic and road parameters recorded for this project, including road classification, speed limits, and associated data used in the life cycle cost assessment.
+
+\begin{table}[H]%
+\centering%
+\caption{Traffic and Road Data}%
+\label{tab:traffic_and_road_data}%
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.40\linewidth}>{\raggedleft\arraybackslash}p{0.40\linewidth}}%
+\toprule%
+\multicolumn{2}{l}{\textbf{Rerouting Road Configuration}} \\%
+\midrule%
+Rerouting Road Configuration&Two Lane\\%
+Carriageway Width&7 (m)\\%
+Road Hourly Capacity&2400 (PCU/hr)\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Accident Severity Distribution}} \\%
+\midrule%
+Minor Injury&25.7 (\%)\\%
+Major Injury&61.42 (\%)\\%
+Fatal Accident&12.88 (\%)\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Road Parameters}} \\%
+\midrule%
+Road Roughness&2000 (mm/km)\\%
+Road Rise&0 (m/km)\\%
+Road Fall&0 (m/km)\\%
+Rerouting Distance&0.1 (km)\\%
+Rerouting Time&0.3 (min)\\%
+Crash Rate along Rerouting Route&3385.23 (acc / M km)\\%
+Work Zone Multiplier&1\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Traffic Flow}} \\%
+\midrule%
+Number of Peak Hours&2\\%
+\bottomrule%
+\end{tabular}%
+\end{table}
+
+\subsubsection{Average Daily Traffic}
+\noindent Table~\ref{tab:vehicle_data} presents the average daily traffic composition across different vehicle categories, which forms the basis for estimating road user costs and diversion emissions during the construction phase.
+
+\begin{table}[H]
+\centering
+\caption{Vehicle Traffic Data}
+\label{tab:vehicle_data}
+\begin{tabular}{lrrr}
+\toprule
+Vehicle Type & Vehicles / Day & Accident (\% of vehicles) & PWR \\
+\midrule
+Small Car & 7271 & 12.18 & \textemdash \\
+Big Car & 7269 & 11.74 & \textemdash \\
+Two Wheeler & 3409 & 74.60 & \textemdash \\
+Ordinary Buses & 2 & 0.88 & \textemdash \\
+Deluxe Buses & 480 & 0.00 & \textemdash \\
+LCV & 564 & 0.00 & \textemdash \\
+HCV & 40 & 0.59 & 7.22 \\
+MCV & 0 & 0.00 & 8.00 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\subsubsection{Traffic Diversion Emissions}
+\noindent Table~\ref{tab:diversion_emissions} summarises the carbon emissions attributable to traffic diversion during the construction phase, accounting for the additional travel distance and vehicle composition on the diversion route.
+
+\begin{table}[H]
+\centering
+\caption{Traffic Diversion Emissions (Detour: 0.10 km)}
+\label{tab:diversion_emissions}
+\begin{tabular}{lrrr}
+\toprule
+Vehicle Type & Vehicles / Day & Factor (kg/veh-km) & Emissions (kg/day) \\
+\midrule
+Small Car & 7271 & 0.10 & 74.89 \\
+Big Car & 7269 & 0.27 & 195.54 \\
+Two Wheeler & 3409 & 0.04 & 11.93 \\
+Ordinary Buses & 2 & 0.45 & 0.09 \\
+Deluxe Buses & 480 & 0.61 & 29.09 \\
+LCV & 564 & 0.31 & 17.31 \\
+HCV & 40 & 0.59 & 2.37 \\
+MCV & 0 & 0.74 & 0.00 \\
+\textbf{Total Daily Emissions} &  &  & 331.22 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\subsubsection{Peak Hour Distribution}
+\noindent Table~\ref{tab:peak_hour_distribution} presents the peak hour traffic distribution used to assess congestion-related impacts and road user costs during the construction phase.
+
+\begin{table}[H]
+\centering
+\caption{Peak Hour Traffic Distribution}
+\label{tab:peak_hour_distribution}
+\begin{tabular}{lr}
+\toprule
+\textbf{Hour} & \textbf{Traffic Proportion (\%)} \\
+\midrule
+Peak Hour 1 & 10.00 \\
+Peak Hour 2 & 10.00 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\subsection{Environmental input data}
+\subsubsection{Social Cost of Carbon}
+\noindent The social cost of carbon (SCC) quantifies the monetary value of environmental damage caused by each unit of CO\textsubscript{2}e emitted. The following section presents the SCC values and parameters adopted in this assessment.
+
+\begin{table}[H]%
+\centering%
+\caption{Social Cost of Carbon {-}{-}{-} Ricke et al. Parameters}%
+\label{tab:scc_ricke_params}%
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.40\linewidth}>{\raggedleft\arraybackslash}p{0.40\linewidth}}%
+\toprule%
+\multicolumn{2}{l}{\textbf{Socioeconomic \& Climate Scenarios}} \\%
+\midrule%
+Country (ISO3)&IND\\%
+Socioeconomic Pathway (SSP)&SSP1 (Sustainability)\\%
+Climate Trajectory (RCP)&Closest RCP (Default)\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Damage Function \& Model Parameters}} \\%
+\midrule%
+Damage Function&BHM SR (Short Run)\\%
+Damage Parameters&Bootstrap (Full Uncertainty)\\%
+Climate Uncertainty&Expected (Central Projections)\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Discounting \& Valuation}} \\%
+\midrule%
+Discounting Approach&Growth{-}adjusted (prtp=2\%, $\eta$=1.5)\\%
+Percentile&50.0\% (Central)\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Currency Adjustment}} \\%
+\midrule%
+USD Conversion Rate&0 (INR/USD)\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Inflation Adjustment (CPI)}} \\%
+\midrule%
+CPI Ratio (Reference{-}Year CPI / 2018 CPI)&1\\%
+\bottomrule%
+\end{tabular}%
+\end{table}
+
+The applied Social Cost of Carbon is \textbf{0.00~INR/kgCO\textsubscript{2}e}. For further reference, see \textcolor{blue}{\href{https://country-level-scc.github.io/explorer/}{Country-level SCC Explorer}}.
+
+\subsubsection{Material Emission Factors}
+\noindent Table~\ref{tab:material_emissions_included} lists the materials included in the carbon emissions calculation along with their respective emission factors, quantities, and total CO\textsubscript{2}e contributions. Materials excluded from the assessment are detailed in Table~\ref{tab:material_emissions_excluded}.
+
+\begingroup
+\footnotesize
+\centering
+\setlength{\tabcolsep}{4pt}
+\setlength{\LTleft}{\fill}
+\setlength{\LTright}{\fill}
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.23\linewidth}>{\raggedleft\arraybackslash}p{0.09\linewidth}>{\centering\arraybackslash}p{0.07\linewidth}>{\raggedleft\arraybackslash}p{0.12\linewidth}>{\raggedleft\arraybackslash}p{0.12\linewidth}>{\centering\arraybackslash}p{0.11\linewidth}>{\raggedleft\arraybackslash}p{0.10\linewidth}}%
+\caption{Materials Included in Carbon Emissions Calculation} \label{tab:material_emissions_included} \\%
+\toprule%
+\textbf{Material}&\textbf{Quantity}&\textbf{Unit}&\textbf{Conversion Factor}&\textbf{Emission Factor}&\textbf{Emission Factor Unit}&\textbf{Total (kgCO\textsubscript{2}e)}\\%
+\midrule%
+\endhead%
+\midrule%
+\multicolumn{7}{r}{\footnotesize\textit{continued on next page}} \\%
+\endfoot%
+\bottomrule%
+\endlastfoot%
+\multicolumn{7}{l}{\textbf{Foundation — Pile}} \\%
+\midrule%
+Boring and concreting in pile M35&40.00&m&1,884.95&0.08&kgCO₂e/kg&6,333.43\\%
+Reinforcement in pile&2.84&t&1,000.00&2.60&kgCO₂e/kg&7,391.80\\%
+Plain Cement Concrete (M15)&1.44&m³&2,400.00&0.11&kgCO₂e/kg&381.22\\%
+\midrule%
+\multicolumn{7}{l}{\textbf{Foundation — Pile Cap}} \\%
+\midrule%
+Concreting of pile cap (M35)&15.16&m³&2,400.00&0.08&kgCO₂e/kg&3,056.66\\%
+Reinforcement in pile cap&0.97&t&1,000.00&2.60&kgCO₂e/kg&2,535.00\\%
+\midrule%
+\multicolumn{7}{l}{\textbf{Sub{-}Structure — Pier}} \\%
+\midrule%
+Concreting in pier M35&8.27&m³&2,400.00&0.08&kgCO₂e/kg&1,667.23\\%
+Reinforcement in pier&1.77&t&1,000.00&2.60&kgCO₂e/kg&4,604.60\\%
+\midrule%
+\multicolumn{7}{l}{\textbf{Sub{-}Structure — Pier Cap}} \\%
+\midrule%
+Concreting of pier cap M35&15.11&m³&2,400.00&0.08&kgCO₂e/kg&3,046.85\\%
+Reinforcement in pier cap&1.69&t&1,000.00&2.60&kgCO₂e/kg&4,404.40\\%
+\midrule%
+\multicolumn{7}{l}{\textbf{Sub{-}Structure — Pedestal}} \\%
+\midrule%
+Concreting of pedestal M35&0.22&m³&2,400.00&0.08&kgCO₂e/kg&43.55\\%
+Reinforcement in pedestal&0.03&t&1,000.00&2.60&kgCO₂e/kg&84.24\\%
+\midrule%
+\multicolumn{7}{l}{\textbf{Super{-}Structure — Girder}} \\%
+\midrule%
+Structural Steel main Girder (Fe 410 B)&23.29&t&1,000.00&2.50&kgCO₂e/kg&58,231.30\\%
+\midrule%
+\multicolumn{7}{l}{\textbf{Super{-}Structure — Deck Slab}} \\%
+\midrule%
+Concreting in deck slab M35&48.30&m³&2,400.00&0.08&kgCO₂e/kg&9,737.28\\%
+Reinforcement in deck slab&5.80&t&1,000.00&2.60&kgCO₂e/kg&15,069.60\\%
+Steel Decking Sheet (310 MPA)&1.77&t&1,000.00&3.00&kgCO₂e/kg&5,323.50\\%
+\midrule%
+\multicolumn{7}{l}{\textbf{Super{-}Structure — Cross Bracings}} \\%
+\midrule%
+Steel Cross Bracing&2.70&t&1,000.00&2.50&kgCO₂e/kg&6,742.69\\%
+\midrule%
+\multicolumn{7}{l}{\textbf{Misc — Railing  \& Crash Barrier \& Median}} \\%
+\midrule%
+Steel railing&20.00&m&10.99&2.50&kgCO₂e/kg&549.50\\%
+Crash barrier M30&40.00&m&715.20&0.11&kgCO₂e/kg&3,146.88\\%
+\midrule%
+\multicolumn{7}{l}{\textbf{Misc — Asphalt, Utilities and Other Materials}} \\%
+\midrule%
+Asphalt wearing course (12mm)&210.00&m²&16.20&0.12&kgCO₂e/m³&408.24\\%
+Yellow and white thermoplastic roadmarking strip (2.5 mm)&2.00&m²&2.15&0.25&kgCO₂e/kg&1.07\\%
+\midrule%
+\multicolumn{7}{l}{\textbf{Misc — Waterproofing}} \\%
+\midrule%
+Waterproofing for pile cap&30.40&m²&120.00&0.08&kgCO₂e/kg&306.43\\%
+Waterproofing for deck slab&210.00&m²&2.00&0.19&kgCO₂e/kg&79.80\\%
+\end{longtable}
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.47\linewidth}>{\raggedleft\arraybackslash}p{0.47\linewidth}}%
+\caption{Materials Excluded from Carbon Emissions Calculation} \label{tab:material_emissions_excluded} \\%
+\toprule%
+\textbf{Material}&\textbf{Exclusion Reason}\\%
+\midrule%
+\endhead%
+\midrule%
+\multicolumn{2}{r}{\footnotesize\textit{continued on next page}} \\%
+\endfoot%
+\bottomrule%
+\endlastfoot%
+\multicolumn{2}{l}{\textbf{Foundation — Excavation}} \\%
+\midrule%
+Excavation for foundation (pile cap depth + thickness of PCC)&Manually Excluded\\%
+Excavation for foundation (pile cap depth + thickness of PCC) (Dump)&Manually Excluded\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Sub{-}Structure — Bearings}} \\%
+\midrule%
+POT{-} PTFE bearing&Manually Excluded\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Super{-}Structure — Girder}} \\%
+\midrule%
+Coating on structural steel&Incomplete Data\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Misc — Railing  \& Crash Barrier \& Median}} \\%
+\midrule%
+Median M30&Manually Excluded\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Misc — Asphalt, Utilities and Other Materials}} \\%
+\midrule%
+Strip Seal Expansion Joint (Catering to maximum horizontal movement upto 70mm)&Incomplete Data\\%
+Anti corrosive paint for reinforcement (CPCC)&Manually Excluded\\%
+\end{longtable}
+\normalsize
+\endgroup
+
+\subsubsection{Transport Emissions}
+\noindent Table~\ref{tab:transport_emissions_summary} presents the estimated carbon emissions from transporting materials to and from the project site, calculated based on vehicle type, load capacity, and travel distance.
+
+\begingroup
+\footnotesize
+\centering
+\setlength{\tabcolsep}{4pt}
+\setlength{\LTleft}{\fill}
+\setlength{\LTright}{\fill}
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.09\linewidth}>{\raggedright\arraybackslash}p{0.11\linewidth}>{\raggedright\arraybackslash}p{0.10\linewidth}>{\raggedleft\arraybackslash}p{0.10\linewidth}>{\raggedleft\arraybackslash}p{0.09\linewidth}>{\raggedleft\arraybackslash}p{0.09\linewidth}>{\raggedleft\arraybackslash}p{0.06\linewidth}>{\raggedleft\arraybackslash}p{0.14\linewidth}}
+\caption{Transport Emissions — Summary by Vehicle} \label{tab:transport_emissions_summary} \\
+\toprule
+\textbf{Delivery} & \textbf{Vehicle} & \textbf{From-To} & \textbf{Distance (km)} & \textbf{Capacity (t)} & \textbf{Gross Wt (t)} & \textbf{Emission Factor} & \textbf{Total Emissions (kgCO₂e)} \\
+\midrule
+\endfirsthead
+\caption[]{Transport Emissions — Summary by Vehicle} \\
+\toprule
+\textbf{Delivery} & \textbf{Vehicle} & \textbf{From-To} & \textbf{Distance (km)} & \textbf{Capacity (t)} & \textbf{Gross Wt (t)} & \textbf{Emission Factor} & \textbf{Total Emissions (kgCO₂e)} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{8}{r}{Continued on next page} \\
+\midrule
+\endfoot
+\bottomrule
+\endlastfoot
+Delivery~1 & \makebox[\linewidth][c]{\textemdash} & Excavation & 10.00 & 8.40 & 30.00 & 0.19 & 490.20 \\
+Delivery~2 & \makebox[\linewidth][c]{\textemdash} & Concreting & 10.00 & 15.00 & 30.00 & 0.19 & 2,479.50 \\
+Delivery~3 & \makebox[\linewidth][c]{\textemdash} & Reinforcement & 10.00 & 21.00 & 30.00 & 0.19 & 444.60 \\
+Delivery~4 & \makebox[\linewidth][c]{\textemdash} & Structural steel & 10.00 & 30.00 & 43.00 & 0.19 & 106.40 \\
+Delivery~5 & \makebox[\linewidth][c]{\textemdash} & Railing & 10.00 & 21.00 & 30.00 & 0.19 & 74.10 \\
+Delivery~6 & \makebox[\linewidth][c]{\textemdash} & Backfilling & 10.00 & 8.40 & 30.00 & 0.19 & 294.12 \\
+\end{longtable}
+
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.27\linewidth}>{\raggedright\arraybackslash}p{0.12\linewidth}>{\raggedleft\arraybackslash}p{0.13\linewidth}>{\raggedleft\arraybackslash}p{0.12\linewidth}>{\raggedleft\arraybackslash}p{0.07\linewidth}>{\raggedleft\arraybackslash}p{0.14\linewidth}}
+\caption{Delivery 1 — From Excavation} \label{tab:transport_emissions_1} \\
+\toprule
+\textbf{Material} & \textbf{Category} & \textbf{(kg) Conversion Factor} & \textbf{Quantity (kg)} & \textbf{Trips} & \textbf{Emissions (kgCO₂e)} \\
+\midrule
+\endfirsthead
+\caption[]{Delivery 1 — From Excavation} \\
+\toprule
+\textbf{Material} & \textbf{Category} & \textbf{(kg) Conversion Factor} & \textbf{Quantity (kg)} & \textbf{Trips} & \textbf{Emissions (kgCO₂e)} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{6}{r}{Continued on next page} \\
+\midrule
+\endfoot
+\bottomrule
+\endlastfoot
+Excavation for foundation (pile cap depth + thickness of PCC) & Foundation & 1,800.00 & 40,075.20 & 5.00 & 490.20 \\
+\end{longtable}
+
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.27\linewidth}>{\raggedright\arraybackslash}p{0.12\linewidth}>{\raggedleft\arraybackslash}p{0.13\linewidth}>{\raggedleft\arraybackslash}p{0.12\linewidth}>{\raggedleft\arraybackslash}p{0.07\linewidth}>{\raggedleft\arraybackslash}p{0.14\linewidth}}
+\caption{Delivery 2 — From Concreting} \label{tab:transport_emissions_2} \\
+\toprule
+\textbf{Material} & \textbf{Category} & \textbf{(kg) Conversion Factor} & \textbf{Quantity (kg)} & \textbf{Trips} & \textbf{Emissions (kgCO₂e)} \\
+\midrule
+\endfirsthead
+\caption[]{Delivery 2 — From Concreting} \\
+\toprule
+\textbf{Material} & \textbf{Category} & \textbf{(kg) Conversion Factor} & \textbf{Quantity (kg)} & \textbf{Trips} & \textbf{Emissions (kgCO₂e)} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{6}{r}{Continued on next page} \\
+\midrule
+\endfoot
+\bottomrule
+\endlastfoot
+Boring and concreting in pile M35 & Foundation & 2,800.00 & 112,000.00 & 8.00 & 684.00 \\
+Plain Cement Concrete (M15) & Foundation & 2,400.00 & 3,465.60 & 1.00 & 85.50 \\
+Concreting of pile cap (M35) & Foundation & 2,400.00 & 36,388.80 & 3.00 & 256.50 \\
+Concreting in pier M35 & Sub-Structure & 2,400.00 & 19,848.00 & 2.00 & 171.00 \\
+Concreting of pier cap M35 & Sub-Structure & 2,400.00 & 36,272.04 & 3.00 & 256.50 \\
+Concreting of pedestal M35 & Sub-Structure & 2,400.00 & 518.40 & 1.00 & 85.50 \\
+Concreting in deck slab M35 & Super-Structure & 2,400.00 & 115,920.00 & 8.00 & 684.00 \\
+Crash barrier M30 & Misc & 715.20 & 28,608.00 & 2.00 & 171.00 \\
+Median M30 & Misc & 609.60 & 12,192.00 & 1.00 & 85.50 \\
+\end{longtable}
+
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.27\linewidth}>{\raggedright\arraybackslash}p{0.12\linewidth}>{\raggedleft\arraybackslash}p{0.13\linewidth}>{\raggedleft\arraybackslash}p{0.12\linewidth}>{\raggedleft\arraybackslash}p{0.07\linewidth}>{\raggedleft\arraybackslash}p{0.14\linewidth}}
+\caption{Delivery 3 — From Reinforcement} \label{tab:transport_emissions_3} \\
+\toprule
+\textbf{Material} & \textbf{Category} & \textbf{(kg) Conversion Factor} & \textbf{Quantity (kg)} & \textbf{Trips} & \textbf{Emissions (kgCO₂e)} \\
+\midrule
+\endfirsthead
+\caption[]{Delivery 3 — From Reinforcement} \\
+\toprule
+\textbf{Material} & \textbf{Category} & \textbf{(kg) Conversion Factor} & \textbf{Quantity (kg)} & \textbf{Trips} & \textbf{Emissions (kgCO₂e)} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{6}{r}{Continued on next page} \\
+\midrule
+\endfoot
+\bottomrule
+\endlastfoot
+Reinforcement in pile & Foundation & 1,000.00 & 2,843.00 & 1.00 & 74.10 \\
+Reinforcement in pile cap & Foundation & 1,000.00 & 975.00 & 1.00 & 74.10 \\
+Reinforcement in pier & Sub-Structure & 1,000.00 & 1,771.00 & 1.00 & 74.10 \\
+Reinforcement in pier cap & Sub-Structure & 1,000.00 & 1,694.00 & 1.00 & 74.10 \\
+Reinforcement in pedestal & Sub-Structure & 1,000.00 & 32.40 & 1.00 & 74.10 \\
+Reinforcement in deck slab & Super-Structure & 1,000.00 & 5,796.00 & 1.00 & 74.10 \\
+\end{longtable}
+
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.27\linewidth}>{\raggedright\arraybackslash}p{0.12\linewidth}>{\raggedleft\arraybackslash}p{0.13\linewidth}>{\raggedleft\arraybackslash}p{0.12\linewidth}>{\raggedleft\arraybackslash}p{0.07\linewidth}>{\raggedleft\arraybackslash}p{0.14\linewidth}}
+\caption{Delivery 4 — From Structural steel} \label{tab:transport_emissions_4} \\
+\toprule
+\textbf{Material} & \textbf{Category} & \textbf{(kg) Conversion Factor} & \textbf{Quantity (kg)} & \textbf{Trips} & \textbf{Emissions (kgCO₂e)} \\
+\midrule
+\endfirsthead
+\caption[]{Delivery 4 — From Structural steel} \\
+\toprule
+\textbf{Material} & \textbf{Category} & \textbf{(kg) Conversion Factor} & \textbf{Quantity (kg)} & \textbf{Trips} & \textbf{Emissions (kgCO₂e)} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{6}{r}{Continued on next page} \\
+\midrule
+\endfoot
+\bottomrule
+\endlastfoot
+Structural Steel main Girder (Fe 410 B) & Super-Structure & 1,000.00 & 23,292.52 & 1.00 & 106.40 \\
+\end{longtable}
+
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.27\linewidth}>{\raggedright\arraybackslash}p{0.12\linewidth}>{\raggedleft\arraybackslash}p{0.13\linewidth}>{\raggedleft\arraybackslash}p{0.12\linewidth}>{\raggedleft\arraybackslash}p{0.07\linewidth}>{\raggedleft\arraybackslash}p{0.14\linewidth}}
+\caption{Delivery 5 — From Railing} \label{tab:transport_emissions_5} \\
+\toprule
+\textbf{Material} & \textbf{Category} & \textbf{(kg) Conversion Factor} & \textbf{Quantity (kg)} & \textbf{Trips} & \textbf{Emissions (kgCO₂e)} \\
+\midrule
+\endfirsthead
+\caption[]{Delivery 5 — From Railing} \\
+\toprule
+\textbf{Material} & \textbf{Category} & \textbf{(kg) Conversion Factor} & \textbf{Quantity (kg)} & \textbf{Trips} & \textbf{Emissions (kgCO₂e)} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{6}{r}{Continued on next page} \\
+\midrule
+\endfoot
+\bottomrule
+\endlastfoot
+Steel railing & Misc & 10.99 & 219.80 & 1.00 & 74.10 \\
+\end{longtable}
+
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.27\linewidth}>{\raggedright\arraybackslash}p{0.12\linewidth}>{\raggedleft\arraybackslash}p{0.13\linewidth}>{\raggedleft\arraybackslash}p{0.12\linewidth}>{\raggedleft\arraybackslash}p{0.07\linewidth}>{\raggedleft\arraybackslash}p{0.14\linewidth}}
+\caption{Delivery 6 — From Backfilling} \label{tab:transport_emissions_6} \\
+\toprule
+\textbf{Material} & \textbf{Category} & \textbf{(kg) Conversion Factor} & \textbf{Quantity (kg)} & \textbf{Trips} & \textbf{Emissions (kgCO₂e)} \\
+\midrule
+\endfirsthead
+\caption[]{Delivery 6 — From Backfilling} \\
+\toprule
+\textbf{Material} & \textbf{Category} & \textbf{(kg) Conversion Factor} & \textbf{Quantity (kg)} & \textbf{Trips} & \textbf{Emissions (kgCO₂e)} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{6}{r}{Continued on next page} \\
+\midrule
+\endfoot
+\bottomrule
+\endlastfoot
+Excavation for foundation (pile cap depth + thickness of PCC) (Dump) & Foundation & 1,000.00 & 22,264.00 & 3.00 & 294.12 \\
+\end{longtable}
+
+\normalsize
+\endgroup
+
+\subsubsection{Machinery and Equipment Emissions}
+\noindent The following section presents the carbon emissions from machinery and equipment operated on-site during the construction phase, calculated based on fuel and electricity consumption, operational hours, and corresponding emission factors.
+
+\begingroup
+\footnotesize
+\centering
+\setlength{\tabcolsep}{4pt}
+\setlength{\LTleft}{\fill}
+\setlength{\LTright}{\fill}
+\begin{longtable}{>{\raggedright\arraybackslash}p{2.8cm}>{\raggedright\arraybackslash}p{1.6cm}>{\raggedleft\arraybackslash}p{1.2cm}>{\raggedleft\arraybackslash}p{1.1cm}>{\raggedleft\arraybackslash}p{1.1cm}>{\raggedleft\arraybackslash}p{1.7cm}>{\raggedleft\arraybackslash}p{1.8cm}>{\raggedleft\arraybackslash}p{2.1cm}}
+\caption{Machinery and Equipment Emissions (Detailed)} \label{tab:machinery_equipment_emissions} \\
+\toprule
+\textbf{Equipment Name} & \textbf{Energy Source} & \textbf{Fuel / Power Rating} & \textbf{Avg Hrs / Day} & \textbf{No. of Days} & \textbf{Emission Factor (kgCO₂e/unit)} & \textbf{Consumption} & \textbf{Emissions (kgCO₂e)} \\
+\midrule
+\endfirsthead
+\caption[]{Machinery and Equipment Emissions (Detailed)} \\
+\toprule
+\textbf{Equipment Name} & \textbf{Energy Source} & \textbf{Fuel / Power Rating} & \textbf{Avg Hrs / Day} & \textbf{No. of Days} & \textbf{Emission Factor (kgCO₂e/unit)} & \textbf{Consumption} & \textbf{Emissions (kgCO₂e)} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{8}{r}{Continued on next page} \\
+\midrule
+\endfoot
+\bottomrule
+\endlastfoot
+Backhoe loader (JCB) & Diesel & 5.00 & 0.22 & 1.00 & 2.69 & 1.10 & 2.96 \\
+Bar bending machine & Electricity (Grid) & 3.00 & 8.65 & 1.00 & 0.71 & 25.95 & 18.42 \\
+Bar cutting machine & Electricity (Grid) & 4.00 & 8.65 & 1.00 & 0.71 & 34.60 & 24.57 \\
+Bitumen boiler & Diesel & 1.00 & 17.43 & 1.00 & 2.69 & 17.43 & 46.89 \\
+Bitumen sprayer & Diesel & 5.00 & 0.00 & 0.00 & 2.69 & 0.00 & 0.00 \\
+Concrete pump & Diesel & 12.00 & 2.71 & 1.00 & 2.69 & 32.52 & 87.48 \\
+Crane (crawler) & Diesel & 12.00 & 11.95 & 1.00 & 2.69 & 143.40 & 385.75 \\
+Crane (mobile) & Diesel & 8.00 & 3.27 & 1.00 & 2.69 & 26.16 & 70.37 \\
+Dewatering pump & Diesel & 2.00 & 0.00 & 0.00 & 2.69 & 0.00 & 0.00 \\
+DG set & Diesel & 4.00 & 0.00 & 0.00 & 2.69 & 0.00 & 0.00 \\
+Grouting mixer & Electricity (Grid) & 1.00 & 0.00 & 0.00 & 0.71 & 0.00 & 0.00 \\
+Grouting pump & Electricity (Grid) & 5.00 & 0.00 & 0.00 & 0.71 & 0.00 & 0.00 \\
+Hydraulic excavator & Diesel & 14.00 & 0.35 & 1.00 & 2.69 & 4.90 & 13.18 \\
+Hydraulic stressing jack & Electricity (Grid) & 3.00 & 0.00 & 0.00 & 0.71 & 0.00 & 0.00 \\
+Needle Vibrator & Electricity (Grid) & 1.00 & 0.00 & 0.00 & 0.71 & 0.00 & 0.00 \\
+Paver finisher & Diesel & 7.00 & 0.00 & 0.00 & 2.69 & 0.00 & 0.00 \\
+Road roller & Diesel & 4.00 & 0.00 & 0.00 & 2.69 & 0.00 & 0.00 \\
+Rotary piling rig/Hydraulic piling rig & Diesel & 15.00 & 4.80 & 2.00 & 2.69 & 144.00 & 387.36 \\
+Site office (If Grid electricity is used) & Electricity (Grid) & 1.60 & 6.24 & 200.00 & 0.71 & 1,996.80 & 1,417.73 \\
+Welding machine & Electricity (Grid) & 4.00 & 0.00 & 0.00 & 0.71 & 0.00 & 0.00 \\
+Air compressor & Diesel & 22.00 & 0.17 & 1.00 & 2.69 & 3.74 & 10.06 \\
+ & Diesel & 0.00 & 0.00 & 0.00 & 2.69 & 0.00 & 0.00 \\
+\end{longtable}
+
+\normalsize
+\endgroup
+
+\subsection{Recycling data}
+\begingroup
+\footnotesize
+\centering
+\setlength{\tabcolsep}{4pt}
+\setlength{\LTleft}{\fill}
+\setlength{\LTright}{\fill}
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.25\linewidth}>{\raggedleft\arraybackslash}p{0.12\linewidth}>{\raggedleft\arraybackslash}p{0.14\linewidth}>{\centering\arraybackslash}p{0.08\linewidth}>{\raggedleft\arraybackslash}p{0.13\linewidth}>{\raggedleft\arraybackslash}p{0.13\linewidth}}%
+\caption{Materials Included in Recyclability Calculation} \label{tab:recycling_included} \\%
+\toprule%
+\textbf{Material}&\textbf{Recyclability \%}&\textbf{Recyclable Quantity}&\textbf{Unit}&\textbf{Scrap Rate (INR)}&\textbf{Recovered Value (INR)}\\%
+\midrule%
+\endhead%
+\midrule%
+\multicolumn{6}{r}{\footnotesize\textit{continued on next page}} \\%
+\endfoot%
+\bottomrule%
+\endlastfoot%
+\multicolumn{6}{l}{\textbf{Foundation — Pile Cap}} \\%
+\midrule%
+Reinforcement in pile cap&75.00&0.73&t&32,500.00&23,765.62\\%
+\midrule%
+\multicolumn{6}{l}{\textbf{Sub{-}Structure — Pier}} \\%
+\midrule%
+Reinforcement in pier&75.00&1.33&t&32,500.00&43,168.12\\%
+\midrule%
+\multicolumn{6}{l}{\textbf{Sub{-}Structure — Pier Cap}} \\%
+\midrule%
+Reinforcement in pier cap&75.00&1.27&t&32,500.00&41,291.25\\%
+\midrule%
+\multicolumn{6}{l}{\textbf{Sub{-}Structure — Pedestal}} \\%
+\midrule%
+Reinforcement in pedestal&75.00&0.02&t&32,500.00&789.75\\%
+\midrule%
+\multicolumn{6}{l}{\textbf{Super{-}Structure — Girder}} \\%
+\midrule%
+Structural Steel main Girder (Fe 410 B)&95.00&22.13&t&26,000.00&575,325.24\\%
+\midrule%
+\multicolumn{6}{l}{\textbf{Super{-}Structure — Deck Slab}} \\%
+\midrule%
+Reinforcement in deck slab&75.00&4.35&t&32,500.00&141,277.50\\%
+Steel Decking Sheet (310 MPA)&95.00&1.69&t&26,000.00&43,830.15\\%
+\midrule%
+\multicolumn{6}{l}{\textbf{Super{-}Structure — Cross Bracings}} \\%
+\midrule%
+Steel Cross Bracing&95.00&2.56&t&26,000.00&66,617.82\\%
+\end{longtable}
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.47\linewidth}>{\raggedleft\arraybackslash}p{0.47\linewidth}}%
+\caption{Materials Excluded from Recyclability Calculation} \label{tab:recycling_excluded} \\%
+\toprule%
+\textbf{Material}&\textbf{Reason}\\%
+\midrule%
+\endhead%
+\midrule%
+\multicolumn{2}{r}{\footnotesize\textit{continued on next page}} \\%
+\endfoot%
+\bottomrule%
+\endlastfoot%
+\multicolumn{2}{l}{\textbf{Foundation — Excavation}} \\%
+\midrule%
+Excavation for foundation (pile cap depth + thickness of PCC)&Incomplete Data\\%
+Excavation for foundation (pile cap depth + thickness of PCC) (Dump)&Incomplete Data\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Foundation — Pile}} \\%
+\midrule%
+Boring and concreting in pile M35&Incomplete Data\\%
+Reinforcement in pile&Manually Excluded\\%
+Plain Cement Concrete (M15)&Incomplete Data\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Foundation — Pile Cap}} \\%
+\midrule%
+Concreting of pile cap (M35)&Incomplete Data\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Sub{-}Structure — Pier}} \\%
+\midrule%
+Concreting in pier M35&Incomplete Data\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Sub{-}Structure — Pier Cap}} \\%
+\midrule%
+Concreting of pier cap M35&Incomplete Data\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Sub{-}Structure — Pedestal}} \\%
+\midrule%
+Concreting of pedestal M35&Incomplete Data\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Sub{-}Structure — Bearings}} \\%
+\midrule%
+POT{-} PTFE bearing&Incomplete Data\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Super{-}Structure — Girder}} \\%
+\midrule%
+Coating on structural steel&Incomplete Data\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Super{-}Structure — Deck Slab}} \\%
+\midrule%
+Concreting in deck slab M35&Incomplete Data\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Misc — Railing  \& Crash Barrier \& Median}} \\%
+\midrule%
+Steel railing&Incomplete Data\\%
+Crash barrier M30&Incomplete Data\\%
+Median M30&Incomplete Data\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Misc — Asphalt, Utilities and Other Materials}} \\%
+\midrule%
+Strip Seal Expansion Joint (Catering to maximum horizontal movement upto 70mm)&Incomplete Data\\%
+Asphalt wearing course (12mm)&Incomplete Data\\%
+Yellow and white thermoplastic roadmarking strip (2.5 mm)&Incomplete Data\\%
+Anti corrosive paint for reinforcement (CPCC)&Incomplete Data\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Misc — Waterproofing}} \\%
+\midrule%
+Waterproofing for pile cap&Incomplete Data\\%
+Waterproofing for deck slab&Incomplete Data\\%
+\end{longtable}
+\normalsize
+\endgroup
+
+\clearpage
+
+\section{LCCA results}
+
+\subsection{Life cycle cost results}
+
+\noindent Table~\ref{tab:lcca_results} presents a comprehensive summary of the life cycle cost analysis results, expressed as present values. The costs are organised by life cycle stage --- Initial Stage, Use Stage, Reconstruction, and End-of-Life --- and further broken down by sustainability pillar: Economic, Environmental, and Social.
+
+\begingroup
+\footnotesize
+\centering
+\setlength{\tabcolsep}{4pt}
+\setlength{\LTleft}{\fill}
+\setlength{\LTright}{\fill}
+\begin{longtable}{p{12cm}r}%
+\caption{Life Cycle Cost Analysis Results} \label{tab:lcca_results} \\%
+\toprule%
+Description&Present Value (INR)\\%
+\midrule%
+\endhead%
+\midrule%
+\multicolumn{2}{r}{\footnotesize\textit{continued on next page}} \\%
+\endfoot%
+\bottomrule%
+\endlastfoot%
+\multicolumn{2}{l}{\textbf{Initial Stage}} \\%
+\midrule%
+\multicolumn{2}{l}{\quad\textit{Economic}} \\%
+\hangindent=2em\hangafter=1 \quad\quad Initial Construction Cost&6,477,802.69\\%
+\hangindent=2em\hangafter=1 \quad\quad Time Costs&83,671.62\\%
+\multicolumn{2}{l}{\quad\textit{Environmental}} \\%
+\hangindent=2em\hangafter=1 \quad\quad Initial Carbon Emissions&1,323,845.11\\%
+\hangindent=2em\hangafter=1 \quad\quad Carbon emissions due to Rerouting (Construction)&377,193.91\\%
+\multicolumn{2}{l}{\quad\textit{Social}} \\%
+\hangindent=2em\hangafter=1 \quad\quad Road User Costs (Construction)&9,042,975.60\\%
+\cmidrule(l){1-2}%
+\textbf{Stage Total — Initial Stage}&\textbf{17,305,488.93}\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{Use Stage}} \\%
+\midrule%
+\multicolumn{2}{l}{\quad\textit{Economic}} \\%
+\hangindent=2em\hangafter=1 \quad\quad Routine Inspection Costs&334,610.90\\%
+\hangindent=2em\hangafter=1 \quad\quad Periodic Maintenance Costs&350,756.82\\%
+\hangindent=2em\hangafter=1 \quad\quad Major Inspection Costs&318,869.84\\%
+\hangindent=2em\hangafter=1 \quad\quad Major Repair Costs&268,181.03\\%
+\hangindent=2em\hangafter=1 \quad\quad Replacement Costs of Bearings and Expansion joints&763,883.40\\%
+\multicolumn{2}{l}{\quad\textit{Environmental}} \\%
+\hangindent=2em\hangafter=1 \quad\quad Periodic Maintenance related Carbon Emissions&71,682.90\\%
+\hangindent=2em\hangafter=1 \quad\quad Major Repair related Carbon Emissions&3,014.40\\%
+\hangindent=2em\hangafter=1 \quad\quad Carbon Emissions due to Rerouting during Major Repairs&117,118.71\\%
+\hangindent=2em\hangafter=1 \quad\quad Carbon Emissions due to Rerouting during Replacement of Bearings and Expansion joints&9,436.13\\%
+\multicolumn{2}{l}{\quad\textit{Social}} \\%
+\hangindent=2em\hangafter=1 \quad\quad Road User Costs during Major Repairs&2,807,843.92\\%
+\hangindent=2em\hangafter=1 \quad\quad Road User Costs during Replacement of Bearings and Expansion joints&226,225.11\\%
+\cmidrule(l){1-2}%
+\textbf{Stage Total — Use Stage}&\textbf{5,271,623.16}\\%
+\midrule%
+\multicolumn{2}{l}{\textbf{End{-}of{-}Life Stage}} \\%
+\midrule%
+\multicolumn{2}{l}{\quad\textit{Economic}} \\%
+\hangindent=2em\hangafter=1 \quad\quad Demolition and Disposal Costs&149,637.24\\%
+\hangindent=2em\hangafter=1 \quad\quad Recycling Costs&{-}216,231.12\\%
+\multicolumn{2}{l}{\quad\textit{Environmental}} \\%
+\hangindent=2em\hangafter=1 \quad\quad Demolition and Disposal related Carbon Emissions&30,580.82\\%
+\hangindent=2em\hangafter=1 \quad\quad Carbon Emissions due to Rerouting during Demolition and Disposal&21,782.95\\%
+\multicolumn{2}{l}{\quad\textit{Social}} \\%
+\hangindent=2em\hangafter=1 \quad\quad Road User Costs due to Demolition and Disposal&522,231.84\\%
+\cmidrule(l){1-2}%
+\textbf{Stage Total — End{-}of{-}Life Stage}&\textbf{508,001.73}\\%
+\midrule%
+\textbf{Total life cycle cost}&\textbf{23,085,113.82}\\%
+\end{longtable}
+\normalsize
+\endgroup
+
+\noindent The life cycle cost results are further illustrated through the following figures. Figure~\ref{fig:pillar_donut}, Figure~\ref{fig:stage_bars}, Figure~\ref{fig:pillar_bars} present the distribution of costs across the three sustainability pillars (Economic, Environmental, and Social) and the four life cycle stages, providing a visual overview of the relative contributions to the total life cycle cost.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.88\textwidth]{lcca_plot_pillar_donut_5w_88zsx.png}
+\caption{LCC components results}\label{fig:pillar_donut}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.88\textwidth]{lcca_plot_stage_bars_jvjdt0dh.png}
+\caption{Distribution of 3PS and 3 stages of LCC}\label{fig:stage_bars}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.88\textwidth]{lcca_plot_pillar_bars_xstbybdu.png}
+\caption{Distribution of various components of road user cost during construction}\label{fig:pillar_bars}
+\end{figure}
+
+\clearpage
+
+
+\clearpage
+
+\section{Summary and conclusions}
+
+
+\noindent
+The LCCA results indicate the relative contribution of construction, road user, and environmental costs, supporting informed and sustainable bridge planning decisions.
+
+\vspace{0.3em}
+
+\noindent
+The most contributing stage of the life cycle is \textbf{Initial stage} contributing to around \textbf{74.96\%} of the total life cycle cost.
+
+\vspace{0.3em}
+
+\noindent
+The most contributing pillar is \textbf{Social} contributing to around \textbf{54.58\%} of the total life cycle cost.
+
+\vspace{0.5em}
+
+
+
+
+\clearpage
+\appendix
+\setcounter{section}{1}
+\setcounter{table}{0}
+\setcounter{figure}{0}
+\renewcommand{\thetable}{A-\arabic{table}}
+\renewcommand{\thefigure}{A-\arabic{figure}}
+
+\section*{Appendix A: Assumptions}
+\addcontentsline{toc}{section}{Appendix A: Assumptions}
+
+\noindent
+This Life Cycle Cost Assessment (LCCA) has been carried out using a deterministic,
+software-based approach. The analysis is based on standard engineering practice,
+published guidelines, and reasonable assumptions adopted to ensure consistency,
+transparency, and comparability of results. The key assumptions adopted in the
+present study are summarised below.
+
+\vspace{0.5em}
+
+\begin{itemize}
+\item The analysis period corresponds to the \textbf{design/service life of the bridge} as specified in the project data.
+\item The study includes: initial construction, routine inspection, periodic maintenance, major inspections, repairs, replacement of bearings and expansion joints, reconstruction, demolition and disposal, and associated road user costs.
+\item Only greenhouse gas (GHG) emissions are considered for environmental cost monetisation.
+\item Other impacts such as noise pollution, local business impacts, regional economic disruptions, and broader social externalities are outside the scope of this study.
+\item Components not explicitly defined in the input data or methodology are excluded.
+\item Future technological advancement, policy changes, traffic growth variations, or economic structural shifts are not considered.
+\item All costs are converted into present value terms.
+\item The discounting approach is based on standard economic theory where future costs and benefits are adjusted to present value using a constant discount rate.
+\item Inflation and interest rates are assumed constant over the analysis period.
+\item Real interest rate principles are used in deriving the discount relationship.
+\item Wholesale Price Index (WPI) ratios are used for escalation of specific cost components based on their respective commodity categories. WPI categories are used for adjusting the following components:
+  \begin{itemize}
+  \item Passenger and crew cost $\rightarrow$ ``All Commodities''
+  \item Property damage and spare parts $\rightarrow$ ``Manufacture of parts and accessories for motor vehicles''
+  \item Human injury cost $\rightarrow$ ``Medical accessories''
+  \item Petrol $\rightarrow$ ``Mineral Oils''
+  \item Diesel $\rightarrow$ ``HSD (High Speed Diesel)''
+  \item Engine oil $\rightarrow$ ``Lube oils''
+  \item Grease and related oils $\rightarrow$ ``Mineral oil (grouped)''
+  \item Tyre costs (by vehicle category) $\rightarrow$ Corresponding tyre index categories
+  \item Fixed and depreciation cost $\rightarrow$ ``Manufacture of motor vehicles, trailers and semi-trailers''
+  \item Commodity holding cost $\rightarrow$ ``Fuel \& Power''
+  \end{itemize}
+\item Initial construction costs are based on estimated quantities and prevailing unit rates from SOR.
+\item Carbon emissions during construction are calculated using emission factors for material, transportation and energy consumption.
+\item Emission factors are assumed constant over the entire analysis period.
+\item Transportation of materials occurs under normal traffic and operating conditions.
+\item Maintenance and repair emissions are assumed proportional to initial construction emissions.
+\item Demolition and disposal emissions are assumed proportional to construction emissions.
+\item Recycling is assumed to generate cost recovery (treated as negative cost).
+\item Environmental cost is calculated by monetising carbon emissions using a single Social Cost of Carbon (SCC) value.
+\item Average Daily Traffic (ADT) is assumed constant within each defined analysis period.
+\item Traffic composition (cars, two-wheelers, buses, LCVs, HCVs, MCVs) is based on input data.
+\item Traffic diversion during construction, maintenance, repair, replacement, reconstruction, and demolition is assumed over a predefined detour length.
+\item Vehicle operating cost, value of time, and accident cost are calculated using standard equations and accepted parameters.
+\item Uniform traffic flow and average operating conditions are assumed during rerouting.
+\item Routine inspections, periodic maintenance, major inspections, and repairs occur at fixed predefined intervals.
+\item Maintenance and repair costs are calculated as a percentage of initial construction or superstructure cost.
+\item Replacement activities are limited to bearings and expansion joints.
+\item Reconstruction involves demolition of the existing bridge followed by construction of a new bridge with similar functional characteristics.
+\item All interventions occur as scheduled without unplanned delays unless explicitly stated.
+\end{itemize}
+
+
+\clearpage
+
+
+
+
+
+
+\clearpage
+\setcounter{section}{2}
+\setcounter{table}{0}
+\setcounter{figure}{0}
+\renewcommand{\thetable}{B-\arabic{table}}
+\renewcommand{\thefigure}{B-\arabic{figure}}
+
+
+\newpage
+\section*{Appendix B: Calculation methodology}
+\addcontentsline{toc}{section}{Appendix B: Calculation methodology}
+
+\noindent
+This chapter presents the calculation method and equations used for cost calculations.
+The glossary for the terms used in the equations are mentioned below.
+
+\vspace{0.5em}
+
+\begin{itemize}
+\item $A_{Di}$ = Accident distribution
+\item $A_{Ne}$ = Number of accidents for each vehicle type
+\item $A_{Tn}$ = Total number of accidents in the stipulated time
+\item $C_{Di}$ = Distance related cost
+\item $CF_D$ = Distance related congestion factor
+\item $CF_T$ = Time related congestion factor
+\item $C_{Ti}$ = Time related cost
+\item $DC_m$ = Duration of construction in months
+\item $D_{ma}$ = Number of equipment usage days
+\item $D_{wm}$ = Number of working days in a month
+\item $Di$ = Distance travelled for transportation of material
+\item $EF_m$ = Emission factor for materials
+\item $EF_{ma}$ = Emission factor for energy consumption
+\item $EF_{tp}$ = Emission factor for transportation
+\item $EF_v$ = Vehicular emission factor
+\item $E_{VD}$ = Vehicle damage cost
+\item $E_{Vi}$ = Economic cost of injury
+\item $Q_{rm}$ = Quantity of recycle material
+\item $RE_c$ = Recycling cost
+\item $T_{AT}$ = Additional travel time
+\item $T_{VP}$ = Time value
+\item $V/C$ = Volume-Capacity ratio
+\item $V_{CD}$ = Vehicle counts per day
+\item $\mathrm{AC}$ = Accident cost
+\item $\mathrm{CC}$ = Cargo capacity
+\item $\mathrm{CFU}$ = Price of fuel
+\item $\mathrm{CHC}$ = Commodity holding cost
+\item $\mathrm{COF}$ = Conversion factor
+\item $\mathrm{CR}$ = Crash rate
+\item $\mathrm{CW}$ = Crew cost
+\item $\mathrm{DC}$ = Depreciation cost
+\item $\mathrm{D_{cf}}$ = Demolition and disposal cost
+\item $\mathrm{D_{cr}}$ = Demolition and disposal cost for reconstruction
+\item $\mathrm{DC_{y}}$ = Duration of construction (years)
+\item $\mathrm{DF_{EC}}$ = Emission cost for end-of-life demolition
+\item $\mathrm{DR_{EC}}$ = Emission cost for demolition during reconstruction
+\item $\mathrm{EOL}$ = Engine oil consumption
+\item $\mathrm{EOLC}$ = Engine oil cost
+\item $\mathrm{EOL_{P}}$ = Engine oil price
+\item $\mathrm{F_{C}}$ = Fuel cost
+\item $\mathrm{FC_{CB}}$ = Fuel consumption petrol
+\item $\mathrm{FC_{CS}}$ = Fuel consumption diesel
+\item $\mathrm{FL}$ = Fall
+\item $\mathrm{FXC}$ = Fixed cost
+\item $\mathrm{G}$ = Grease consumption
+\item $\mathrm{GC}$ = Grease cost
+\item $\mathrm{G_{P}}$ = Grease price
+\item $I$ = Interest rate
+\item $\mathrm{IC}$ = Initial construction cost
+\item $\mathrm{IR}$ = Investment ratio
+\item $\mathrm{LC}$ = Maintenance labour cost
+\item $\mathrm{MIc}$ = Major inspection cost
+\item $\mathrm{MR_{c}}$ = Major repair cost
+\item $\mathrm{MR_{EC}}$ = Major repair emission cost
+\item $n$ = Design life (years)
+\item $\mathrm{NP}$ = New vehicle cost
+\item $\mathrm{O_{Avg}}$ = Average occupancy of a vehicle
+\item $\mathrm{OL}$ = Other oil consumption
+\item $\mathrm{OLC}$ = Other oil cost
+\item $\mathrm{OL_{P}}$ = Other oil price
+\item $\mathrm{P_{IC}}$ = Percentage of initial construction cost
+\item $\mathrm{P_{IEC}}$ = Percentage of initial carbon emission
+\item $\mathrm{PMc}$ = Periodic maintenance cost
+\item $\mathrm{PM_{EC}}$ = Periodic maintenance emission cost
+\item $\mathrm{PT}$ = Passenger time cost
+\item $\mathrm{PWF}$ = Present Worth Factor
+\item $\mathrm{PWR}$ = Power weight ratio
+\item $Q$ = Quantity of material
+\item $r$ = Discount rate
+\item $R$ = Rate of material
+\item $\mathrm{RC_{BE}}$ = Replacement cost of bearing and expansion joint
+\item $\mathrm{RCN}$ = Reconstruction cost
+\item $\mathrm{RD}$ = Rerouting distance
+\item $\mathrm{REC_{EC}}$ = Reconstruction emission cost
+\item $\mathrm{RG}$ = Roughness
+\item $\mathrm{RI_{c}}$ = Routine inspection cost 
+\item $\mathrm{R}$ = Rate of recycle material
+\item $\mathrm{RS}$ = Rise
+\item $\mathrm{RUC}$ = Road user cost
+\item $\mathrm{SP}$ = Spare part cost
+\item $\mathrm{TC}$ = Time cost
+\item $\mathrm{TYC}$ = Tyre cost
+\item $\mathrm{TCe}$ = Cost of each tyre
+\item $\mathrm{TCR}$ = Time cost for reconstruction
+\item $\mathrm{TL}$ = Tyre life
+\item $\mathrm{TN}$ = Number of tyres
+\item $\mathrm{UPD}$ = Utilisation per day
+\item $\mathrm{VOC}$ = Vehicle operating cost
+\item $\mathrm{VOT}$ = Value of time cost
+\item $\mathrm{W}$ = Width of carriageway
+\item $\mathrm{WPI}$ = Wholesale price index
+\item $\mathrm{WZM}$ = Work zone multiplier
+\item $x$ = Periodic interval (years)
+\item $\mathrm{ADT}$ = Average daily traffic
+\item $\mathrm{IEC}$ = Initial emission cost
+\item $\mathrm{IAEC}$ = Initial carbon emission cost from on-site activities
+\item $\mathrm{IETC}$ = Initial carbon emission cost due to transportation of material
+\item $\mathrm{SCC}$ = Social cost of carbon
+\item $\mathrm{VEC}$ = Vehicular emission cost
+\item $\mathrm{IAEC}$ = Initial on-site emission cost
+\item $\mathrm{ECR}$ = Energy consumption rate
+\item $H$ = Average machinery hours per day
+\item $D_{ma}$ = Number of equipment usage days
+\item $EF_{ma}$ = Emission factor for machinery energy use
+\end{itemize}
+
+\vspace{0.5em}
+
+{\bfseries B.1 Initial Cost}
+\addcontentsline{toc}{subsection}{B.1 Initial Cost}
+
+\vspace{0.3em}
+\textbf{B.1.1 Economic cost}
+\addcontentsline{toc}{subsubsection}{B.1.1 Economic cost}
+
+\noindent
+Initial construction cost
+\[
+IC = \sum_{i=1}^{n} Q_i \times R_i
+\]
+
+\noindent
+Time cost
+\[
+TC = IC \times I \times DC_y \times IR
+\]
+
+\vspace{0.3em}
+\textbf{B.1.2 Social cost}
+\addcontentsline{toc}{subsubsection}{B.1.2 Social cost}
+
+\noindent
+Road user cost during construction
+\[
+RUC_{cn} = VOC_{cn} + VOT_{cn} + AC_{cn}
+\]
+\[
+\resizebox{\linewidth}{!}{$\displaystyle
+VOC_{cn} = D_{wm} \times DC_m \times RD \times
+\left[
+  \sum_{j=1}^{o} \left\{ (C_{Ti})_{j} \times (V_{CD})_{j} \times (CF_{T})_{j} \times (WPI_{Ti})_{j} \right\}
+  + \sum_{k=1}^{p} \left\{ (C_{Di})_{k} \times (V_{CD})_{k} \times (CF_{D})_{k} \times (WPI_{Di})_{k} \right\}
+\right]
+$}
+\]
+
+\noindent
+Distance related costs
+\[
+F_{Cp} = CFU_{Pe} \times FC_{CS}
+\]
+\[
+F_{Cd} = CFU_{Di} \times FC_{CB}
+\]
+\[
+F_{C} = CFU \times FC
+\]
+
+\begin{table}[h!]
+\centering
+\caption{Fuel Consumption equations for different vehicles}
+{\fontsize{9pt}{11pt}\selectfont
+\everymath{\fontsize{9pt}{11pt}\selectfont}
+\everydisplay{\fontsize{9pt}{11pt}\selectfont}
+\setlength{\tabcolsep}{1.5pt}
+\renewcommand{\arraystretch}{1.45}
+\begin{tabular}{|>{\fontsize{9pt}{11pt}\selectfont}p{0.15\linewidth}|>{\fontsize{9pt}{11pt}\selectfont}p{0.79\linewidth}|}
+\hline
+Small and Big Car &
+$
+\begin{array}{rl}
+FC_{CS} &= 30 + \frac{844.085}{V} + 0.003V^2 + (0.001 \times RG) + (0.3414 \times RS) - (0.2225 \times FL) \\
+FC_{CB} &= 35 + \frac{983.503}{V} + 0.003V^2 + (0.002 \times RG) + (0.339 \times RS) - (0.4785 \times FL)
+\end{array}
+$ \\ \hline
+Two-wheeler &
+$FC = 2.704 + \frac{439.656}{V} + 0.00349V^2 + (0.000157 \times RG) + (0.3642 \times RS) - (0.2709 \times FL)$ \\ \hline
+Buses &
+$FC = 34.23 + \frac{4054.42}{V} + 0.02149V^2 + (0.001246 \times RG) + (3.4557 \times RS) - (1.8454 \times FL)$ \\ \hline
+LCV &
+$FC_{CB} = 22.504 + \frac{1708.244}{V} + 0.02591V^2 + (0.001612 \times RG) + (5.6863 \times RS) - (0.8744 \times FL)$ \\ \hline
+HCV &
+$FC_{CB} = 50.0 + \frac{8049.955}{V} + 0.012V^2 + (0.005 \times RG) + (4.565 \times RS) - (4.904 \times FL) - (7.285 \times PWR)$ \\ \hline
+MCV &
+$FC_{CB} = 90.0 + \frac{14489.919}{V} + 0.0216V^2 + (0.01 \times RG) + (8.217 \times RS) - (8.8272 \times FL) - (13.113 \times PWR)$ \\ \hline
+\end{tabular}
+}
+\end{table}
+
+\begin{table}[h!]
+\centering
+\caption{Speed equations for different vehicles}
+{\fontsize{9pt}{11pt}\selectfont
+\setlength{\tabcolsep}{1.5pt}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{|>{\fontsize{9pt}{11pt}\selectfont}p{0.15\linewidth}|>{\fontsize{9pt}{11pt}\selectfont}p{0.79\linewidth}|}
+\hline
+Small Car & $V = 81.19 - (0.7892 \times RF) - [0.001891 \times (RG - 2000)]$ \\ \hline
+Big Car & $V = 81.92 - (0.7963 \times RF) - [0.001915 \times (RG - 2000)]$ \\ \hline
+Two-wheeler & $V = 59.71 - (0.7892 \times RF) - [0.001891 \times (RG - 2000)]$ \\ \hline
+Buses & $V = 54.23 - (0.4111 \times RF) - [0.00098 \times (RG - 2000)]$ \\ \hline
+LCV & $V = 57.41 - (0.5119 \times RF) - [0.00102 \times (RG - 2000)]$ \\ \hline
+HCV & $V = 96.52 - (0.5040 \times RF) - [0.00100 \times (RG - 2000)]$ \\ \hline
+MCV & $V = 44.79 - (0.3994 \times RF) - [0.00079 \times (RG - 2000)]$ \\ \hline
+\end{tabular}
+}
+\end{table}
+\begin{center}
+\textit{(Note: This table of equation is only for two lane road)}
+\end{center}
+
+\[
+SP = \frac{SP}{NP} \times NP
+\]
+
+\begin{table}[h!]
+\centering
+\caption{Spare part to New vehicle cost ratio for different vehicles}
+{\fontsize{9pt}{11pt}\selectfont
+\setlength{\tabcolsep}{1.5pt}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{|>{\fontsize{9pt}{11pt}\selectfont}p{0.15\linewidth}|>{\fontsize{9pt}{11pt}\selectfont}p{0.79\linewidth}|}
+\hline
+Small Car & $\frac{SP}{NP} = 0.0075 \times (RG - 2000) \times 10^{-5}$ \\ \hline
+Big Car & $\frac{SP}{NP} = 0.0045 \times (RG - 2000) \times 10^{-5}$ \\ \hline
+Two-wheeler & $\frac{SP}{NP} = [-55.879 + (0.024 \times RG)] \times 10^{-5}$ \\ \hline
+Buses & $\frac{SP}{NP} = e^{-9.7871 + (0.007373 \times RF) + (0.0000723 \times RG) + \frac{1.925}{W}}$ \\ \hline
+LCV & $\frac{SP}{NP} = e^{-10.5615 + (0.000141 \times RG) + \frac{3.493}{W}}$ \\ \hline
+HCV and MCV & $\frac{SP}{NP} = e^{-9.492638 + (0.0001413 \times RG) + \frac{3.493}{W}}$ \\ \hline
+\end{tabular}
+}
+\end{table}
+
+\[
+LC = a \times SP
+\]
+\textit{a for small car and big car = 1.79934, Two-wheeler = 0.5498, Buses = 1.1781, LCV = 0.85773, HCV and MCV = 0.7912}
+
+\[
+TC = \frac{TC_e \times TN}{TL}
+\]
+
+\begin{table}[h!]
+\centering
+\caption{Tyre Life equations for different vehicles}
+{\fontsize{9pt}{11pt}\selectfont
+\setlength{\tabcolsep}{1.5pt}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{|>{\fontsize{9pt}{11pt}\selectfont}p{0.15\linewidth}|>{\fontsize{9pt}{11pt}\selectfont}p{0.79\linewidth}|}
+\hline
+Small and big car & $TL = 68771 - (147.9 \times RF) - (26.72 \times RG/W)$ \\ \hline
+Two-wheeler & $TL = 47340 - (101.8 \times RF) - (18.39 \times RG/W)$ \\ \hline
+Buses & $TL = 38519 - (389.52 \times RF) - (1.32 \times RG) + (983.829 \times W)$ \\ \hline
+LCV & $TL = 22382 - (375.3 \times RF) - (1.037 \times RG) + (3817 \times W)$ \\ \hline
+HCV & $TL = 24662 - (413.6 \times RF) - (1.142 \times RG) + (4205 \times W)$ \\ \hline
+MCV & $TL = 23726 - (398 \times RF) - (1.0099 \times RG) + (4046 \times W)$ \\ \hline
+\end{tabular}
+}
+\end{table}
+
+\[
+EOLC = EOL \times EOL_{P} \times 10^{-3}
+\]
+
+\begin{table}[h!]
+\centering
+\caption{Engine oil consumption for different vehicles}
+{\fontsize{9pt}{11pt}\selectfont
+\setlength{\tabcolsep}{1.5pt}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{|>{\fontsize{9pt}{11pt}\selectfont}p{0.15\linewidth}|>{\fontsize{9pt}{11pt}\selectfont}p{0.79\linewidth}|}
+\hline
+Small and big car & $EOL = 1.8807 + (0.036615 \times RF) + (0.000578 \times RG/W)$ \\ \hline
+Two-wheeler & $EOL = 0.405 + (0.007899 \times RF) + (0.000125 \times RG/W)$ \\ \hline
+Buses & $EOL = 0.4303 + (0.001494 \times RF) + (0.0007885 \times RG/W)$ \\ \hline
+LCV & $EOL = 0.80679 + (0.019496 \times RF) + (0.0001297 \times RG/W)$ \\ \hline
+HCV & $EOL = 1.0277 + (0.02495 \times RF) + (0.0001782 \times RG/W)$ \\ \hline
+MCV & $EOL = 1.3826 + (0.03348 \times RF) + (0.002319 \times RG/W)$ \\ \hline
+\end{tabular}
+}
+\end{table}
+
+\[
+OLC = OL \times OLP \times 10^{-4}
+\]
+
+\begin{table}[h!]
+\centering
+\caption{Other oil consumption equations for different vehicles}
+{\fontsize{9pt}{11pt}\selectfont
+\setlength{\tabcolsep}{1.5pt}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{|>{\fontsize{9pt}{11pt}\selectfont}p{0.15\linewidth}|>{\fontsize{9pt}{11pt}\selectfont}p{0.79\linewidth}|}
+\hline
+Small and big car and two-wheeler & $OL = 1.631 + (0.05167 \times RF) + (0.001867 \times RG/W)$ \\ \hline
+Buses & $OL = 3.3201 + (0.002889 \times RF) + (0.0008217 \times RG) - (0.3295 \times W)$ \\ \hline
+LCV & $OL = 2.0415 + (0.0001058 \times RG)$ \\ \hline
+HCV and MCV & $OL = 5.1037 + (0.0002646 \times RG)$ \\ \hline
+\end{tabular}
+}
+\end{table}
+
+\[
+GC = G \times G_{P} \times 10^{4}
+\]
+
+\begin{table}[h!]
+\centering
+\caption{Grease consumption equations for different vehicles}
+{\fontsize{9pt}{11pt}\selectfont
+\setlength{\tabcolsep}{1.5pt}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{|>{\fontsize{9pt}{11pt}\selectfont}p{0.15\linewidth}|>{\fontsize{9pt}{11pt}\selectfont}p{0.79\linewidth}|}
+\hline
+Small car, big car and two-wheeler & $G = 2.816 + (0.2007 \times RF)$ \\ \hline
+Buses & $G = 4.992 + (0.03376 \times RF) + (0.3634 \times W)$ \\ \hline
+LCV & $G = 0.3661 + (0.0283 \times RF) + (0.000251 \times RG)$ \\ \hline
+HCV and MCV & $G = 0.9153 + (0.0707 \times RF) + (0.000627 \times RG)$ \\ \hline
+\end{tabular}
+}
+\end{table}
+
+\textbf{Time related costs}
+
+\[
+FXC = \frac{b}{UPD}
+\]
+\textit{b for small car and big car = 395.65, Two-wheeler = 24.32, Buses = 772.89, LCV = 723.80, HCV = 924.28, MCV = 1238.26}
+
+\begin{table}[h!]
+\centering
+\caption{Utilisation per day equations for different vehicles}
+{\fontsize{9pt}{11pt}\selectfont
+\setlength{\tabcolsep}{1.5pt}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{|>{\fontsize{9pt}{11pt}\selectfont}p{0.15\linewidth}|>{\fontsize{9pt}{11pt}\selectfont}p{0.79\linewidth}|}
+\hline
+Small car & $UPD = 6.7127 \times V$ \\ \hline
+Big Car & $UPD = 6.7378 \times V$ \\ \hline
+Two-wheeler & $UPD = 2.119 \times V$ \\ \hline
+Buses & $UPD = 22.7134 + (12.2569 \times V)$ \\ \hline
+LCV & $UPD = 28.807 + (2.1836 \times V)$ \\ \hline
+HCV & $UPD = 55.6719 + (4.22 \times V)$ \\ \hline
+MCV & $UPD = 77.7233 + (5.8915 \times V)$ \\ \hline
+\end{tabular}
+}
+\end{table}
+
+\[
+DC = \frac{c}{UPD}
+\]
+\textit{c for small and big cars = 42.83, Two-wheeler = 4.26, Buses = 221, LCV = 120.9, HCV = 154.54 and MCV = 238.54}
+
+For Car and Two wheelers,
+\[
+PT = \frac{d}{V}
+\]
+
+For Buses,
+\[
+PT = \frac{d}{UPD}
+\]
+\textit{d for small and big car = 328.06, Two-wheeler = 70.29, Buses = 15509.8}
+
+\textit{(Note: This equation is only for two lane road)}
+
+\[
+CW = \frac{e}{UPD}
+\]
+\textit{e for Buses = 3775.3, LCV = 900, HCV = 1500 and MCV = 1800}
+
+\[
+CHC = \frac{f}{UPD}
+\]
+\textit{f for LCV = 71.35, HCV = 218.75, MCV = 409.28}
+
+\textit{(Note: This equation is only for two lane road)}
+
+\textbf{Time related congestion factors}
+
+\begin{table}[h!]
+\centering
+\caption{Time related congestion factor equations for different vehicles}
+{\fontsize{9pt}{11pt}\selectfont
+\setlength{\tabcolsep}{1.5pt}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{|>{\fontsize{9pt}{11pt}\selectfont}p{0.15\linewidth}|>{\fontsize{9pt}{11pt}\selectfont}p{0.79\linewidth}|}
+\hline
+Cars & $CF_T = 1.087 + (0.483 \times V/C)$ \\ \hline
+Two-wheelers & $CF_T = 0.804 + (0.865 \times V/C)$ \\ \hline
+Buses & $CF_T = 0.864 + (0.543 \times V/C)$ \\ \hline
+LCV & $CF_T = 0.925 + (0.573 \times V/C)$ \\ \hline
+HCV and MCV & $CF_T = 0.878 + (0.561 \times V/C)$ \\ \hline
+\end{tabular}
+}
+\end{table}
+\begin{center}
+ \textit{(Note: This equation is only for two lane road)}   
+\end{center}
+
+
+\textbf{Distance related congestion factor}
+
+\begin{table}[h!]
+\centering
+\caption{Distance related congestion factor equations for different vehicles }
+{\fontsize{9pt}{11pt}\selectfont
+\setlength{\tabcolsep}{1.5pt}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{|>{\fontsize{9pt}{11pt}\selectfont}p{0.15\linewidth}|>{\fontsize{9pt}{11pt}\selectfont}p{0.79\linewidth}|}
+\hline
+Cars & $CF_D = 0.893 + (0.259 \times V/C)$ \\ \hline
+Two-wheelers & $CF_D = 0.917 + (0.112 \times V/C)$ \\ \hline
+Buses & $CF_D = 0.800 + (1.1 \times V/C)$ \\ \hline
+LCV & $CF_D = 0.9 + (1.0 \times V/C)$ \\ \hline
+HCV & $CF_D = 0.925 + (0.482 \times V/C)$ \\ \hline
+MCV & $CF_D = 0.900 + (1.4 \times V/C)$ \\ \hline
+\end{tabular}
+}
+\end{table}
+\begin{center}
+    \textit{(Note: This equation is only for two lane road)}
+\end{center}
+
+
+\[
+\resizebox{\linewidth}{!}{$\displaystyle
+VOT_{cn} = D_{wm} \times DC_m \times T_{AT} \times
+\left[
+  \sum_{j=1}^{o} \left\{ (T_{VP})_{j} \times (V_{CD})_{j} \times (O_{Avg})_{j} \times (WPI_{Ti})_{j} \right\}
+  + \sum_{k=1}^{p} \left\{ (CHC_{T})_{k} \times (V_{CD})_{k} \times (WPI_{Di})_{k} \right\}
+\right]
+$}
+\]
+
+\[
+\resizebox{\linewidth}{!}{$\displaystyle
+AC_{cn} = A_{Tn} \times
+\left[
+  \sum_{j=1}^{o} \left\{ (E_{Vi})_{j} \times (A_{Di})_{j} \times (WPI_{me})_{j} \right\}
+  + \sum_{k=1}^{p} \left\{ (E_{VD})_{k} \times (A_{Ne})_{k} \times (WPI_{sp})_{k} \right\}
+\right]
+$}
+\]
+
+\[
+A_{Tn} = D_{wm} \times DC_m \times CR \times WZM \times RD \times 10^{-6}
+\]
+
+\vspace{0.5em}
+
+\section*{\fontsize{14pt}{16pt}\selectfont\bfseries B.1.3 Environmental cost}
+\addcontentsline{toc}{subsubsection}{B.1.3 Environmental cost}
+
+\begin{itemize}
+\item Embodied carbon emission cost during construction
+\[
+IEC = SCC \times \sum_{j=1}^{o} \left[ Q_{j} \times (COF)_{j} \times (EF_{m})_{j} \right]
+\]
+
+\item Vehicular emission cost during construction due to rerouting
+\[
+VEC = SCC \times D_{wm} \times DC_m \times RD \times \sum_{k=1}^{p} \left[ ADT_{k} \times (EF_{v})_{k} \right]
+\]
+
+\item Carbon emissions from on-site activities during construction
+\[
+IAEC = SCC \times \sum_{j=1}^{o} \left[ (ECR)_{j} \times (H)_{j} \times (D_{ma})_{j} \times (EF_{ma})_{j} \right]
+\]
+
+\item Carbon emission cost due to transportation of construction material
+\[
+IETC = SCC \times \sum_{j=1}^{o} \left[ Q_{j} \times Di_{j} \times (EF_{tp})_{j} \right]
+\]
+\end{itemize}
+
+%----------------------------------------------
+{\bfseries B.2 Use Stage Cost}
+\addcontentsline{toc}{subsection}{B.2 Use Stage Cost}
+
+\vspace{0.3em}
+\textbf{B.2.1 Economic cost}
+\addcontentsline{toc}{subsubsection}{B.2.1 Economic cost}
+
+\begin{itemize}
+  \item \textbf{Routine Inspection cost}
+    \[ RI_c = \mathrm{PWF} \times P_{Ics} \]
+    \[
+\mathrm{PWF} = \sum_{i=1}^{\mathrm{int}\left(\frac{n}{x}\right)-1} \frac{(1+f)^{i x}}{(1+r)^{i x}}
+\]
+  \item \textbf{Periodic maintenance cost}
+    \[ PM_c = \mathrm{PWF} \times P_{ICm} \]
+  \item \textbf{Major repair cost}
+    \[ MR_c = \mathrm{PWF} \times P_{ICr} \]
+  \item \textbf{Major inspection cost}
+    \[ MI_c = \mathrm{PWF} \times P_{ICi} \]
+  \item \textbf{Replacement cost of bearings and expansion joints}
+    \[ RC_{BE} = \mathrm{PWF} \times P_{SCr} \]
+\end{itemize}
+
+
+
+
+\vspace{0.3em}
+\textbf{B.2.2 Social cost}
+\addcontentsline{toc}{subsubsection}{B.2.2 Social cost}
+
+\begin{itemize}
+  \item \textbf{Road user cost due to rerouting during major repairs}
+    \[ RUC_{mr} = VOC_{mr} + VOT_{mr} + AC_{mr} \]
+    \[
+    \resizebox{\linewidth}{!}{$\displaystyle
+    VOC_{mr} = \mathrm{PWF} \times D_{wm} \times DC_m \times RD \left[
+      \sum_{j=1}^{o} \left\{ (C_{Ti})_j \times (V_{CD})_j \times (CF_T)_j \times (WPI_{Ti})_j \right\}
+      + \sum_{k=1}^{p} \left\{ (C_{Di})_k \times (V_{CD})_k \times (CF_D)_k \times (WPI_{Di})_k \right\}
+    \right]
+    $}
+    \]
+    (Refer to table B-1 to B-16 to calculate distance and time related costs for VOC)
+    \[
+    \resizebox{\linewidth}{!}{$\displaystyle
+    VOT_{mr} = \mathrm{PWF} \times D_{wm} \times DC_m \times T_{AT} \left[
+      \sum_{j=1}^{o} \left\{ (T_{VP})_j \times (V_{CD})_j \times (O_{Avg})_j \times (WPI_{Ti})_j \right\}
+      + \sum_{k=1}^{p} \left\{ (CHC_T)_k \times (V_{CD})_k \times (WPI_{Di})_k \right\}
+    \right]
+    $}
+    \]
+    \[
+    \resizebox{\linewidth}{!}{$\displaystyle
+    AC_{mr} = \mathrm{PWF} \times A_{Tn} \left[
+      \sum_{j=1}^{o} \left\{ (E_{Vi})_j \times (A_{Di})_j \times (WPI_{me})_j \right\}
+      + \sum_{k=1}^{p} \left\{ (E_{VD})_k \times (A_{Ne})_k \times (WPI_{sp})_k \right\}
+    \right]
+    $}
+    \]
+
+  \item \textbf{Road user cost due to rerouting during major repairs}
+    \[ RUC_{rbe} = VOC_{rbe} + VOT_{rbe} + AC_{rbe} \]
+    \[
+    \resizebox{\linewidth}{!}{$\displaystyle
+    VOC_{rbe} = \mathrm{PWF} \times D_{wm} \times DC_m \times RD \left[
+      \sum_{j=1}^{o} \left\{ (C_{Ti})_j \times (V_{CD})_j \times (CF_T)_j \times (WPI_{Ti})_j \right\}
+      + \sum_{k=1}^{p} \left\{ (C_{Di})_k \times (V_{CD})_k \times (CF_D)_k \times (WPI_{Di})_k \right\}
+    \right]
+    $}
+    \]
+    (Refer to table B-1 to B-16 to calculate distance and time related costs for VOC)
+    \[
+    \resizebox{\linewidth}{!}{$\displaystyle
+    VOT_{rbe} = \mathrm{PWF} \times D_{wm} \times DC_m \times T_{AT} \left[
+      \sum_{j=1}^{o} \left\{ (T_{VP})_j \times (V_{CD})_j \times (O_{Avg})_j \times (WPI_{Ti})_j \right\}
+      + \sum_{k=1}^{p} \left\{ (CHC_T)_k \times (V_{CD})_k \times (WPI_{Di})_k \right\}
+    \right]
+    $}
+    \]
+    \[
+    \resizebox{\linewidth}{!}{$\displaystyle
+    AC_{rbe} = \mathrm{PWF} \times A_{Tn} \left[
+      \sum_{j=1}^{o} \left\{ (E_{Vi})_j \times (A_{Di})_j \times (WPI_{me})_j \right\}
+      + \sum_{k=1}^{p} \left\{ (E_{VD})_k \times (A_{Ne})_k \times (WPI_{sp})_k \right\}
+    \right]
+    $}
+    \]
+\end{itemize}
+
+\vspace{0.3em}
+\textbf{B.2.3 Environmental cost}
+\addcontentsline{toc}{subsubsection}{B.2.3 Environmental cost}
+
+\begin{itemize}
+  \item Carbon emission cost due to periodic maintenance
+    \[ PM_{EC} = \mathrm{PWF} \times P_{IECp} \]
+  \item Carbon emission cost due to major repairs
+    \[ MR_{EC} = \mathrm{PWF} \times P_{IECm} \]
+  \item Carbon emission due to rerouting of vehicles during major repairs
+    \[
+    VEC_{MR} = \mathrm{PWF} \times \mathrm{SCC} \times D_{wm} \times DC_m \times RD
+    \times \sum_{k=1}^{p} \left[(ADT)_k \times (EF_v)_k\right]
+    \]
+  \item Carbon emission cost due to replacement of bearings and expansion joints
+    \[ RC_{BEE} = \mathrm{PWF} \times P_{IESr} \]
+  \item Carbon emission due to rerouting of vehicles during replacement of bearings and expansion joints
+    \[
+    VEC_{RE} = \mathrm{PWF} \times \mathrm{SCC} \times D_{wm} \times DC_m \times RD
+    \times \sum_{k=1}^{p} \left[(ADT)_k \times (EF_v)_k\right]
+    \]
+\end{itemize}
+
+%----------------------------------------------
+{\bfseries B.3 End-of-Life Stage Cost Calculation}
+\addcontentsline{toc}{subsection}{B.3 End-of-Life Stage Cost Calculation}
+
+\vspace{0.3em}
+\textbf{B.3.1 Economic cost}
+\addcontentsline{toc}{subsubsection}{B.3.1 Economic cost}
+
+\begin{itemize}
+  \item \textbf{Demolition and disposal cost for reconstruction}
+    \[ D_{cr} = \mathrm{PWF} \times P_{ICd} \]
+  \item \textbf{Reconstruction cost}
+    \[ \mathrm{RCN} = \mathrm{PWF} \times \mathrm{IC} \]
+  \item \textbf{Time cost for reconstruction of bridge}
+    \[ \mathrm{TCR} = \bigl| \mathrm{PWF} \times \mathrm{TC} \bigr| \]
+  \item \textbf{Demolition cost at end of life}
+    \[ D_{cf} = \mathrm{PWF} \times P_{ICd} \]
+  \item \textbf{Recycling cost}
+    \[ RE_c = \mathrm{PWF} \times \sum_{i=0}^{m} (RS)_i \times (Q_{rm})_i \]
+\end{itemize}
+
+\vspace{0.3em}
+\textbf{B.3.2 Social cost}
+\addcontentsline{toc}{subsubsection}{B.3.2 Social cost}
+
+\begin{itemize}
+  \item \textbf{Road user cost due to rerouting of vehicles during demolition for reconstruction}
+    \[ \mathrm{RUC}_{dr} = \mathrm{VOC}_{dr} + \mathrm{VOT}_{dr} + \mathrm{AC}_{dr} \]
+    \[
+    \resizebox{\linewidth}{!}{$\displaystyle
+    VOC_{dr} = \mathrm{PWF} \times D_{wm} \times DC_m \times RD \left[
+      \sum_{j=1}^{o} \left\{ (C_{Ti})_j \times (V_{CD})_j \times (CF_T)_j \times (WPI_{Ti})_j \right\}
+      + \sum_{k=1}^{p} \left\{ (C_{Di})_k \times (V_{CD})_k \times (CF_D)_k \times (WPI_{Di})_k \right\}
+    \right]
+    $}
+    \]
+    \[
+    \resizebox{\linewidth}{!}{$\displaystyle
+    VOT_{dr} = \mathrm{PWF} \times D_{wm} \times DC_m \times T_{AT} \left[
+      \sum_{j=1}^{o} \left\{ (T_{VP})_j \times (V_{CD})_j \times (O_{Avg})_j \times (WPI_{Ti})_j \right\}
+      + \sum_{k=1}^{p} \left\{ (CHC_T)_k \times (V_{CD})_k \times (WPI_{Di})_k \right\}
+    \right]
+    $}
+    \]
+    \[
+    \resizebox{\linewidth}{!}{$\displaystyle
+    AC_{dr} = \mathrm{PWF} \times A_{Tn} \left[
+      \sum_{j=1}^{o} \left\{ (E_{Vi})_j \times (A_{Di})_j \times (WPI_{me})_j \right\}
+      + \sum_{k=1}^{p} \left\{ (E_{VD})_k \times (A_{Ne})_k \times (WPI_{sp})_k \right\}
+    \right]
+    $}
+    \]
+
+  \item \textbf{Road user cost due to rerouting of vehicles during reconstruction}
+    \[ \mathrm{RUC}_{re} = \mathrm{VOC}_{re} + \mathrm{VOT}_{re} + \mathrm{AC}_{re} \]
+    \[
+    \resizebox{\linewidth}{!}{$\displaystyle
+    VOC_{re} = \mathrm{PWF} \times D_{wm} \times DC_m \times RD \left[
+      \sum_{j=1}^{o} \left\{ (C_{Ti})_j \times (V_{CD})_j \times (CF_T)_j \times (WPI_{Ti})_j \right\}
+      + \sum_{k=1}^{p} \left\{ (C_{Di})_k \times (V_{CD})_k \times (CF_D)_k \times (WPI_{Di})_k \right\}
+    \right]
+    $}
+    \]
+    (Refer to table B-1 to B-16 to calculate distance and time related costs for VOC)
+    \[
+    \resizebox{\linewidth}{!}{$\displaystyle
+    VOT_{re} = \mathrm{PWF} \times D_{wm} \times DC_m \times T_{AT} \left[
+      \sum_{j=1}^{o} \left\{ (T_{VP})_j \times (V_{CD})_j \times (O_{Avg})_j \times (WPI_{Ti})_j \right\}
+      + \sum_{k=1}^{p} \left\{ (CHC_T)_k \times (V_{CD})_k \times (WPI_{Di})_k \right\}
+    \right]
+    $}
+    \]
+    \[
+    \resizebox{\linewidth}{!}{$\displaystyle
+    AC_{re} = \mathrm{PWF} \times A_{Tn} \left[
+      \sum_{j=1}^{o} \left\{ (E_{Vi})_j \times (A_{Di})_j \times (WPI_{me})_j \right\}
+      + \sum_{k=1}^{p} \left\{ (E_{VD})_k \times (A_{Ne})_k \times (WPI_{sp})_k \right\}
+    \right]
+    $}
+    \]
+
+  \item \textbf{Road user cost due to rerouting of vehicles during demolition at the end of life}
+    \[ \mathrm{RUC}_{df} = \mathrm{VOC}_{df} + \mathrm{VOT}_{df} + \mathrm{AC}_{df} \]
+    \[
+    \resizebox{\linewidth}{!}{$\displaystyle
+    VOC_{df} = \mathrm{PWF} \times D_{wm} \times DC_m \times RD \left[
+      \sum_{j=1}^{o} \left\{ (C_{Ti})_j \times (V_{CD})_j \times (CF_T)_j \times (WPI_{Ti})_j \right\}
+      + \sum_{k=1}^{p} \left\{ (C_{Di})_k \times (V_{CD})_k \times (CF_D)_k \times (WPI_{Di})_k \right\}
+    \right]
+    $}
+    \]
+    (Refer to table B-1 to B-16 to calculate distance and time related costs for VOC)
+    \[
+    \resizebox{\linewidth}{!}{$\displaystyle
+    VOT_{df} = \mathrm{PWF} \times D_{wm} \times DC_m \times T_{AT} \left[
+      \sum_{j=1}^{o} \left\{ (T_{VP})_j \times (V_{CD})_j \times (O_{Avg})_j \times (WPI_{Ti})_j \right\}
+      + \sum_{k=1}^{p} \left\{ (CHC_T)_k \times (V_{CD})_k \times (WPI_{Di})_k \right\}
+    \right]
+    $}
+    \]
+    \[
+    \resizebox{\linewidth}{!}{$\displaystyle
+    AC_{df} = \mathrm{PWF} \times A_{Tn} \left[
+      \sum_{j=1}^{o} \left\{ (E_{Vi})_j \times (A_{Di})_j \times (WPI_{me})_j \right\}
+      + \sum_{k=1}^{p} \left\{ (E_{VD})_k \times (A_{Ne})_k \times (WPI_{sp})_k \right\}
+    \right]
+    $}
+    \]
+\end{itemize}
+
+\vspace{0.3em}
+\textbf{B.3.3 Environmental cost}
+\addcontentsline{toc}{subsubsection}{B.3.3 Environmental cost}
+
+\textbf{Carbon Emission Cost}
+
+\begin{itemize}
+  \item Carbon emission cost due to demolition and disposal for reconstruction
+    \[ \mathrm{DR}_{\mathrm{EC}} = \mathrm{PWF} \times P_{\mathrm{IECd}} \]
+
+  \item Carbon emission cost due to rerouting of vehicles during demolition for reconstruction
+    \[\begin{array}{rl}
+    \mathrm{VEC}_{\mathrm{DR}}
+    &= \mathrm{PWF} \times \mathrm{SCC} \times D_{wm} \times \mathrm{DC}_m \times \mathrm{RD} \\
+    &\quad \times \sum_{k=1}^{p} (\mathrm{ADT})_k\, (\mathrm{EF}_v)_k
+    \end{array}\]
+
+  \item Carbon emission cost due to reconstruction
+    \[ \mathrm{REC}_{\mathrm{EC}} = \mathrm{PWF} \times \mathrm{IEC} \]
+
+  \item Carbon emission cost due to rerouting of vehicles during reconstruction
+    \[\begin{array}{rl}
+    \mathrm{VEC}_{\mathrm{REC}}
+    &= \mathrm{PWF} \times \mathrm{SCC} \times D_{wm} \times \mathrm{DC}_m \times \mathrm{RD} \\
+    &\quad \times \sum_{k=1}^{p} (\mathrm{ADT})_k\, (\mathrm{EF}_v)_k
+    \end{array}\]
+
+  \item Carbon emission cost due to demolition and disposal at end of life
+    \[ \mathrm{DF}_{\mathrm{EC}} = \mathrm{PWF} \times P_{\mathrm{IECd}} \]
+
+  \item Carbon emission cost due to rerouting of vehicles during demolition at end of life
+    \[\begin{array}{rl}
+    \mathrm{VEC}_{\mathrm{DF}}
+    &= \mathrm{PWF} \times \mathrm{SCC} \times D_{wm} \times \mathrm{DC}_m \times \mathrm{RD} \\
+    &\quad \times \sum_{k=1}^{p} (\mathrm{ADT})_k\, (\mathrm{EF}_v)_k
+    \end{array}\]
+\end{itemize}
+
+
+
+    
+
+\clearpage
+
+\begin{landscape}
+
+\setcounter{section}{3}
+\setcounter{table}{0}
+\setcounter{figure}{0}
+\renewcommand{\thetable}{C-\arabic{table}}
+\renewcommand{\thefigure}{C-\arabic{figure}}
+
+\section*{Appendix C: Miscellaneous data}
+
+\addcontentsline{toc}{section}{Appendix C: Miscellaneous data}
+
+\begingroup
+
+\scriptsize
+
+\centering
+
+\setlength{\tabcolsep}{2pt}
+
+\setlength{\LTleft}{\fill}
+
+\setlength{\LTright}{\fill}
+
+
+
+\begin{table}[H]%
+\centering%
+\caption{WPI Adjustment Factors — Combined. All values in INR.}%
+\label{tab:wpi_combined}%
+\begin{adjustbox}{width=\linewidth}\begin{tabular}{lrrrrrrrrrrrrrrrr}%
+\toprule%
+Vehicle&Petrol Cost&Diesel Cost&Engine Oil Cost&Other Oil Cost&Grease Cost&Property Damage Cost&Tyre Cost&Spare Parts Cost&Fixed Depreciation&Commodity Holding Cost&Passenger Cost&Crew Cost&Fatal Injury Cost&Major Injury Cost&Minor Injury Cost&Value of Time Cost\\%
+\midrule%
+\multicolumn{17}{l}{\textbf{Ratio (Selected / Base)}} \\%
+\midrule%
+Small Car&1.7210&1.7103&1.4497&1.6295&1.6295&1.1486&1.1266&1.1413&1.1464&1.4413&1.2783&1.2783&1.1055&1.1055&1.1055&1.2783\\%
+Big Car&1.7210&1.7103&1.4497&1.6295&1.6295&1.1486&1.1266&1.1413&1.1464&1.4413&1.2783&1.2783&1.1055&1.1055&1.1055&1.2783\\%
+Two Wheeler&1.7210&1.7103&1.4497&1.6295&1.6295&1.1486&1.1402&1.1413&1.1464&1.4413&1.2783&1.2783&1.1055&1.1055&1.1055&1.2783\\%
+Ordinary Bus&1.7210&1.7103&1.4497&1.6295&1.6295&1.1486&1.1926&1.2822&1.1464&1.4413&1.2783&1.2783&1.1055&1.1055&1.1055&1.2783\\%
+Deluxe Bus&1.7210&1.7103&1.4497&1.6295&1.6295&1.1486&1.1926&1.2822&1.1464&1.4413&1.2783&1.2783&1.1055&1.1055&1.1055&1.2783\\%
+LCV&1.7210&1.7103&1.4497&1.6295&1.6295&1.1486&1.1926&1.0099&1.1464&1.4413&1.2783&1.2783&1.1055&1.1055&1.1055&1.2783\\%
+HCV&1.7210&1.7103&1.4497&1.6295&1.6295&1.1486&1.1926&1.0099&1.1464&1.4413&1.2783&1.2783&1.1055&1.1055&1.1055&1.2783\\%
+MCV&1.7210&1.7103&1.4497&1.6295&1.6295&1.1486&1.1926&1.0099&1.1464&1.4413&1.2783&1.2783&1.1055&1.1055&1.1055&1.2783\\%
+\midrule%
+\multicolumn{17}{l}{\textbf{Selected Year Values}} \\%
+\midrule%
+Small Car&146.97&161.45&190.20&150.73&150.73&130.02&111.76&129.19&130.46&146.58&154.93&154.93&146.48&146.48&146.48&154.93\\%
+Big Car&146.97&161.45&190.20&150.73&150.73&130.02&111.76&129.19&130.46&146.58&154.93&154.93&146.48&146.48&146.48&154.93\\%
+Two Wheeler&146.97&161.45&190.20&150.73&150.73&130.02&118.58&129.19&130.46&146.58&154.93&154.93&146.48&146.48&146.48&154.93\\%
+Ordinary Bus&146.97&161.45&190.20&150.73&150.73&130.02&116.28&145.14&130.46&146.58&154.93&154.93&146.48&146.48&146.48&154.93\\%
+Deluxe Bus&146.97&161.45&190.20&150.73&150.73&130.02&116.28&145.14&130.46&146.58&154.93&154.93&146.48&146.48&146.48&154.93\\%
+LCV&146.97&161.45&190.20&150.73&150.73&130.02&116.28&115.23&130.46&146.58&154.93&154.93&146.48&146.48&146.48&154.93\\%
+HCV&146.97&161.45&190.20&150.73&150.73&130.02&116.28&115.23&130.46&146.58&154.93&154.93&146.48&146.48&146.48&154.93\\%
+MCV&146.97&161.45&190.20&150.73&150.73&130.02&116.28&115.23&130.46&146.58&154.93&154.93&146.48&146.48&146.48&154.93\\%
+\midrule%
+\multicolumn{17}{l}{\textbf{Base Year Values (2019)}} \\%
+\midrule%
+Small Car&85.40&94.40&131.20&92.50&92.50&113.20&99.20&113.20&113.80&101.70&121.20&121.20&132.50&132.50&132.50&121.20\\%
+Big Car&85.40&94.40&131.20&92.50&92.50&113.20&99.20&113.20&113.80&101.70&121.20&121.20&132.50&132.50&132.50&121.20\\%
+Two Wheeler&85.40&94.40&131.20&92.50&92.50&113.20&104.00&113.20&113.80&101.70&121.20&121.20&132.50&132.50&132.50&121.20\\%
+Ordinary Bus&85.40&94.40&131.20&92.50&92.50&113.20&97.50&113.20&113.80&101.70&121.20&121.20&132.50&132.50&132.50&121.20\\%
+Deluxe Bus&85.40&94.40&131.20&92.50&92.50&113.20&97.50&113.20&113.80&101.70&121.20&121.20&132.50&132.50&132.50&121.20\\%
+LCV&85.40&94.40&131.20&92.50&92.50&113.20&97.50&114.10&113.80&101.70&121.20&121.20&132.50&132.50&132.50&121.20\\%
+HCV&85.40&94.40&131.20&92.50&92.50&113.20&97.50&114.10&113.80&101.70&121.20&121.20&132.50&132.50&132.50&121.20\\%
+MCV&85.40&94.40&131.20&92.50&92.50&113.20&97.50&114.10&113.80&101.70&121.20&121.20&132.50&132.50&132.50&121.20\\%
+\bottomrule%
+\end{tabular}\end{adjustbox}%
+\end{table}
+
+
+
+\normalsize
+
+\endgroup
+
+\end{landscape}
+\end{document}
