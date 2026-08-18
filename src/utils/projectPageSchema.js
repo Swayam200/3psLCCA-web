@@ -499,9 +499,23 @@ export const normalizeCarbonEmissionData = (value, project = {}) => {
     const rcp = socialData.rcp || 'RCP 4.5 (Intermediate)';
     const customScc = numberValue(socialData.custom_scc !== undefined ? socialData.custom_scc : socialData.custom?.entered_value !== undefined ? socialData.custom.entered_value : 0.05) ?? 0.05;
 
-    let sccVal = 0.05;
+    // The Social Cost page resolves Ricke-mode values itself from the
+    // per-country dataset (an async fetch a sync normalizer cannot do) and
+    // stores the result. When those params are present, echo the stored cost
+    // verbatim — recomputing from the legacy stub below would corrupt the
+    // precise value and break normalize-idempotence (the carbon-freeze
+    // invariant). The stub survives only for legacy rows without params.
+    const hasRickeParams = socialData.ricke && typeof socialData.ricke === 'object';
+
+    let sccVal;
     if (sccMode === 'NITI Aayog') {
         sccVal = 6.3936 * inrRate;
+    } else if (sccMode === 'K. Ricke et al. (Country-Level)' && hasRickeParams) {
+        sccVal = numberValue(
+            socialData.calculated_scc_local !== undefined
+                ? socialData.calculated_scc_local
+                : socialData.result?.cost_of_carbon_local
+        ) ?? 0;
     } else if (sccMode === 'K. Ricke et al. (Country-Level)') {
         const RICKE_SCC_TABLE = {
             "SSP1 (Sustainability)|RCP 2.6 (Low Warming)": 0.085,
