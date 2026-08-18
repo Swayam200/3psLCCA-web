@@ -30,7 +30,11 @@ async function boot(baseUrl) {
 
             report('packages', 'Loading pandas + matplotlib…');
             await pyodide.loadPackage(['pandas', 'matplotlib', 'beautifulsoup4', 'pyyaml', 'jinja2'], {
-                messageCallback: () => { },
+                // Forward per-package lines so the UI keeps moving during the
+                // longest download stretch of a cold run.
+                messageCallback: (line) => {
+                    if (/^Loading /.test(line)) report('packages', `${line}…`);
+                },
             });
 
             report('runtime', 'Loading report modules…');
@@ -79,6 +83,12 @@ json.dumps({"tex": _result["tex"], "files": _result["files"], "plot_error": _res
 
 self.onmessage = async (event) => {
     const { id, type, baseUrl, chunks, config } = event.data;
+    if (type === 'warmup') {
+        // Opportunistic pre-boot while the user is still choosing report
+        // sections; errors are swallowed — a real generate reports them.
+        boot(baseUrl).catch(() => {});
+        return;
+    }
     if (type !== 'generate') return;
     try {
         const pyodide = await boot(baseUrl);

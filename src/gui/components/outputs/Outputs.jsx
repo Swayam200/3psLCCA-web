@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useProjectData } from '../../../contexts/ProjectDataContext';
-import { Row, Col, Card, Button, Form, Table } from 'react-bootstrap';
+import { Row, Col, Card, Button, Form, Table, ProgressBar } from 'react-bootstrap';
 import * as d3 from 'd3';
 import JSZip from 'jszip';
 import pako from 'pako';
@@ -297,6 +297,7 @@ const Outputs = ({ addLog, navTrigger }) => {
         () => projectData?.outputs_data?.engine || {}
     );
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+    const [reportProgress, setReportProgress] = useState(null); // { message, percent }
     const [showReportModal, setShowReportModal] = useState(false);
 
     const reportRef = useRef();
@@ -484,6 +485,11 @@ const Outputs = ({ addLog, navTrigger }) => {
             addLog("Error: Calculation results are not ready yet. Please click 'Proceed' or wait for data to load.");
             return;
         }
+        // Start the heavy one-time downloads (Python runtime, TeX engine)
+        // while the user is still choosing sections in the modal.
+        import('./latexReportEngine.js')
+            .then(({ warmUpLatexReport }) => warmUpLatexReport())
+            .catch(() => {});
         setShowReportModal(true);
     };
 
@@ -504,20 +510,29 @@ const Outputs = ({ addLog, navTrigger }) => {
             // fully in the browser (desktop-identical PDF). jsPDF remains the
             // automatic fallback if WASM is unavailable or the compile fails.
             try {
-                const { generateLatexReport, downloadPdf } = await import('./latexReportEngine.js');
+                const { generateLatexReport, downloadPdf, progressPercent } = await import('./latexReportEngine.js');
+                let lastPercent = 0;
+                setReportProgress({ message: 'Starting…', percent: 0 });
                 const { pdf, fileName, plotError } = await generateLatexReport({
                     projectData,
                     results: resultsForReport,
                     selections,
-                    onProgress: (message) => addLog(message),
+                    onProgress: (message) => {
+                        addLog(message);
+                        const percent = progressPercent(message);
+                        if (percent !== null) lastPercent = percent;
+                        setReportProgress({ message, percent: lastPercent });
+                    },
                 });
                 if (plotError) addLog(`Warning: report plots unavailable (${plotError}).`);
+                setReportProgress({ message: 'Report ready — downloading…', percent: 100 });
                 downloadPdf(pdf, fileName);
                 addLog(`LaTeX report ready: ${fileName} (${(pdf.length / 1024 / 1024).toFixed(2)} MB).`);
                 return;
             } catch (latexError) {
                 console.error("LaTeX report engine failed, falling back to jsPDF:", latexError);
                 addLog(`LaTeX engine unavailable (${latexError.message}). Generating fallback-layout report instead...`);
+                setReportProgress(null);
             }
 
             await generateReport({
@@ -540,6 +555,7 @@ const Outputs = ({ addLog, navTrigger }) => {
             addLog(`Error: ${err.message}`);
         } finally {
             setIsGeneratingPdf(false);
+            setReportProgress(null);
         }
     };
 
@@ -645,9 +661,9 @@ const Outputs = ({ addLog, navTrigger }) => {
             <div ref={reportRef} ref-id="report-container" className="p-4" style={{ color: 'var(--app-text-primary)', position: 'relative', backgroundColor: 'var(--app-bg-main)' }}>
                 <div className="d-flex justify-content-between align-items-center mb-4">
                     <h2 style={{ color: 'var(--app-primary-accent)' }}>Outputs</h2>
-                    <Button 
-                        variant="outline-primary" 
-                        onClick={handleDownloadReport} 
+                    <Button
+                        variant="outline-primary"
+                        onClick={handleDownloadReport}
                         disabled={isGeneratingPdf}
                         style={{ borderColor: 'var(--app-primary-accent)', color: 'var(--app-primary-accent)', opacity: isGeneratingPdf ? 0.5 : 1 }}
                     >
@@ -658,6 +674,23 @@ const Outputs = ({ addLog, navTrigger }) => {
                         )}
                     </Button>
                 </div>
+
+                {isGeneratingPdf && reportProgress && (
+                    <div className="mb-4" data-testid="report-progress">
+                        <div className="d-flex justify-content-between mb-1" style={{ fontSize: '0.82rem', color: 'var(--app-text-secondary)' }}>
+                            <span>{reportProgress.message}</span>
+                            <span>{reportProgress.percent}%</span>
+                        </div>
+                        <ProgressBar
+                            now={reportProgress.percent}
+                            animated
+                            style={{ height: '6px', backgroundColor: 'var(--app-input-bg)' }}
+                        />
+                        <div className="mt-1" style={{ fontSize: '0.75rem', color: 'var(--app-text-secondary)' }}>
+                            First report on this device downloads the engine (~60 MB, cached afterwards) — later reports take seconds.
+                        </div>
+                    </div>
+                )}
 
                 <div
                     className="mb-4"
