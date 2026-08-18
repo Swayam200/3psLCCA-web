@@ -490,7 +490,7 @@ const Outputs = ({ addLog, navTrigger }) => {
     const handleConfirmReport = async (selections) => {
         setShowReportModal(false);
         if (isGeneratingPdf) return;
-        
+
         setIsGeneratingPdf(true);
         addLog("Preparing professional LCCA report...");
         try {
@@ -499,7 +499,27 @@ const Outputs = ({ addLog, navTrigger }) => {
             if (!resultsForReport) {
                 throw new Error("Calculation results are not ready. Please run the backend calculation first.");
             }
-            
+
+            // Preferred engine: the desktop app's own LaTeX pipeline running
+            // fully in the browser (desktop-identical PDF). jsPDF remains the
+            // automatic fallback if WASM is unavailable or the compile fails.
+            try {
+                const { generateLatexReport, downloadPdf } = await import('./latexReportEngine.js');
+                const { pdf, fileName, plotError } = await generateLatexReport({
+                    projectData,
+                    results: resultsForReport,
+                    selections,
+                    onProgress: (message) => addLog(message),
+                });
+                if (plotError) addLog(`Warning: report plots unavailable (${plotError}).`);
+                downloadPdf(pdf, fileName);
+                addLog(`LaTeX report ready: ${fileName} (${(pdf.length / 1024 / 1024).toFixed(2)} MB).`);
+                return;
+            } catch (latexError) {
+                console.error("LaTeX report engine failed, falling back to jsPDF:", latexError);
+                addLog(`LaTeX engine unavailable (${latexError.message}). Generating fallback-layout report instead...`);
+            }
+
             await generateReport({
                 projectInputs,
                 results: resultsForReport,

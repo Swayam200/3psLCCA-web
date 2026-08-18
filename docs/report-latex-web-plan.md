@@ -80,6 +80,32 @@ cause surfaced in minutes:
 - Note for R3: the worker compiles once, so `Page n of ??` and TOC/refs
   stay unresolved — wire the standard second pass (desktop does the same).
 
+## R3 + R4 complete (2026-08-18): wired into the app, fallback in place
+
+- `src/gui/components/outputs/latexReportEngine.js` orchestrates the two
+  workers (lazy dynamic import — none of this is in the main bundle):
+  project data → `desktopChunksForReport` → Pyodide report worker (.tex +
+  plots) → path rewrite → SwiftLaTeX worker (**two passes**, resolving TOC
+  and "Page n of m" like desktop's double compile) → download.
+- Outputs' "Download Report" prefers this engine; on any failure it logs
+  the reason and falls back to the existing jsPDF layout automatically
+  (R4). The fallback path was exercised for real during testing.
+- The section-selection modal's keys are byte-identical to desktop's
+  `KEY_SHOW_*` config strings, so selections pass straight through to the
+  desktop builder.
+- `report-worker.js` is now a **module worker** (pyodide v0.28+/v314
+  dropped classic-worker support — this was found the hard way).
+- Verified end-to-end in the running app with the M_20_2L_OF_S archive:
+  import → in-browser calculation → Generate PDF Report →
+  `M_20_2L_OF_S_Report.pdf`, 2.54 MB, ~24 s with warm caches (log:
+  runtime 2 s, packages 7 s, tex generation 2 s, format 4 s, two compile
+  passes 4 s each). 147 node tests pass, including new `rewriteTexPaths`
+  units.
+- Deliberately not built: the latex-css HTML preview page from the
+  original R3 sketch — the real PDF now arrives in seconds, so a
+  lookalike preview adds little; revisit only if user feedback asks for
+  an instant on-screen view.
+
 ## R2 history (how it looked when blocked)
 
 Restored the archived SwiftLaTeX stack and extended it for today's

@@ -8,13 +8,12 @@
  * lazily on first use and land in the browser HTTP cache.
  */
 
-/* global loadPyodide, importScripts */
+// Loaded as a MODULE worker: pyodide v0.28+ (our v314 CDN line) dropped
+// classic-worker support, so the runtime is pulled in via dynamic import.
 
 // Keep in step with the pyodide devDependency in package.json.
 const PYODIDE_VERSION = '314.0.2';
 const PYODIDE_CDN = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`;
-
-importScripts(`${PYODIDE_CDN}pyodide.js`);
 
 let bootPromise = null;
 
@@ -26,6 +25,7 @@ async function boot(baseUrl) {
     if (!bootPromise) {
         bootPromise = (async () => {
             report('pyodide', 'Loading Python runtime…');
+            const { loadPyodide } = await import(/* @vite-ignore */ `${PYODIDE_CDN}pyodide.mjs`);
             const pyodide = await loadPyodide({ indexURL: PYODIDE_CDN });
 
             report('packages', 'Loading pandas + matplotlib…');

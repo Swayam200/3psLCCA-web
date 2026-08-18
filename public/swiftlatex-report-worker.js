@@ -98,8 +98,17 @@ self.onmessage = async (event) => {
     engine.writeMemFSFile('main.tex', event.data.tex);
     engine.setEngineMainFile('main.tex');
 
-    post('status', { message: 'Compiling LaTeX report PDF...' });
-    const result = await engine.compileLaTeX();
+    // Two passes by default, like the desktop pipeline: the first pass
+    // writes the .aux/.toc into the engine's in-memory filesystem, the
+    // second resolves the table of contents, cross-references and
+    // "Page n of m" totals.
+    const passes = Math.max(1, event.data.passes ?? 2);
+    let result;
+    for (let pass = 1; pass <= passes; pass += 1) {
+      post('status', { message: `Compiling LaTeX report PDF (pass ${pass}/${passes})...` });
+      result = await engine.compileLaTeX();
+      if (!result.pdf) break;
+    }
     closeEngine(engine);
 
     const elapsedMs = Math.round(performance.now() - startedAt);
