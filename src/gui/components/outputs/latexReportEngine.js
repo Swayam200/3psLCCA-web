@@ -48,6 +48,51 @@ const getTexWorker = () => {
     return texWorkerPromise;
 };
 
+/**
+ * Map a pipeline progress message onto an overall percentage. The weights
+ * reflect measured wall time: downloads and Pyodide boot dominate the first
+ * run, the two compile passes dominate warm runs.
+ */
+const STAGE_MARKS = [
+    ['Preparing project data', 2],
+    ['Loading Python runtime', 5],
+    ['Loading pandas', 25],
+    ['Loading report modules', 45],
+    ['Generating LaTeX report', 52],
+    ['Loading SwiftLaTeX', 62],
+    ['Preparing static SwiftLaTeX format', 68],
+    ['pass 1/2', 78],
+    ['pass 2/2', 90],
+];
+
+export const progressPercent = (message) => {
+    const hit = STAGE_MARKS.find(([needle]) => String(message || '').includes(needle));
+    return hit ? hit[1] : null;
+};
+
+let warmedUp = false;
+
+/**
+ * Start the heavy one-time downloads (Pyodide runtime + packages + report
+ * runtime, TeX engine + format sources) before the user hits Generate —
+ * called when the section-selection modal opens, so the network works while
+ * they pick sections. Safe to call repeatedly; everything is idempotent and
+ * failures stay silent (generation will surface them properly if real).
+ */
+export const warmUpLatexReport = () => {
+    if (warmedUp) return;
+    warmedUp = true;
+    try {
+        getTexWorker().then((worker) => worker.postMessage({ type: 'warmup', baseUrl: baseUrl() }));
+        const engineBase = `${baseUrl()}vendor/swiftlatex/`;
+        for (const file of ['PdfTeXEngine.js', 'swiftlatexpdftex.js', 'swiftlatexpdftex.wasm']) {
+            fetch(`${engineBase}${file}`, { priority: 'low' }).catch(() => {});
+        }
+    } catch {
+        // Warm-up is purely opportunistic.
+    }
+};
+
 const generateTex = async ({ chunks, config, onProgress }) => {
     const worker = await getTexWorker();
     return new Promise((resolve, reject) => {
