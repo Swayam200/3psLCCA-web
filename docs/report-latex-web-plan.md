@@ -1,6 +1,34 @@
 # Desktop-identical LaTeX report on the web — architecture plan
 
-Plan: Swayam/Claude · Status: proposed, 2026-08-18
+Plan: Swayam/Claude · Status: **R0 spike passed** (both legs), 2026-08-18
+
+## R0 results (reference project: M_20_2L_OF_S, Mumbai 20m 2-lane steel bridge)
+
+- **CPython leg:** desktop's `compile_lcca_report_pdf` ran with a 6-line fake
+  controller fed by the project's chunks as plain JSON — no engine, no Qt at
+  runtime. Output vs the GUI-generated PDF: **40/40 pages, zero text
+  differences on any page, every embedded image (logos + all matplotlib
+  plots) byte-identical.** 4.2 s end-to-end including pdflatex.
+- **Pyodide leg (Python-in-WASM, what the browser runs):** the same modules
+  generated the `.tex` under Pyodide in ~2 s (imports 1.5 s, plots 0.3 s,
+  build 0.2 s). The `.tex` is **sha256-identical to the CPython one** after
+  normalizing three environment-path classes (random temp suffixes on plot
+  filenames, FS mount prefixes, OS temp dir). Plot PNGs are visually
+  indistinguishable; bytes differ only from freetype/PNG-encoder builds.
+- **The compat layer measured** (this is the whole "shim", ~150 lines):
+  fake controller (6 lines) · generic PySide6 stub classes · a functional
+  `QColor` (~20 lines — theme code does real color math) · cut
+  `project_controller` import (kills the engine/psutil chain) · pin
+  matplotlib to Agg (plot helpers force QtAgg at import) · synchronous
+  `ThreadPoolExecutor` (no threads in WASM).
+- Upstream nice-to-haves surfaced (not blockers): guard the module-level
+  `matplotlib.use("QtAgg")` in `plots_helper/Pie.py`; desktop bug —
+  `report_section_dialog.py` uses Windows-only `os.startfile` to open the
+  finished PDF, which crashes the auto-open on macOS
+  (`subprocess.run(["open", path])` on darwin fixes it).
+- Not covered by R0 (next gate, R2): XeTeX/pdfTeX-WASM compiling this
+  template in the browser — evidenced by the archived `d060ca2` stack, to be
+  re-verified on today's template.
 
 ## Goal
 
