@@ -37,12 +37,16 @@
 
         (async () => {
             try {
-                const texFile = new URLSearchParams(location.search).get('tex') || 'main.tex';
+                const params = new URLSearchParams(location.search);
+                const texFile = params.get('tex') || 'main.tex';
+                // ?engine=/report-smoke/engine-new/ swaps the wasm engine while
+                // keeping the vendored texlive tree as the file source (A/B tests).
+                const engineBase = params.get('engine') || '/vendor/swiftlatex/';
                 const [tex, names] = await Promise.all([
                     fetch(`/report-smoke/${texFile}`).then((r) => r.text()),
                     fetch('/report-smoke/files.json').then((r) => r.json()),
                 ]);
-                log(`compiling ${texFile}`);
+                log(`compiling ${texFile} with engine ${engineBase}`);
                 const assets = {};
                 for (const name of names) {
                     assets[name] = new Uint8Array(await (await fetch(`/report-smoke/${name}`)).arrayBuffer());
@@ -62,6 +66,7 @@
                     if (data.type === 'success') {
                         const ms = Math.round(performance.now() - started);
                         log(`[SUCCESS] ${data.pdf.length} bytes in ${ms} ms`);
+                        window.__smokePdf = data.pdf; // kept for page-parity extraction
                         window.__smoke = { done: true, ok: true, bytes: data.pdf.length, elapsedMs: ms, log: data.log };
                         const blob = new Blob([data.pdf], { type: 'application/pdf' });
                         const embed = document.createElement('embed');
@@ -74,7 +79,8 @@
                     type: 'compile-latex',
                     tex: rewriteTexPaths(tex, names),
                     assets,
-                    swiftlatexBase: '/vendor/swiftlatex/',
+                    swiftlatexBase: engineBase,
+                    texliveEndpoint: new URL('/vendor/swiftlatex/texlive/', location.href).href,
                 });
             } catch (error) {
                 log(`boot failed: ${error.message}`);

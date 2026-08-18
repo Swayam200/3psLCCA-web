@@ -45,7 +45,42 @@ JSON→JS collapses `20.0`→`20`, desktop renders whichever it receives);
 `npm run test:report` proves Pyodide regenerates the web-data golden tex
 byte-exactly.
 
-## R2 status (2026-08-18): compile works, one engine blocker
+## R2 complete (2026-08-18): full report compiles in-browser
+
+The engine blocker below is **fixed**. The earlier "fixed internal pool"
+theory was wrong — with a debuggable from-source engine build the real
+cause surfaced in minutes:
+
+- **Root cause:** upstream SwiftLaTeX hardcodes `-halt-on-error` for
+  document compiles, so every *recoverable* TeX error is a fatal exit that
+  also loses its message (desktop runs `pdflatex -interaction=nonstopmode`,
+  where the same errors recover). The 54-row material table crosses a page
+  boundary, and longtable's page split on pre-2025 engines goes through a
+  LaTeX-kernel shim that intentionally raises-and-ignores an
+  infinite-shrink `\vsplit` error — fatal only under halt-on-error.
+  (Modern binaries demote it to `ignored:`; the local MacTeX log shows
+  exactly that, and desktop PDFs have always carried it.)
+- **Fix:** rebuilt the engine from source (upstream master `87dfb95`,
+  emscripten 6.0.7 — see `public/vendor/swiftlatex/BUILD.md` +
+  `engine-build.patch`): halt-on-error only for format builds; PDF-file
+  existence decides compile success (like the pdflatex CLI); failure
+  results now append the `.log` transcript tail so future errors are never
+  silent again. Second compat fix while re-testing: the 2026 macro tree
+  assumes the `\partokencontext` primitive (TeX Live 2025) exists —
+  microtype assigns to it unguarded — so `pdflatex.ini` now aliases it to
+  a scratch count register at format-build time.
+- **Verified:** full M_20_2L_OF_S report — **38 pages, 2.61 MB, ~15–25 s,
+  zero TeX errors, deterministic bytes across runs** — through the
+  production vendored path. Parity vs local MacTeX pdflatex on the same
+  `.tex`: same page count, **0/38 pages differ** in whitespace-insensitive
+  text, and the material-table pages pixel-diff at ≤0.11%. Regression
+  variants A/G/J/K all pass. The stale 10 MB `swiftlatexpdftex.fmt` is
+  gone (the worker builds the format fresh each session; a dumped format
+  only loads on the exact engine build that wrote it).
+- Note for R3: the worker compiles once, so `Page n of ??` and TOC/refs
+  stay unresolved — wire the standard second pass (desktop does the same).
+
+## R2 history (how it looked when blocked)
 
 Restored the archived SwiftLaTeX stack and extended it for today's
 template. Working, verified in-browser via `public/report-smoke.html`:
@@ -63,15 +98,11 @@ template. Working, verified in-browser via `public/report-smoke.html`:
   to text-companion glyphs (₂, ³, °) in Times sections.
 - **Everything except the material-emissions table compiles: 2.38 MB PDF
   in ~42 s in the browser.** Bisected precisely: the 54-row material table
-  crashes the engine while EITHER half (27 rows) compiles — a fixed
-  internal pool in the 2020-era pdfTeX wasm build, aborting without a TeX
-  error. Not content-related (chars, fonts, microtype all ruled out by
-  variants D–K in the smoke harness).
-- **Next step:** swap the engine binaries for the maintained TeXlyre fork
-  build (same engine family, newer toolchain — prebuilt `pdftex.wasm` in
-  their repo), or rebuild the wasm with larger TeX pools. The rest of the
-  stack (runtime, worker protocol, texlive tree, path rewriting) is
-  engine-agnostic and stays as is.
+  crashes the engine while EITHER half (27 rows) compiles, aborting
+  without a TeX error. (Diagnosed at the time as a fixed internal pool —
+  disproved above; the halves pass because they fit one page and never
+  trigger the longtable page-split.) Not content-related: chars, fonts,
+  microtype all ruled out by variants D–K in the smoke harness.
 
 ## Goal
 

@@ -1,0 +1,139 @@
+diff --git a/pdftex.wasm/Makefile b/pdftex.wasm/Makefile
+index f6bcda0..50f8af7 100644
+--- a/pdftex.wasm/Makefile
++++ b/pdftex.wasm/Makefile
+@@ -56,8 +56,9 @@ all: $(PROJECT_NAME)
+ 
+ $(PROJECT_NAME): $(HEADERS) $(TEXOBJECTS) $(PDFOBJECTS) $(EPDFOBJECTS)
+ 	@$(CXX_LINK) $(TEXOBJECTS) $(PDFOBJECTS) $(EPDFOBJECTS) xpdf/xpdf.a  --js-library library.js  --pre-js pre.js \
+-	-s EXPORTED_FUNCTIONS='["_compileBibtex", "_compileLaTeX", "_compileFormat", "_main", "_setMainEntry"]' \
+-	-s EXPORTED_RUNTIME_METHODS=["cwrap"] -s NO_EXIT_RUNTIME=1 -s ALLOW_MEMORY_GROWTH=1 && \
++	-s EXPORTED_FUNCTIONS='["_compileBibtex", "_compileLaTeX", "_compileFormat", "_main", "_setMainEntry", "_malloc", "_free"]' \
++	-s EXPORTED_RUNTIME_METHODS='["cwrap", "FS", "UTF8ToString", "intArrayFromString"]' \
++	-s NO_EXIT_RUNTIME=1 -s ALLOW_MEMORY_GROWTH=1 -s STACK_SIZE=16MB -s ENVIRONMENT=worker && \
+ 	echo -e "\033[32m[DONE]\033[0m $(PROJECT_NAME)" || \
+ 	echo -e "\033[31m[ERROR]\033[0m $(PROJECT_NAME)"
+ 
+diff --git a/pdftex.wasm/main.c b/pdftex.wasm/main.c
+index f6d7473..08cb3d5 100644
+--- a/pdftex.wasm/main.c
++++ b/pdftex.wasm/main.c
+@@ -535,7 +535,10 @@ int main(int argc, char **argv) {
+ char main_entry_file[MAXMAINFILENAME];
+ 
+ int _compile() {
+-  haltonerrorp = 1;
++  /* haltonerrorp is set per entry point: format builds halt on error,
++     document compiles recover like `pdflatex -interaction=nonstopmode`
++     (halting turned recoverable errors, e.g. longtable's vsplit
++     infinite-shrink shim on pre-2025 engines, into silent fatal exits). */
+   dumpname = DEFAULT_DUMP_NAME;
+   int fmtstrlen = strlen(DEFAULT_FMT_NAME);
+   TEXformatdefault = xmalloc(fmtstrlen + 2);
+@@ -558,12 +561,14 @@ int compileLaTeX() {
+     }
+     strncpy(bootstrapcmd, main_entry_file, MAXMAINFILENAME);
+     bootstrapcmd[MAXMAINFILENAME - 1] = 0;
++    haltonerrorp = 0;
+     return _compile();
+ }
+ 
+ int compileFormat() {
+     iniversion = 1;
+     strncpy(bootstrapcmd, "*pdflatex.ini", MAXMAINFILENAME);
++    haltonerrorp = 1;
+     return _compile();
+ }
+ 
+diff --git a/pdftex.wasm/pre.js b/pdftex.wasm/pre.js
+index 4e4c1bf..4d60643 100644
+--- a/pdftex.wasm/pre.js
++++ b/pdftex.wasm/pre.js
+@@ -117,8 +117,11 @@ function compileLaTeXRoutine() {
+     const setMainFunction = cwrap('setMainEntry', 'number', ['string']);
+     setMainFunction(self.mainfile);
+     let status = _compileLaTeX();
+-    if (status === 0) {
+-        let pdfArrayBuffer = null;
++    // Like the pdflatex CLI: recovered errors exit 1 but still produce a
++    // PDF. The output file's existence decides success; callers can still
++    // inspect the log for errors they consider fatal.
++    let pdfArrayBuffer = null;
++    if (status === 0 || status === 1) {
+         _compileBibtex();
+         try {
+             let pdfurl = WORKROOT + "/" + self.mainfile.substr(0, self.mainfile.length - 4) + ".pdf";
+@@ -126,31 +129,33 @@ function compileLaTeXRoutine() {
+                 encoding: 'binary'
+             });
+         } catch (err) {
+-            console.error("Fetch content failed.");
+-            status = -253;
+-            self.postMessage({
+-                'result': 'failed',
+-                'status': status,
+-                'log': self.memlog,
+-                'cmd': 'compile'
+-            });
+-            return;
++            pdfArrayBuffer = null;
++        }
++    }
++    if (pdfArrayBuffer === null) {
++        console.error("Compilation failed, with status code " + status);
++        // The terminal stream loses the final error on abnormal exit; the
++        // transcript file has it. Append its tail so callers can see why.
++        try {
++            const transcript = FS.readFile(WORKROOT + "/" + self.mainfile.substr(0, self.mainfile.length - 4) + ".log", { encoding: 'utf8' });
++            self.memlog += "\n=== transcript tail (" + transcript.length + " chars) ===\n" + transcript.slice(-8000);
++        } catch (err) {
++            self.memlog += "\n(no transcript file readable: " + err + ")";
+         }
+         self.postMessage({
+-            'result': 'ok',
+-            'status': status,
++            'result': 'failed',
++            'status': status === 0 ? -253 : status,
+             'log': self.memlog,
+-            'pdf': pdfArrayBuffer.buffer,
+             'cmd': 'compile'
+-        }, [pdfArrayBuffer.buffer]);
++        });
+     } else {
+-        console.error("Compilation failed, with status code " + status);
+         self.postMessage({
+-            'result': 'failed',
++            'result': 'ok',
+             'status': status,
+             'log': self.memlog,
++            'pdf': pdfArrayBuffer.buffer,
+             'cmd': 'compile'
+-        });
++        }, [pdfArrayBuffer.buffer]);
+     }
+ }
+ 
+@@ -296,9 +301,9 @@ function kpse_find_file_impl(nameptr, format, _mustexist) {
+         return 0;
+     }
+ 
+-    if (xhr.status === 200) {
++    if (xhr.status === 200 && !String(xhr.getResponseHeader("content-type") || "").includes("text/html")) {
+         let arraybuffer = xhr.response;
+-        const fileid = xhr.getResponseHeader('fileid');
++        const fileid = xhr.getResponseHeader('fileid') || reqname;
+         const savepath = TEXCACHEROOT + "/" + fileid;
+         FS.writeFile(savepath, new Uint8Array(arraybuffer));
+         texlive200_cache[cacheKey] = savepath;
+@@ -347,9 +352,9 @@ function kpse_find_pk_impl(nameptr, dpi) {
+         return 0;
+     }
+ 
+-    if (xhr.status === 200) {
++    if (xhr.status === 200 && !String(xhr.getResponseHeader("content-type") || "").includes("text/html")) {
+         let arraybuffer = xhr.response;
+-        const pkid = xhr.getResponseHeader('pkid');
++        const pkid = xhr.getResponseHeader('pkid') || reqname;
+         const savepath = TEXCACHEROOT + "/" + pkid;
+         FS.writeFile(savepath, new Uint8Array(arraybuffer));
+         pk200_cache[cacheKey] = savepath;
