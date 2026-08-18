@@ -1,0 +1,322 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "description": "Unit registry for 3psLCCA. Active units = _common + selected system (metric or imperial).",
+    "systems": ["metric", "imperial"],
+    "default_system": "metric"
+  },
+
+  "dimensions": {
+    "Mass":   { "si": "kg",  "common": { "metric": "t",   "imperial": "lb"  } },
+    "Length": { "si": "m",   "common": { "metric": "m",   "imperial": "ft"  } },
+    "Area":   { "si": "m2",  "common": { "metric": "m2",  "imperial": "ft2" } },
+    "Volume": { "si": "m3",  "common": { "metric": "m3",  "imperial": "ft3" } },
+    "Count":  { "si": "nos", "common": { "metric": "nos", "imperial": "nos" } },
+    "Time":   { "si": "s",   "common": { "metric": "yr",  "imperial": "yr"  } }
+  },
+
+  "_common": {
+    "nos": {
+      "dimension": "Count",
+      "to_si":     1.0,
+      "display":   "Nos.",
+      "name":      "Numbers",
+      "example":   "Doors, windows, fixtures",
+      "aliases":   ["Nos.", "Nos", "NOS", "no", "No.", "number", "numbers"]
+    },
+    "pcs": {
+      "dimension": "Count",
+      "to_si":     1.0,
+      "display":   "Pcs.",
+      "name":      "Pieces",
+      "example":   "Sanitary fittings, tiles",
+      "aliases":   ["Pcs.", "Pcs", "PCS", "piece", "pieces"]
+    },
+    "set": {
+      "dimension": "Count",
+      "to_si":     1.0,
+      "display":   "Set",
+      "name":      "Set",
+      "example":   "Pump set, equipment set",
+      "aliases":   ["SET", "Set"]
+    },
+    "ls": {
+      "dimension": "Count",
+      "to_si":     1.0,
+      "display":   "L.S.",
+      "name":      "Lump Sum",
+      "example":   "General or provisional work items",
+      "aliases":   ["LS", "L.S.", "lumpsum", "lump sum", "Lump Sum"]
+    },
+    "hr": {
+      "dimension": "Time",
+      "to_si":     3600.0,
+      "display":   "hr",
+      "name":      "Hour",
+      "example":   "Labour rates, equipment hire",
+      "aliases":   ["h", "HR", "Hr", "hour", "hours"]
+    },
+    "day": {
+      "dimension": "Time",
+      "to_si":     86400.0,
+      "display":   "day",
+      "name":      "Day",
+      "example":   "Daily hire rates, short-duration work items",
+      "aliases":   ["DAY", "Day", "days", "Days"]
+    },
+    "month": {
+      "dimension": "Time",
+      "to_si":     2629800.0,
+      "display":   "month",
+      "name":      "Month",
+      "example":   "Monthly maintenance contracts",
+      "aliases":   ["Month", "MONTH", "mo", "mth", "Mth"]
+    },
+    "yr": {
+      "dimension": "Time",
+      "to_si":     31557600.0,
+      "display":   "yr",
+      "name":      "Year",
+      "example":   "Service life, LCCA analysis period, annual costs",
+      "aliases":   ["year", "Year", "YR", "Yr", "years", "Years", "annum", "p.a."]
+    }
+  },
+
+  "metric": {
+    "kg": {
+      "dimension": "Mass",
+      "to_si":     1.0,
+      "display":   "kg",
+      "name":      "Kilogram",
+      "example":   "Reinforcement steel, small material quantities",
+      "aliases":   ["KG", "Kg", "kgs", "kilogram", "kilograms"]
+    },
+    "t": {
+      "dimension": "Mass",
+      "to_si":     1000.0,
+      "display":   "t",
+      "name":      "Metric Tonne",
+      "example":   "Bulk steel, structural steel billing",
+      "aliases":   ["MT", "M.T.", "tonne", "Tonne", "ton", "metric ton", "metric_ton", "T"]
+    },
+    "q": {
+      "dimension": "Mass",
+      "to_si":     100.0,
+      "display":   "q",
+      "name":      "Quintal",
+      "example":   "Shorthand for 100 kg",
+      "aliases":   ["quintal", "Quintal", "Q"]
+    },
+    "g": {
+      "dimension": "Mass",
+      "to_si":     0.001,
+      "display":   "g",
+      "name":      "Gram",
+      "example":   "Small material quantities, adhesives",
+      "aliases":   ["gm", "gram", "Gram", "GM", "GM"]
+    },
+    "m": {
+      "dimension": "Length",
+      "to_si":     1.0,
+      "display":   "m",
+      "name":      "Metre",
+      "example":   "Wall length, piping, conduit",
+      "aliases":   ["meter", "metre", "Meter", "Metre", "RM", "rm", "Rm", "RMt", "rmt", "lmt", "running metre", "running meter"]
+    },
+    "m2": {
+      "dimension": "Area",
+      "to_si":     1.0,
+      "display":   "m\u00b2",
+      "name":      "Square Metre",
+      "example":   "Plastering, flooring, shuttering, tile work, painting",
+      "aliases":   ["sqm", "Sqm", "SQM", "sqm.", "Sqm.", "m2", "sq.m", "sq m", "sqmt", "sq.mt"]
+    },
+    "m3": {
+      "dimension": "Volume",
+      "to_si":     1.0,
+      "display":   "m\u00b3",
+      "name":      "Cubic Metre",
+      "example":   "Concrete, excavation, brickwork",
+      "aliases":   ["cum", "Cum", "CUM", "m3", "M3", "cu.m", "cu m"]
+    },
+    "mm": {
+      "dimension": "Length",
+      "to_si":     0.001,
+      "display":   "mm",
+      "name":      "Millimetre",
+      "example":   "Rebar diameter, plate thickness",
+      "aliases":   ["millimeter", "millimetre", "MM"]
+    },
+    "cm": {
+      "dimension": "Length",
+      "to_si":     0.01,
+      "display":   "cm",
+      "name":      "Centimetre",
+      "example":   "Cover block thickness",
+      "aliases":   ["centimeter", "centimetre", "CM"]
+    },
+    "km": {
+      "dimension": "Length",
+      "to_si":     1000.0,
+      "display":   "km",
+      "name":      "Kilometre",
+      "example":   "Road length, transport distance",
+      "aliases":   ["kilometer", "kilometre", "KM"]
+    },
+    "ml": {
+      "dimension": "Volume",
+      "to_si":     0.000001,
+      "display":   "mL",
+      "name":      "Millilitre",
+      "example":   "Chemical admixtures, paint",
+      "aliases":   ["mL", "ML", "millilitre", "milliliter"]
+    },
+    "l": {
+      "dimension": "Volume",
+      "to_si":     0.001,
+      "display":   "L",
+      "name":      "Litre",
+      "example":   "Paint, chemical quantities",
+      "aliases":   ["L", "litre", "liter", "Litre", "Liter", "LTR", "ltr"]
+    },
+    "mm2": {
+      "dimension": "Area",
+      "to_si":     0.000001,
+      "display":   "mm\u00b2",
+      "name":      "Square Millimetre",
+      "example":   "Rebar cross-section area",
+      "aliases":   ["mm2", "sqmm", "sq.mm", "MM2"]
+    },
+    "cm2": {
+      "dimension": "Area",
+      "to_si":     0.0001,
+      "display":   "cm\u00b2",
+      "name":      "Square Centimetre",
+      "example":   "Structural member cross-sections",
+      "aliases":   ["cm2", "sqcm", "sq.cm", "CM2"]
+    },
+    "ha": {
+      "dimension": "Area",
+      "to_si":     10000.0,
+      "display":   "ha",
+      "name":      "Hectare",
+      "example":   "Land acquisition, approach road corridor",
+      "aliases":   ["HA", "Ha", "hectare", "hectares"]
+    }
+  },
+
+  "imperial": {
+    "lb": {
+      "dimension": "Mass",
+      "to_si":     0.453592,
+      "display":   "lb",
+      "name":      "Pound",
+      "example":   "Material quantities in US projects",
+      "aliases":   ["lbs", "Lb", "LB", "pound", "pounds", "Pound"]
+    },
+    "ton_us": {
+      "dimension": "Mass",
+      "to_si":     907.185,
+      "display":   "ton",
+      "name":      "US Short Ton",
+      "example":   "Bulk material quantities in US projects",
+      "aliases":   ["short ton", "US ton", "sh.ton"]
+    },
+    "oz": {
+      "dimension": "Mass",
+      "to_si":     0.028350,
+      "display":   "oz",
+      "name":      "Ounce",
+      "example":   "Small material quantities",
+      "aliases":   ["ounce", "OZ", "Oz"]
+    },
+    "ft": {
+      "dimension": "Length",
+      "to_si":     0.3048,
+      "display":   "ft",
+      "name":      "Foot",
+      "example":   "Residential layout dimensions",
+      "aliases":   ["feet", "foot", "Ft", "FT", "Feet", "Foot"]
+    },
+    "in": {
+      "dimension": "Length",
+      "to_si":     0.0254,
+      "display":   "in",
+      "name":      "Inch",
+      "example":   "Pipe diameter, member dimensions",
+      "aliases":   ["inch", "inches", "IN", "\""]
+    },
+    "yd": {
+      "dimension": "Length",
+      "to_si":     0.9144,
+      "display":   "yd",
+      "name":      "Yard",
+      "example":   "Land measurement",
+      "aliases":   ["yard", "yards", "YD", "Yd"]
+    },
+    "mi": {
+      "dimension": "Length",
+      "to_si":     1609.34,
+      "display":   "mi",
+      "name":      "Mile",
+      "example":   "Road length",
+      "aliases":   ["mile", "miles", "MI"]
+    },
+    "ft2": {
+      "dimension": "Area",
+      "to_si":     0.092903,
+      "display":   "ft\u00b2",
+      "name":      "Square Foot",
+      "example":   "Flat sale area, residential flooring",
+      "aliases":   ["sqft", "sq.ft", "Sqft", "SFT", "sft", "SQFT", "sq ft"]
+    },
+    "yd2": {
+      "dimension": "Area",
+      "to_si":     0.836127,
+      "display":   "yd\u00b2",
+      "name":      "Square Yard",
+      "example":   "Land purchase",
+      "aliases":   ["sqyd", "sq.yd", "Sqyd", "SQYD", "sq yd"]
+    },
+    "ft3": {
+      "dimension": "Volume",
+      "to_si":     0.028317,
+      "display":   "ft\u00b3",
+      "name":      "Cubic Foot",
+      "example":   "Sand, aggregates supply",
+      "aliases":   ["cft", "Cft", "CFT", "cu.ft", "cu ft"]
+    },
+    "yd3": {
+      "dimension": "Volume",
+      "to_si":     0.764555,
+      "display":   "yd\u00b3",
+      "name":      "Cubic Yard",
+      "example":   "Concrete in US projects",
+      "aliases":   ["cuyd", "cu.yd", "cu yd", "CYD"]
+    },
+    "gal": {
+      "dimension": "Volume",
+      "to_si":     0.003785,
+      "display":   "gal",
+      "name":      "US Gallon",
+      "example":   "Paint, liquid materials",
+      "aliases":   ["gallon", "gallons", "GAL", "Gal"]
+    },
+    "in2": {
+      "dimension": "Area",
+      "to_si":     0.00064516,
+      "display":   "in\u00b2",
+      "name":      "Square Inch",
+      "example":   "Structural cross-sections in US projects",
+      "aliases":   ["sqin", "sq.in", "IN2", "in2"]
+    },
+    "acre": {
+      "dimension": "Area",
+      "to_si":     4046.86,
+      "display":   "acre",
+      "name":      "Acre",
+      "example":   "Land acquisition in US/UK projects",
+      "aliases":   ["Acre", "ACRE", "acres", "Acres"]
+    }
+  }
+}

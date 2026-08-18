@@ -1,0 +1,16 @@
+{
+  "synced_at": "2026-08-18T14:37:34.041Z",
+  "desktop_repo": "/Users/swayam200/Developer/3psLCCA-Desktop",
+  "desktop_commit": "027bbd92d82f07a508f8786f6a06f2151e5c9e7e",
+  "files": {
+    "three_ps_lcca_gui": 163,
+    "pylatex": 24,
+    "ordered_set": 1,
+    "gui/assets/logo/3pslcca_header.png": 1,
+    "code_to_latex/pdf_generation_v3/images/image_1.png": 1,
+    "gui/assets/themes/Ubuntu_font/Ubuntu-Light.ttf": 1,
+    "gui/assets/themes/Ubuntu_font/Ubuntu-Regular.ttf": 1,
+    "gui/assets/themes/Ubuntu_font/Ubuntu-Medium.ttf": 1,
+    "gui/assets/themes/Ubuntu_font/Ubuntu-Bold.ttf": 1
+  }
+}
