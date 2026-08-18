@@ -36,3 +36,4 @@ skills-lock.json
 __pycache__/
 *.pyc
 .claude/
+public/report-smoke/

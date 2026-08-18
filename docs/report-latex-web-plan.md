@@ -30,6 +30,49 @@ Plan: Swayam/Claude · Status: **R0 spike passed** (both legs), 2026-08-18
   template in the browser — evidenced by the archived `d060ca2` stack, to be
   re-verified on today's template.
 
+## R1 results (2026-08-18)
+
+Shipped and tested: `vendor/report-runtime` (desktop Python subtree +
+pylatex/ordered_set + 4 output-relevant assets, synced by
+`scripts/sync-report-runtime.mjs`), `report-runtime/report_compat.py`
+(productionized R0 shim), `scripts/build-report-runtime.mjs` →
+`public/report/runtime.zip` (3 MB), `public/report-worker.js` (Pyodide
+worker), `src/gui/components/outputs/reportChunks.js` (the one web→desktop
+mapper; import now preserves desktop `values`/`meta` losslessly).
+Tests: mapper round-trip vs the desktop chunk store; web-data golden
+semantically identical to the desktop golden (numbers canonicalized —
+JSON→JS collapses `20.0`→`20`, desktop renders whichever it receives);
+`npm run test:report` proves Pyodide regenerates the web-data golden tex
+byte-exactly.
+
+## R2 status (2026-08-18): compile works, one engine blocker
+
+Restored the archived SwiftLaTeX stack and extended it for today's
+template. Working, verified in-browser via `public/report-smoke.html`:
+
+- Vendored texlive tree completed with a **deterministic dependency
+  enumeration** (local `pdflatex -recorder` on the reference report → copy
+  every kpathsea INPUT by format code: tfm→`3/`, map→`11/`, tex→`26/`,
+  pfb→`32/`, vf→`33/`, enc→`44/`).
+- Engine patches (documented, in `public/vendor/swiftlatex/swiftlatexpdftex.js`):
+  treat `text/html` 200s as not-found (dev-server SPA fallback poisoned
+  optional probes like `geometry.cfg`); enable virtual-font (format 33)
+  lookups upstream had hard-disabled.
+- `ts1ptm.fd` substituted in the vendor tree (TS1/ptm → TS1/cmr): the
+  wasm build aborts on the ptmr8c virtual-font path; visual effect limited
+  to text-companion glyphs (₂, ³, °) in Times sections.
+- **Everything except the material-emissions table compiles: 2.38 MB PDF
+  in ~42 s in the browser.** Bisected precisely: the 54-row material table
+  crashes the engine while EITHER half (27 rows) compiles — a fixed
+  internal pool in the 2020-era pdfTeX wasm build, aborting without a TeX
+  error. Not content-related (chars, fonts, microtype all ruled out by
+  variants D–K in the smoke harness).
+- **Next step:** swap the engine binaries for the maintained TeXlyre fork
+  build (same engine family, newer toolchain — prebuilt `pdftex.wasm` in
+  their repo), or rebuild the wasm with larger TeX pools. The rest of the
+  stack (runtime, worker protocol, texlive tree, path rewriting) is
+  engine-agnostic and stays as is.
+
 ## Goal
 
 **Report 1:1 with desktop (LaTeX).** The PDF a web user downloads should be

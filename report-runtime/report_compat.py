@@ -202,9 +202,14 @@ def generate_report_tex(chunks, config=None, work_dir="/report_out"):
         p = out / name if not str(name).startswith("/") else Path(name)
         if p.exists():
             files[p.name] = p.as_posix()
+    import tempfile
+
     for extra in [
         pkg_root / "gui" / "assets" / "logo" / "3pslcca_header.png",
         pkg_root / "code_to_latex" / "pdf_generation_v3" / "images" / "image_1.png",
+        # title_page writes the agency logo (from general_info base64) into
+        # the OS temp dir and references it by absolute path in the .tex.
+        Path(tempfile.gettempdir()) / "3ps_lcca_agency_logo.png",
     ]:
         if extra.exists():
             files[extra.name] = extra.as_posix()

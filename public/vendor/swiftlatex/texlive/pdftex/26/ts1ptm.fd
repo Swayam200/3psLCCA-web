@@ -1,0 +1,19 @@
+% ts1ptm.fd — web report engine substitution.
+%
+% Upstream TS1/ptm resolves to the ptmr8c family, which are VIRTUAL fonts;
+% the SwiftLaTeX pdftex wasm build aborts loading them. Substitute the CM
+% text-companion implementation (tcrm*, real Type1 fonts already vendored)
+% so TS1 glyphs (subscripts, degree signs) render instead of crashing.
+% Visual effect is limited to those few glyphs. See docs/report-latex-web-plan.md.
+\ProvidesFile{ts1ptm.fd}[2026/08/18 web-engine TS1/ptm -> TS1/cmr substitution]
+\DeclareFontFamily{TS1}{ptm}{}
+\DeclareFontShape{TS1}{ptm}{m}{n}{<-> ssub * cmr/m/n}{}
+\DeclareFontShape{TS1}{ptm}{m}{it}{<-> ssub * cmr/m/it}{}
+\DeclareFontShape{TS1}{ptm}{m}{sl}{<-> ssub * cmr/m/sl}{}
+\DeclareFontShape{TS1}{ptm}{m}{sc}{<-> ssub * cmr/m/n}{}
+\DeclareFontShape{TS1}{ptm}{b}{n}{<-> ssub * cmr/bx/n}{}
+\DeclareFontShape{TS1}{ptm}{b}{it}{<-> ssub * cmr/bx/it}{}
+\DeclareFontShape{TS1}{ptm}{b}{sl}{<-> ssub * cmr/bx/sl}{}
+\DeclareFontShape{TS1}{ptm}{bx}{n}{<-> ssub * ptm/b/n}{}
+\DeclareFontShape{TS1}{ptm}{bx}{it}{<-> ssub * ptm/b/it}{}
+\DeclareFontShape{TS1}{ptm}{bx}{sl}{<-> ssub * ptm/b/sl}{}

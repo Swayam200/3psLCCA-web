@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>LaTeX report compile smoke</title>
+    <style>
+        body { font: 13px/1.4 monospace; margin: 1rem; background: #14141c; color: #d8d8e6; }
+        #log { white-space: pre-wrap; max-height: 40vh; overflow: auto; border: 1px solid #333; padding: .5rem; }
+        embed { width: 100%; height: 55vh; margin-top: 1rem; background: #fff; }
+    </style>
+</head>
+
+<body>
+    <h3>SwiftLaTeX compile smoke — M_20_2L_OF_S report</h3>
+    <div id="log">booting…</div>
+    <script>
+        const logEl = document.getElementById('log');
+        const log = (line) => { logEl.textContent += `\n${line}`; logEl.scrollTop = logEl.scrollHeight; };
+        window.__smoke = { done: false };
+
+        /** Rewrite absolute/relative asset paths in the tex to bare MemFS names. */
+        const rewriteTexPaths = (tex, names) => {
+            let out = tex;
+            for (const name of names) {
+                const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                out = out.replace(new RegExp(`\\{[^{}]*[/\\\\]${esc}\\}`, 'g'), `{${name}}`);
+            }
+            // Pre-expand the template's own \DeclareUnicodeCharacter mappings:
+            // the wasm pdftex build aborts on raw U+2082 inside table cells,
+            // while the expanded macro (what inputenc produces) works fine.
+            return out
+                .replace(/₂/g, '\\textsubscript{2}')
+                .replace(/₹/g, 'Rs.')
+                .replace(/[–—]/g, '--');
+        };
+
+        (async () => {
+            try {
+                const texFile = new URLSearchParams(location.search).get('tex') || 'main.tex';
+                const [tex, names] = await Promise.all([
+                    fetch(`/report-smoke/${texFile}`).then((r) => r.text()),
+                    fetch('/report-smoke/files.json').then((r) => r.json()),
+                ]);
+                log(`compiling ${texFile}`);
+                const assets = {};
+                for (const name of names) {
+                    assets[name] = new Uint8Array(await (await fetch(`/report-smoke/${name}`)).arrayBuffer());
+                }
+                log(`tex ${tex.length} chars, ${names.length} assets`);
+
+                const worker = new Worker('/swiftlatex-report-worker.js');
+                const started = performance.now();
+                worker.onmessage = (event) => {
+                    const data = event.data || {};
+                    if (data.type === 'status') log(`[status] ${data.message}`);
+                    if (data.type === 'error') {
+                        log(`[ERROR] status=${data.status} hasPdf=${data.hasPdf} ${data.message || ''}`);
+                        log((data.log || '').slice(-4000));
+                        window.__smoke = { done: true, ok: false, payload: data, log: data.log || data.message };
+                    }
+                    if (data.type === 'success') {
+                        const ms = Math.round(performance.now() - started);
+                        log(`[SUCCESS] ${data.pdf.length} bytes in ${ms} ms`);
+                        window.__smoke = { done: true, ok: true, bytes: data.pdf.length, elapsedMs: ms, log: data.log };
+                        const blob = new Blob([data.pdf], { type: 'application/pdf' });
+                        const embed = document.createElement('embed');
+                        embed.src = URL.createObjectURL(blob);
+                        embed.type = 'application/pdf';
+                        document.body.appendChild(embed);
+                    }
+                };
+                worker.postMessage({
+                    type: 'compile-latex',
+                    tex: rewriteTexPaths(tex, names),
+                    assets,
+                    swiftlatexBase: '/vendor/swiftlatex/',
+                });
+            } catch (error) {
+                log(`boot failed: ${error.message}`);
+                window.__smoke = { done: true, ok: false, log: error.message };
+            }
+        })();
+    </script>
+</body>
+
+</html>

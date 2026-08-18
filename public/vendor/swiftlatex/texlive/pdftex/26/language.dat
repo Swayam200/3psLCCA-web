@@ -1,0 +1,4 @@
+% Minimal language.dat for static SwiftLaTeX report POC.
+english hyphen.tex
+=usenglish
+=USenglish
