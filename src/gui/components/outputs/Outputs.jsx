@@ -437,9 +437,26 @@ const Outputs = ({ addLog, navTrigger }) => {
             };
             setEngineMetadata(nextEngineMetadata);
             setCalculationPhase('calculating');
+            // Desktop parity: the recycling total and the social cost of
+            // carbon are resolved fresh at calculation time (from material
+            // rows and the saved Ricke parameters), like desktop's live
+            // widgets do — never trusted from possibly-stale stored values.
+            const { prepareProjectForCalculation } = await import('../../../utils/calculationPrep.js');
+            const prepared = await prepareProjectForCalculation(projectData);
+            if (prepared.recycling) {
+                updateProjectData('recycling_data', prepared.recycling);
+                addLog(`Recycling: recovered value ${Math.round(prepared.recycling.total_recovered_value).toLocaleString('en-IN')} from ${prepared.recycling.included_count} of ${prepared.recycling.total_count} materials.`);
+            }
+            if (prepared.socialCost) {
+                updateProjectData('carbon_emission_data', prepared.project.carbon_emission_data);
+                addLog(`Social cost of carbon resolved: ${prepared.socialCost.cost.toFixed(3)} per kgCO₂e.`);
+            }
             addLog("Running lifecycle cost calculation...");
+            // Send the DERIVED inputs, not the raw project: the derivation
+            // computes desktop-identical totals (material kgCO₂e, recycling,
+            // construction sums); the adapter's raw-row fallback does not.
             const response = await calculateLcca({
-                project: projectData,
+                project: buildCalculationProjectInputs(prepared.project),
                 analysisPeriodYears: analysisPeriod,
             });
 
