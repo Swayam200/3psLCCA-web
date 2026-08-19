@@ -46,12 +46,39 @@ index f6d7473..08cb3d5 100644
  }
  
 diff --git a/pdftex.wasm/pre.js b/pdftex.wasm/pre.js
-index 4e4c1bf..4d60643 100644
+index 4e4c1bf..dc1993b 100644
 --- a/pdftex.wasm/pre.js
 +++ b/pdftex.wasm/pre.js
-@@ -117,8 +117,11 @@ function compileLaTeXRoutine() {
+@@ -112,13 +112,38 @@ Module['onAbort'] = function() {
+     return;
+ };
+ 
++/** FNV-1a fingerprint of the cross-reference files (.aux/.toc/.lof/.lot).
++ * When a compile leaves them unchanged, the run has converged and no rerun
++ * is needed (the rule latexmk uses); callers compare across passes. */
++function auxFingerprint() {
++    const stem = WORKROOT + "/" + self.mainfile.substr(0, self.mainfile.length - 4);
++    let h = 0x811c9dc5;
++    for (const ext of ['.aux', '.toc', '.lof', '.lot']) {
++        let data;
++        try {
++            data = FS.readFile(stem + ext, { encoding: 'binary' });
++        } catch (err) {
++            data = [0];
++        }
++        for (let i = 0; i < data.length; i++) {
++            h ^= data[i];
++            h = (h * 0x01000193) >>> 0;
++        }
++    }
++    return h >>> 0;
++}
++
+ function compileLaTeXRoutine() {
+     prepareExecutionContext();
      const setMainFunction = cwrap('setMainEntry', 'number', ['string']);
      setMainFunction(self.mainfile);
++    const auxBefore = auxFingerprint();
      let status = _compileLaTeX();
 -    if (status === 0) {
 -        let pdfArrayBuffer = null;
@@ -63,7 +90,7 @@ index 4e4c1bf..4d60643 100644
          _compileBibtex();
          try {
              let pdfurl = WORKROOT + "/" + self.mainfile.substr(0, self.mainfile.length - 4) + ".pdf";
-@@ -126,31 +129,33 @@ function compileLaTeXRoutine() {
+@@ -126,31 +151,35 @@ function compileLaTeXRoutine() {
                  encoding: 'binary'
              });
          } catch (err) {
@@ -107,13 +134,15 @@ index 4e4c1bf..4d60643 100644
              'status': status,
              'log': self.memlog,
 +            'pdf': pdfArrayBuffer.buffer,
++            'aux': auxFingerprint(),
++            'auxBefore': auxBefore,
              'cmd': 'compile'
 -        });
 +        }, [pdfArrayBuffer.buffer]);
      }
  }
  
-@@ -296,9 +301,9 @@ function kpse_find_file_impl(nameptr, format, _mustexist) {
+@@ -296,19 +325,17 @@ function kpse_find_file_impl(nameptr, format, _mustexist) {
          return 0;
      }
  
@@ -125,7 +154,20 @@ index 4e4c1bf..4d60643 100644
          const savepath = TEXCACHEROOT + "/" + fileid;
          FS.writeFile(savepath, new Uint8Array(arraybuffer));
          texlive200_cache[cacheKey] = savepath;
-@@ -347,9 +352,9 @@ function kpse_find_pk_impl(nameptr, dpi) {
+         return _allocate(intArrayFromString(savepath));
+ 
+-    } else if (xhr.status === 301) {
+-        console.log("TexLive File not exists " + remote_url);
+-        texlive404_cache[cacheKey] = 1;
+-        return 0;
+-    } 
++    }
++    console.log("TexLive File not exists " + remote_url);
++    texlive404_cache[cacheKey] = 1;
+     return 0;
+ }
+ 
+@@ -347,19 +374,16 @@ function kpse_find_pk_impl(nameptr, dpi) {
          return 0;
      }
  
@@ -137,3 +179,17 @@ index 4e4c1bf..4d60643 100644
          const savepath = TEXCACHEROOT + "/" + pkid;
          FS.writeFile(savepath, new Uint8Array(arraybuffer));
          pk200_cache[cacheKey] = savepath;
+         return _allocate(intArrayFromString(savepath));
+ 
+-    } else if (xhr.status === 301) {
+-        console.log("TexLive File not exists " + remote_url);
+-        pk404_cache[cacheKey] = 1;
+-        return 0;
+-    } 
++    }
++    console.log("TexLive File not exists " + remote_url);
++    pk404_cache[cacheKey] = 1;
+     return 0;
+-
+ }
+\ No newline at end of file

@@ -40,8 +40,9 @@ test('progressPercent: known pipeline stages map to increasing percentages', () 
         'Generating LaTeX report…',
         'Loading SwiftLaTeX report engine...',
         'Preparing static SwiftLaTeX format...',
-        'Compiling LaTeX report PDF (pass 1/2)...',
-        'Compiling LaTeX report PDF (pass 2/2)...',
+        'Compiling LaTeX report PDF (pass 1)...',
+        'Compiling LaTeX report PDF (pass 2)...',
+        'Compiling LaTeX report PDF (pass 3)...',
     ];
     const percents = stages.map(progressPercent);
     assert.ok(percents.every((p) => typeof p === 'number'), 'every stage maps');

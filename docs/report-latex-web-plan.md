@@ -80,6 +80,31 @@ cause surfaced in minutes:
 - Note for R3: the worker compiles once, so `Page n of ??` and TOC/refs
   stay unresolved — wire the standard second pass (desktop does the same).
 
+## Performance pass (2026-08-19): ~50 s warm → 18 s first / 8 s repeat
+
+User-reported warm runs took ~50 s. Profiling found the dominant cost was
+not TeX itself: the engine only negative-cached missing files on
+upstream's private `301` convention, so every probe for a nonexistent
+file (virtual-font lookups for plain Type1 fonts, `main.aux` on pass 1,
+optional `.cfg` probes) repeated a **blocking synchronous XHR** — dozens
+of times per pass, ~100+ per report, each a full network round-trip on
+GitHub Pages. Fixes, all measured on the M_20 reference project:
+
+- Engine `pre.js`: negative-cache all missing-file responses (pass 2
+  dropped 16.1 s → 3.3 s even on localhost).
+- Rerun-until-stable instead of blind two passes (latexmk's rule, via
+  aux/toc fingerprints the engine now returns): fresh documents converge
+  in 2–3 passes — 3 passes is *more* correct than desktop's fixed 2 when
+  the TOC shifts page numbers — and repeats converge in 1.
+- The engine worker (with its compiled format and retained references) now
+  lives for the session, and the modal-open warm-up builds the format too;
+  tex generation and engine preparation run concurrently.
+- Measured in the real app flow: first report of a session **18 s**
+  click→PDF (8 s modal dwell absorbs all boot), repeat reports **8 s**,
+  single pass. Multithreading was researched and rejected: TeX is
+  inherently single-threaded, no wasm TeX build supports threads, and
+  GitHub Pages cannot serve the COOP/COEP headers SharedArrayBuffer needs.
+
 ## R3 + R4 complete (2026-08-18): wired into the app, fallback in place
 
 - `src/gui/components/outputs/latexReportEngine.js` orchestrates the two

@@ -59,10 +59,11 @@ const STAGE_MARKS = [
     ['Loading pandas', 25],
     ['Loading report modules', 45],
     ['Generating LaTeX report', 52],
-    ['Loading SwiftLaTeX', 62],
-    ['Preparing static SwiftLaTeX format', 68],
-    ['pass 1/2', 78],
-    ['pass 2/2', 90],
+    ['Loading SwiftLaTeX', 58],
+    ['Preparing static SwiftLaTeX format', 62],
+    ['pass 1)', 70],
+    ['pass 2)', 85],
+    ['pass 3)', 94],
 ];
 
 export const progressPercent = (message) => {
@@ -70,24 +71,46 @@ export const progressPercent = (message) => {
     return hit ? hit[1] : null;
 };
 
+let latexWorker = null;
+let activeCompileProgress = null;
+
+/** The LaTeX engine worker is kept for the session: its compiled format and
+ * retained cross-reference files make repeat compiles far cheaper (no
+ * format rebuild; usually a single convergent pass). */
+const getLatexWorker = () => {
+    if (!latexWorker) {
+        latexWorker = new Worker(`${baseUrl()}swiftlatex-report-worker.js`);
+        latexWorker.addEventListener('message', (event) => {
+            if (event.data?.type === 'status') activeCompileProgress?.(event.data.message);
+        });
+    }
+    return latexWorker;
+};
+
+const resetLatexWorker = () => {
+    try {
+        latexWorker?.terminate();
+    } catch {
+        // Best effort.
+    }
+    latexWorker = null;
+};
+
 let warmedUp = false;
 
 /**
- * Start the heavy one-time downloads (Pyodide runtime + packages + report
- * runtime, TeX engine + format sources) before the user hits Generate —
- * called when the section-selection modal opens, so the network works while
- * they pick sections. Safe to call repeatedly; everything is idempotent and
- * failures stay silent (generation will surface them properly if real).
+ * Start the heavy work that doesn't need project data (Pyodide runtime +
+ * packages + report runtime; TeX engine download + format build) before the
+ * user hits Generate — called when the section-selection modal opens, so it
+ * runs while they pick sections. Safe to call repeatedly; failures stay
+ * silent (generation surfaces them properly when real).
  */
 export const warmUpLatexReport = () => {
     if (warmedUp) return;
     warmedUp = true;
     try {
         getTexWorker().then((worker) => worker.postMessage({ type: 'warmup', baseUrl: baseUrl() }));
-        const engineBase = `${baseUrl()}vendor/swiftlatex/`;
-        for (const file of ['PdfTeXEngine.js', 'swiftlatexpdftex.js', 'swiftlatexpdftex.wasm']) {
-            fetch(`${engineBase}${file}`, { priority: 'low' }).catch(() => {});
-        }
+        getLatexWorker().postMessage({ type: 'prepare', swiftlatexBase: `${baseUrl()}vendor/swiftlatex/` });
     } catch {
         // Warm-up is purely opportunistic.
     }
@@ -122,30 +145,36 @@ const generateTex = async ({ chunks, config, onProgress }) => {
 };
 
 const compilePdf = async ({ tex, assets, onProgress }) => {
-    const worker = new Worker(`${baseUrl()}swiftlatex-report-worker.js`);
+    const worker = getLatexWorker();
+    activeCompileProgress = onProgress;
     try {
         return await new Promise((resolve, reject) => {
-            worker.onmessage = (event) => {
+            const onMessage = (event) => {
                 const data = event.data || {};
-                if (data.type === 'status') {
-                    onProgress?.(data.message);
-                } else if (data.type === 'success') {
-                    resolve({ pdf: data.pdf, log: data.log, elapsedMs: data.elapsedMs });
+                if (data.type === 'success') {
+                    worker.removeEventListener('message', onMessage);
+                    resolve({ pdf: data.pdf, log: data.log, elapsedMs: data.elapsedMs, passesRun: data.passesRun });
                 } else if (data.type === 'error') {
+                    worker.removeEventListener('message', onMessage);
+                    // A failed engine may hold corrupt state; next run starts fresh.
+                    resetLatexWorker();
                     reject(new Error(data.message || `LaTeX compile failed (status ${data.status}).\n${(data.log || '').slice(-2000)}`));
                 }
             };
-            worker.onerror = (event) => reject(new Error(`LaTeX compile worker failed to load: ${event.message || 'unknown error'}`));
+            worker.addEventListener('message', onMessage);
+            worker.addEventListener('error', (event) => {
+                resetLatexWorker();
+                reject(new Error(`LaTeX compile worker failed to load: ${event.message || 'unknown error'}`));
+            }, { once: true });
             worker.postMessage({
                 type: 'compile-latex',
                 tex,
                 assets,
-                passes: 2,
                 swiftlatexBase: `${baseUrl()}vendor/swiftlatex/`,
             });
         });
     } finally {
-        worker.terminate();
+        activeCompileProgress = null;
     }
 };
 
@@ -163,6 +192,11 @@ export const generateLatexReport = async ({
 }) => {
     onProgress('Preparing project data…');
     const chunks = desktopChunksForReport(projectData, { results, currency });
+
+    // The engine download + format build has no dependency on the document,
+    // so it runs concurrently with the Python tex generation (idempotent if
+    // the modal-open warm-up already did it).
+    getLatexWorker().postMessage({ type: 'prepare', swiftlatexBase: `${baseUrl()}vendor/swiftlatex/` });
 
     const { tex, files, plotError } = await generateTex({
         chunks,
