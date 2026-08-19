@@ -124,7 +124,7 @@ export function buildAiContext(projectData) {
             },
             stagewise: {
                 initial: round(summaries.stagewise.initial),
-                use_and_reconstruction: round(summaries.stagewise.use_reconstruction),
+                use: round(summaries.stagewise.use),
                 end_of_life: round(summaries.stagewise.end_of_life),
             },
             top_cost_items: items.slice(0, 10),

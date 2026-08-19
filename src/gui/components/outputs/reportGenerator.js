@@ -356,7 +356,7 @@ const addResultsSection = async (doc, results, computedData, chartRefs, config, 
     const totalLcc = Object.values(computedData.stagewise).reduce((a, b) => a + b, 0);
     const rows = [
         ["Initial Stage Costs", (computedData.stagewise.initial / 1e6).toFixed(2), "M INR"],
-        ["Use & Reconstruction Costs", (computedData.stagewise.use_reconstruction / 1e6).toFixed(2), "M INR"],
+        ["Use Stage Costs", (computedData.stagewise.use / 1e6).toFixed(2), "M INR"],
         ["End-of-Life Costs", (computedData.stagewise.end_of_life / 1e6).toFixed(2), "M INR"],
         ["TOTAL LCC (Present Value)", (totalLcc / 1e6).toFixed(2), "M INR"]
     ];

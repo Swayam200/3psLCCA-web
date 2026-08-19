@@ -1,7 +1,12 @@
 /**
  * lifecycleSummary.js
  * Computes summary views from LCCA result dict.
- * Ported from: 3psLCCA-gui/gui/components/outputs/helper_functions/lifecycle_summary.py
+ * Ported VERBATIM from desktop
+ * gui/components/outputs/helper_functions/lifecycle_summary.py.
+ *
+ * NOTE (desktop semantics): "reconstruction" and "end_of_life" are merged
+ * into a single "end_of_life" group in all summary outputs; "use_stage" is
+ * reported alone.
  */
 
 /**
@@ -33,10 +38,7 @@ function stageTotals(stageData) {
 
 /**
  * Compute summary views from LCCA result dict.
- * 
- * NOTE: "use_stage" and "reconstruction" are merged into a single
- * "use_reconstruction" group in all outputs.
- * 
+ *
  * @param {Object} data - The raw LCCA results dict
  * @returns {Object} { stagewise, pillar_wise, pillar_totals, environmental_split }
  */
@@ -44,7 +46,7 @@ export function computeAllSummaries(data) {
     // Step 1: Compute per-stage pillar totals
     const stages = {};
     for (const k of ['initial_stage', 'use_stage', 'reconstruction', 'end_of_life']) {
-        stages[k] = stageTotals(data[k] || {});
+        stages[k] = stageTotals(data?.[k] || {});
     }
 
     // Helper: sum all three pillars for a single raw stage key
@@ -56,19 +58,19 @@ export function computeAllSummaries(data) {
     // 1) Stagewise (Merged)
     const stagewise = {
         initial: totalOf('initial_stage'),
-        use_reconstruction: totalOf('use_stage') + totalOf('reconstruction'),
-        end_of_life: totalOf('end_of_life'),
+        use: totalOf('use_stage'),
+        end_of_life: totalOf('reconstruction') + totalOf('end_of_life'),
     };
 
     // 2) Pillar-wise (Merged)
     const pillar_wise = {
         initial: stages.initial_stage,
-        use_reconstruction: {
-            eco: stages.use_stage.eco + stages.reconstruction.eco,
-            env: stages.use_stage.env + stages.reconstruction.env,
-            social: stages.use_stage.social + stages.reconstruction.social,
+        use: stages.use_stage,
+        end_of_life: {
+            eco: stages.reconstruction.eco + stages.end_of_life.eco,
+            env: stages.reconstruction.env + stages.end_of_life.env,
+            social: stages.reconstruction.social + stages.end_of_life.social,
         },
-        end_of_life: stages.end_of_life,
     };
 
     // 3) Pillar totals (lifetime)
@@ -82,14 +84,9 @@ export function computeAllSummaries(data) {
     // 4) Environmental split
     const environmental_split = {
         initial: stages.initial_stage.env,
-        use_reconstruction: stages.use_stage.env + stages.reconstruction.env,
-        end_of_life: stages.end_of_life.env,
+        use: stages.use_stage.env,
+        end_of_life: stages.reconstruction.env + stages.end_of_life.env,
     };
 
-    return {
-        stagewise,
-        pillar_wise,
-        pillar_totals,
-        environmental_split,
-    };
+    return { stagewise, pillar_wise, pillar_totals, environmental_split };
 }
