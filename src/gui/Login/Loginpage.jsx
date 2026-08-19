@@ -78,8 +78,9 @@ const Loginpage = ({ onLogin, onGuestLogin, onGoogleLogin }) => {
     };
 
     return (
-        <Container fluid className="p-0 m-0" style={{ height: '100vh', overflow: 'hidden' }}>
+        <Container fluid className="p-0 m-0 min-vh-100 d-flex flex-column">
             <style>{`
+
                 @keyframes logo-fly-in {
                     0% {
                         opacity: 0;
@@ -146,8 +147,6 @@ const Loginpage = ({ onLogin, onGuestLogin, onGoogleLogin }) => {
 
                 .logo-bg-glow {
                     position: absolute;
-                    width: 160px;
-                    height: 160px;
                     border-radius: 50%;
                     background: radial-gradient(circle, rgba(115, 165, 175, 0.15) 0%, rgba(115, 165, 175, 0) 70%);
                     z-index: -1;
@@ -162,10 +161,10 @@ const Loginpage = ({ onLogin, onGuestLogin, onGoogleLogin }) => {
                     font-weight: 200;
                 }
             `}</style>
-            <Row className="g-0 m-0 w-100 h-100" style={{ backgroundColor: 'var(--app-bg-main)', transition: 'background-color 0.3s ease' }}>
+            <Row className="g-0 m-0 w-100 flex-grow-1" style={{ backgroundColor: 'var(--app-bg-main)', transition: 'background-color 0.3s ease' }}>
 
                 {/* Left Side: Minimal Background */}
-                <Col md={6} className="d-flex flex-column p-4">
+                <Col md={6} className="d-flex flex-column p-3 p-md-4 pb-5 pb-md-4">
 
                     {/* Top Logo */}
                     <div className="d-flex align-items-center mb-4" style={{ fontWeight: 'bold', fontSize: '1.2rem', color: 'var(--app-text-primary)' }}>
@@ -175,17 +174,17 @@ const Loginpage = ({ onLogin, onGuestLogin, onGoogleLogin }) => {
                     {/* Middle Text */}
                     <div className="d-flex flex-column justify-content-center align-items-center text-center flex-grow-1" style={{ paddingBottom: '5vh' }}>
                         <div className="premium-logo-container mb-4 d-flex justify-content-center align-items-center">
-                            <div className="logo-bg-glow"></div>
+                            <div className="logo-bg-glow" style={{ width: 'clamp(110px, 18vw, 160px)', height: 'clamp(110px, 18vw, 160px)' }}></div>
                             <div className="premium-logo-floater">
                                 <img
                                     src={Logo3psLCCA}
                                     alt="3psLCCA Logo"
                                     className="premium-logo-rotator"
-                                    style={{ width: '130px', height: '130px', filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.15))' }}
+                                    style={{ width: 'clamp(90px, 15vw, 130px)', height: 'clamp(90px, 15vw, 130px)', filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.15))' }}
                                 />
                             </div>
                         </div>
-                        <h1 className="fw-bold mb-2" style={{ fontSize: '2.8rem', letterSpacing: '-0.5px', color: 'var(--app-text-primary)', transition: 'color 0.3s ease', minHeight: '3.6rem' }}>
+                        <h1 className="fw-bold mb-2" style={{ fontSize: 'clamp(1.8rem, 4vw, 2.8rem)', letterSpacing: '-0.5px', color: 'var(--app-text-primary)', transition: 'color 0.3s ease', minHeight: 'clamp(2.4rem, 5vw, 3.6rem)' }}>
                             {welcomeText}
                             <span className="typewriter-cursor">|</span>
                         </h1>
@@ -197,7 +196,7 @@ const Loginpage = ({ onLogin, onGuestLogin, onGoogleLogin }) => {
                 </Col>
 
                 {/* Right Side: Form Container */}
-                <Col md={6} className="d-flex flex-column justify-content-center p-3 p-md-4 border-start" style={{ backgroundColor: 'var(--app-bg-card)', borderColor: 'var(--app-border-light)', transition: 'background-color 0.3s ease, border-color 0.3s ease', overflowY: 'auto' }}>
+                <Col md={6} className="d-flex flex-column justify-content-center p-3 p-md-4 border-start" style={{ backgroundColor: 'var(--app-bg-card)', borderColor: 'var(--app-border-light)', transition: 'background-color 0.3s ease, border-color 0.3s ease' }}>
                     <div className="w-100 mx-auto p-3 p-md-4 rounded shadow border" style={{ maxWidth: '520px', backgroundColor: 'var(--app-bg-card)', borderColor: 'var(--app-border-light)', transition: 'background-color 0.3s ease, border-color 0.3s ease' }}>
 
                         <div className="mb-3 text-center">
