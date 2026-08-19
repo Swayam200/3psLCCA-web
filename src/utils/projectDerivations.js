@@ -1,4 +1,5 @@
 import { normalizeProjectData } from './projectSchema.js';
+import { recyclingChunkData } from './recyclingDerivations.js';
 import {
     computeMachineryTotal,
     computeMaterialEmissions,
@@ -141,9 +142,22 @@ export const deriveDemolitionData = (projectData) => {
 
 export const deriveRecyclingData = (projectData) => {
     const project = normalizeProjectData(projectData);
+    // Desktop parity: the recovered (salvage) value is DERIVED from the
+    // construction material rows at calculation time — the recycling chunk
+    // only stores the computed summary (desktop recycling/main.py). The
+    // legacy saved `included` list is used only when the project has no
+    // material rows at all (hand-entered data from older web versions).
+    const computed = recyclingChunkData(
+        project,
+        project.general_info?.project_currency || project.currency || '',
+    );
+    const legacyTotal = getRecyclingTotal(project.recycling_data);
     return {
         ...(project.recycling_data || {}),
-        total_recovered_value: getRecyclingTotal(project.recycling_data),
+        ...computed,
+        total_recovered_value: computed.total_count > 0
+            ? computed.total_recovered_value
+            : legacyTotal,
     };
 };
 
@@ -155,8 +169,17 @@ export const deriveTrafficAndRoadData = (projectData) => {
     const roadParams = traffic.road_params || {};
     const alternateRoad = traffic.alternate_road || {};
 
+    // Per-vehicle rerouting emission factors live on the Traffic Rerouting
+    // Emissions page data (desktop diversion_emissions chunk); the engine
+    // multiplies them by vehicles/day × reroute km. Resolve them here so
+    // every vehicle row carries the value the adapter reads first.
+    const reroutingFactors = computeTrafficReroutingData(project).emission_factors || {};
+
     const normalizedVehicles = VEHICLE_TYPES.reduce((acc, key) => {
         const row = vehicleData[key] || {};
+        const emissionFactor = parseNumber(
+            row.carbon_emissions_kgCO2e_per_km ?? row.emission_factor ?? row.ef ?? reroutingFactors[key],
+        );
         acc[key] = {
             vehicles_per_day: parseNumber(row.vehicles_per_day ?? row.adt ?? row.ADT ?? vehiclesPerDay[key]),
             accident_percentage: parseNumber(row.accident_percentage),
@@ -166,7 +189,8 @@ export const deriveTrafficAndRoadData = (projectData) => {
             velocity: parseNumber(row.velocity ?? row.speed),
             VOC: parseNumber(row.VOC ?? row.voc),
             occupancy: parseNumber(row.occupancy),
-            emission_factor: parseNumber(row.emission_factor ?? row.ef),
+            carbon_emissions_kgCO2e_per_km: emissionFactor,
+            emission_factor: emissionFactor,
         };
         return acc;
     }, {});

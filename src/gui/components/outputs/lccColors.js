@@ -1,20 +1,22 @@
 /**
  * lccColors.js
  * Single source of truth for all chart/table colors in the outputs section.
- * Ported from: 3psLCCA-gui/gui/components/outputs/helper_functions/lcc_colors.py
+ * Ported VERBATIM from desktop
+ * gui/components/outputs/helper_functions/lcc_colors.py — desktop is the
+ * visual reference, so these hex values must not drift.
  */
 
 export const COLORS = {
-    // Pillar colors (cost categories) - Vibrant but balanced
-    eco_color: '#4361ee', // Modern Blue
-    env_color: '#06d6a0', // Emerald Green
-    soc_color: '#f72585', // Vivid Rose
+    // Pillar colors (cost categories)
+    eco_color: '#9e9eff',
+    env_color: '#8ad400',
+    soc_color: '#ff5a2a',
 
     // Stage colors (life-cycle phases)
-    init_color: '#3f37c9', // Deep Blue
-    use_color: '#4cc9f0',  // Sky Blue
-    end_color: '#b5179e',  // Purple
-    recon_color: '#7209b7', // Violet
+    init_color: '#CCCCCC',
+    use_color: '#00C49A',
+    end_color: '#EA9E9E',
+    recon_color: '#B0BEC5',
 
     // Material colors
     steel_color: '#6E0902',
@@ -33,4 +35,3 @@ export const STAGE_COLORS = {
     reconstruction: COLORS.recon_color,
     end_of_life: COLORS.end_color,
 };
-

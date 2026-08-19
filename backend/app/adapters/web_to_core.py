@@ -349,7 +349,9 @@ def _traffic_data(project: dict[str, Any]) -> dict[str, Any]:
     traffic = _as_dict(project.get("traffic_and_road_data") or project.get("traffic_data"))
     carbon = _as_dict(project.get("carbon_emission_data"))
     diversion = _as_dict(carbon.get("diversion_emissions_data"))
-    factors = _as_dict(diversion.get("factors"))
+    # The rerouting page persists per-vehicle factors as "emission_factors"
+    # (desktop chunk shape); accept the legacy "factors" name too.
+    factors = _as_dict(diversion.get("emission_factors") or diversion.get("factors"))
     vehicle_data = _as_dict(traffic.get("vehicle_data") or traffic.get("vehicles"))
     vehicles_per_day = _as_dict(traffic.get("vehicles_per_day"))
     severity = _as_dict(traffic.get("severity"))

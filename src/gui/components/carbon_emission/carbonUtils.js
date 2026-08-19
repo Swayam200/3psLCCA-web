@@ -353,9 +353,12 @@ export const computeTrafficReroutingData = (projectData = {}) => {
     const factors = saved.emission_factors || saved.factors ||
         VEHICLE_TYPES.reduce((acc, vehicle) => ({ ...acc, [vehicle.key]: vehicle.defaultEf }), {});
     const vehicles = traffic.vehicles || traffic.vehicle_data || {};
+    // Same precedence as deriveTrafficAndRoadData: the flat field is the
+    // desktop-shaped source of truth; road_params is a web-side sub-object
+    // that imports initialize with zeros and must not shadow it.
     const rerouteDistance = parseNumber(
-        traffic.road_params?.additional_reroute_distance_km ??
         traffic.additional_reroute_distance_km ??
+        traffic.road_params?.additional_reroute_distance_km ??
         saved.reroute_km
     );
     const totalCalculated = VEHICLE_TYPES.reduce((sum, vehicle) => {

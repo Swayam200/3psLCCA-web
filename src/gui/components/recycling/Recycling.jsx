@@ -1,63 +1,87 @@
-/* eslint-disable no-unused-vars */
-import React, { useState, useEffect } from 'react';
+/**
+ * Recycling page — desktop parity (gui/components/recycling/main.py).
+ *
+ * Everything here is DERIVED from the construction material rows: each row
+ * carries a recyclability % and scrap rate (from the material database or
+ * user edits), and Recovered Value = quantity × recyclability%/100 × scrap
+ * rate. The recycling_data chunk only stores the computed summary; manual
+ * include/exclude lives on the row itself (state.included_in_recyclability),
+ * exactly like desktop. The calculation recomputes this at "Calculate" time
+ * regardless of whether this page was ever opened.
+ */
+import { useEffect, useMemo, useState } from 'react';
+import { FaChevronDown, FaChevronUp, FaEdit } from 'react-icons/fa';
 import { useProjectData } from '../../../contexts/ProjectDataContext';
-import { normalizeRecyclingData } from '../../../utils/projectPageSchema';
+import {
+    computeRecycling,
+    calcRecyclableQty,
+    recyclePct,
+    recyclingChunkData,
+    rowName,
+    rowQuantity,
+    rowUnit,
+    scrapRate,
+} from '../../../utils/recyclingDerivations';
 import EditRecyclabilityModal from './EditRecyclabilityModal';
-import { FaEdit, FaChevronDown, FaChevronUp } from 'react-icons/fa';
 
-const INCLUDED_DATA = [
-    { id: 1, category: 'Foundation', material: 'Steel Rebar (Fe500)', qtyValue: '5.210', qtyUnit: 't', recyclability: '75.0%', recyclableQty: '3.907 t', scrapRate: '32500.000', recoveredValue: '126,993.750' },
-    { id: 2, category: 'Foundation', material: 'Steel Rebar (Fe500)', qtyValue: '1.677', qtyUnit: 't', recyclability: '75.0%', recyclableQty: '1.258 t', scrapRate: '32500.000', recoveredValue: '40,876.875' },
-    { id: 3, category: 'Sub Structure', material: 'Steel Rebar (Fe500)', qtyValue: '2.102', qtyUnit: 't', recyclability: '75.0%', recyclableQty: '1.576 t', scrapRate: '32500.000', recoveredValue: '51,236.250' },
-    { id: 4, category: 'Sub Structure', material: 'Steel Rebar (Fe500)', qtyValue: '0.032', qtyUnit: 't', recyclability: '75.0%', recyclableQty: '0.024 t', scrapRate: '32500.000', recoveredValue: '789.750' },
-    { id: 5, category: 'Super Structure', material: 'Structural Steel main Girder (Fe 410 B)', qtyValue: '62.192', qtyUnit: 't', recyclability: '95.0%', recyclableQty: '59.083 t', scrapRate: '26000.000', recoveredValue: '1,536,150.588' },
-    { id: 6, category: 'Super Structure', material: 'Steel Rebar (Fe500)', qtyValue: '10.143', qtyUnit: 't', recyclability: '75.0%', recyclableQty: '7.607 t', scrapRate: '32500.000', recoveredValue: '247,235.625' },
-    { id: 7, category: 'Super Structure', material: 'Steel Decking Sheet (310 MPA)', qtyValue: '3.105', qtyUnit: 't', recyclability: '95.0%', recyclableQty: '2.950 t', scrapRate: '26000.000', recoveredValue: '76,702.762' },
-    { id: 8, category: 'Misc', material: 'Mild Steel railing', qtyValue: '35.000', qtyUnit: 'm', recyclability: '95.0%', recyclableQty: '33.250 m', scrapRate: '26000.000', recoveredValue: '864,500.000' },
-];
-
-const EXCLUDED_DATA = [
-    { id: 9, category: 'Foundation', material: 'Soft Rock (0 to 1.5m)', qtyValue: '39.984', qtyUnit: 'm³', recyclability: '0.0%', scrapRate: '0.000', reason: 'Missing Data' },
-    { id: 10, category: 'Foundation', material: 'Concreting of bored pile (M35) (1000mm) (5 to 10m)', qtyValue: '40.000', qtyUnit: 'm', recyclability: '0.0%', scrapRate: '0.000', reason: 'Missing Data' },
-    { id: 11, category: 'Foundation', material: 'Plain Cement Concrete (M15)', qtyValue: '3.136', qtyUnit: 'm³', recyclability: '0.0%', scrapRate: '0.000', reason: 'Missing Data' },
-    { id: 12, category: 'Foundation', material: 'Concreting of pile cap (M35)', qtyValue: '29.375', qtyUnit: 'm³', recyclability: '0.0%', scrapRate: '0.000', reason: 'Missing Data' },
-    { id: 13, category: 'Sub Structure', material: 'Concreting in Pier(M35) (5 to 7.5m)', qtyValue: '9.570', qtyUnit: 'm³', recyclability: '0.0%', scrapRate: '0.000', reason: 'Missing Data' },
-    { id: 14, category: 'Sub Structure', material: 'Steel Rebar (Fe500)', qtyValue: '2.175', qtyUnit: 't', recyclability: '0.0%', scrapRate: '0.000', reason: 'Missing Data' },
-    { id: 15, category: 'Sub Structure', material: 'Concreting of pier cap M35', qtyValue: '19.540', qtyUnit: 'm³', recyclability: '0.0%', scrapRate: '0.000', reason: 'Missing Data' },
-];
+const fmt = (value, digits = 3) => new Intl.NumberFormat('en-IN', {
+    minimumFractionDigits: digits > 0 ? Math.min(digits, 3) : 0,
+    maximumFractionDigits: digits,
+}).format(value);
 
 const Recycling = () => {
     const { projectData, updateProjectData } = useProjectData();
-    const [included, setIncluded] = useState(() => {
-        const saved = normalizeRecyclingData(projectData.recycling_data);
-        return (saved && saved.included) ? saved.included : INCLUDED_DATA;
-    });
-    const [excluded, setExcluded] = useState(() => {
-        const saved = normalizeRecyclingData(projectData.recycling_data);
-        return (saved && saved.excluded) ? saved.excluded : EXCLUDED_DATA;
-    });
     const [editingItem, setEditingItem] = useState(null);
 
-    const handleEdit = (item) => {
-        setEditingItem(item);
-    };
+    const computed = useMemo(() => computeRecycling(projectData), [projectData]);
+    const currency = projectData.general_info?.project_currency || projectData.currency || 'INR';
 
-    const handleSave = (updatedItem) => {
-        if (included.find(i => i.id === updatedItem.id)) {
-            setIncluded(included.map(i => i.id === updatedItem.id ? updatedItem : i));
-        } else {
-            setExcluded(excluded.map(i => i.id === updatedItem.id ? updatedItem : i));
+    // Persist the derived summary (desktop get_data) whenever it changes so
+    // saved projects and the report always carry the current totals.
+    useEffect(() => {
+        const summary = recyclingChunkData(projectData, currency);
+        const saved = projectData.recycling_data || {};
+        if (Math.abs((saved.total_recovered_value ?? -1) - summary.total_recovered_value) > 1e-9
+            || saved.included_count !== summary.included_count
+            || saved.total_count !== summary.total_count) {
+            updateProjectData('recycling_data', { ...saved, ...summary });
         }
+    }, [projectData, currency, updateProjectData]);
+
+    /** Update one material row inside its structure section chunk. */
+    const updateRow = (item, mutate) => {
+        const sections = projectData[item.sectionKey];
+        if (!Array.isArray(sections)) return;
+        const nextSections = sections.map((section) => {
+            if (section.id !== item.sectionId) return section;
+            return {
+                ...section,
+                rows: (section.rows || []).map((row) => (row.id === item.row.id ? mutate(row) : row)),
+            };
+        });
+        updateProjectData(item.sectionKey, nextSections);
     };
 
-    const handleExclude = (item) => {
-        setIncluded(prev => prev.filter(i => i.id !== item.id));
-        setExcluded(prev => [...prev, item]);
-    };
+    const setIncludedFlag = (item, included) => updateRow(item, (row) => ({
+        ...row,
+        state: { ...(row.state || {}), included_in_recyclability: included },
+    }));
 
-    const handleInclude = (item) => {
-        setExcluded(prev => prev.filter(i => i.id !== item.id));
-        setIncluded(prev => [...prev, item]);
+    const handleModalSave = (saved) => {
+        const item = saved.__item;
+        if (!item) return;
+        const pct = parseFloat(String(saved.recoveryPercent).replace(/,/g, ''));
+        const rate = parseFloat(String(saved.scrapRate).replace(/,/g, ''));
+        updateRow(item, (row) => ({
+            ...row,
+            ...(Number.isFinite(rate) ? { scrapRate: rate } : {}),
+            ...(Number.isFinite(pct) ? { postDemolitionRecoveryPercentage: pct } : {}),
+            values: {
+                ...(row.values || {}),
+                ...(Number.isFinite(rate) ? { scrap_rate: rate } : {}),
+                ...(Number.isFinite(pct) ? { post_demolition_recovery_percentage: pct } : {}),
+            },
+        }));
     };
 
     const headerStyle = {
@@ -77,42 +101,37 @@ const Recycling = () => {
         verticalAlign: 'middle',
     };
 
-    const totalRecoveredValue = included.reduce((sum, item) => {
-        const val = parseFloat(String(item.recoveredValue).replace(/,/g, '')) || 0;
-        return sum + val;
-    }, 0);
-
-    useEffect(() => {
-        const saved = normalizeRecyclingData(projectData.recycling_data);
-        const nextIncluded = saved.included?.length ? saved.included : INCLUDED_DATA;
-        const nextExcluded = saved.excluded?.length ? saved.excluded : EXCLUDED_DATA;
-        setIncluded(prev => JSON.stringify(nextIncluded) !== JSON.stringify(prev) ? nextIncluded : prev);
-        setExcluded(prev => JSON.stringify(nextExcluded) !== JSON.stringify(prev) ? nextExcluded : prev);
-    }, [projectData.recycling_data]);
-
-    useEffect(() => {
-        updateProjectData('recycling_data', {
-            included,
-            excluded,
-            total_recovered_value: totalRecoveredValue,
-        });
-    }, [included, excluded, totalRecoveredValue, updateProjectData]);
+    const modalItem = editingItem && {
+        __item: editingItem,
+        material: rowName(editingItem.row),
+        qtyValue: String(rowQuantity(editingItem.row)),
+        qtyUnit: rowUnit(editingItem.row),
+        scrapRate: String(scrapRate(editingItem.row) || ''),
+        recoveryPercent: String(recyclePct(editingItem.row) || ''),
+        recyclability: String(recyclePct(editingItem.row) || ''),
+    };
 
     return (
         <div className="h-100 d-flex flex-column overflow-hidden" style={{ backgroundColor: 'var(--app-bg-main)', color: 'var(--app-text-primary)' }}>
             {/* Header Area */}
             <div className="d-flex align-items-center justify-content-between p-3 border-bottom" style={{ backgroundColor: 'var(--app-bg-card)', borderColor: 'var(--app-border-light) !important' }}>
                 <div className="d-flex gap-4">
-                    <span>Total Recovered Value: <strong>{new Intl.NumberFormat('en-IN', { maximumFractionDigits: 3 }).format(totalRecoveredValue)}</strong></span>
-                    <span className="text-muted">Included: {included.length} of {included.length + excluded.length} items</span>
-                </div>
-                <div className="d-flex align-items-center gap-2" style={{ cursor: 'pointer' }}>
-                    Show Details <FaChevronDown size={12} />
+                    <span>
+                        Total Recovered Value ({currency}):{' '}
+                        <strong data-testid="recycling-total">{fmt(computed.totalRecoveredValue)}</strong>
+                    </span>
+                    <span className="text-muted">Included: {computed.includedCount} of {computed.totalCount} items</span>
                 </div>
             </div>
 
             <div className="flex-grow-1 overflow-auto p-3 custom-scrollbar">
-                
+                {computed.totalCount === 0 && (
+                    <div className="text-muted p-3">
+                        No materials are available for recycling calculations — add material
+                        entries in the Construction Work Data section first.
+                    </div>
+                )}
+
                 {/* Included Table */}
                 <h6 className="mb-3 mt-2 fw-bold">Included in Recyclability</h6>
                 <div className="table-responsive rounded border border-secondary mb-4" style={{ backgroundColor: 'var(--app-bg-card)' }}>
@@ -121,40 +140,30 @@ const Recycling = () => {
                             <tr>
                                 <th style={headerStyle}>Category</th>
                                 <th style={headerStyle}>Material</th>
-                                <th style={headerStyle} className="text-center">
-                                    Qty
-                                    <div className="d-flex justify-content-between text-muted" style={{ fontSize: '0.7rem', marginTop: '4px' }}>
-                                        <span>Value</span><span>Unit</span>
-                                    </div>
-                                </th>
+                                <th style={headerStyle} className="text-end">Qty</th>
+                                <th style={headerStyle}>Unit</th>
                                 <th style={headerStyle} className="text-end">Recyclability %</th>
                                 <th style={headerStyle} className="text-end">Recyclable Qty</th>
-                                <th style={headerStyle} className="text-end">Scrap Rate</th>
-                                <th style={headerStyle} className="text-end">Recovered Value</th>
-                                <th style={headerStyle} className="text-end">Warning</th>
+                                <th style={headerStyle} className="text-end">Scrap Rate ({currency})</th>
+                                <th style={headerStyle} className="text-end">Recovered Value ({currency})</th>
                                 <th style={headerStyle} className="text-center">Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {included.map(item => (
-                                <tr key={item.id}>
-                                    <td style={cellStyle}>{item.category}</td>
-                                    <td style={cellStyle}>{item.material}</td>
-                                    <td style={cellStyle} className="text-center">
-                                        <div className="d-flex justify-content-between">
-                                            <span>{item.qtyValue}</span>
-                                            <span className="text-muted ms-2">{item.qtyUnit}</span>
-                                        </div>
-                                    </td>
-                                    <td style={cellStyle} className="text-end">{item.recyclability}</td>
-                                    <td style={cellStyle} className="text-end">{item.recyclableQty}</td>
-                                    <td style={cellStyle} className="text-end">{item.scrapRate}</td>
-                                    <td style={cellStyle} className="text-end">{item.recoveredValue}</td>
-                                    <td style={cellStyle} className="text-end"></td>
+                            {computed.includedItems.map((item) => (
+                                <tr key={item.row.id}>
+                                    <td style={cellStyle}>{item.category} — {item.sectionName}</td>
+                                    <td style={cellStyle}>{rowName(item.row)}</td>
+                                    <td style={cellStyle} className="text-end">{fmt(rowQuantity(item.row))}</td>
+                                    <td style={cellStyle}>{rowUnit(item.row)}</td>
+                                    <td style={cellStyle} className="text-end">{fmt(recyclePct(item.row), 2)}</td>
+                                    <td style={cellStyle} className="text-end">{fmt(calcRecyclableQty(item.row))}</td>
+                                    <td style={cellStyle} className="text-end">{fmt(scrapRate(item.row), 2)}</td>
+                                    <td style={cellStyle} className="text-end">{fmt(item.value, 2)}</td>
                                     <td style={cellStyle} className="text-center">
                                         <div className="d-flex justify-content-center gap-3">
-                                            <FaEdit style={{ cursor: 'pointer', color: 'var(--app-text-muted)' }} title="Edit" onClick={() => handleEdit(item)} />
-                                            <FaChevronDown style={{ cursor: 'pointer', color: '#dc3545' }} title="Exclude" onClick={() => handleExclude(item)} />
+                                            <FaEdit style={{ cursor: 'pointer', color: 'var(--app-text-muted)' }} title="Edit" onClick={() => setEditingItem(item)} />
+                                            <FaChevronDown style={{ cursor: 'pointer', color: '#dc3545' }} title="Exclude from calculation" onClick={() => setIncludedFlag(item, false)} />
                                         </div>
                                     </td>
                                 </tr>
@@ -171,37 +180,30 @@ const Recycling = () => {
                             <tr>
                                 <th style={headerStyle}>Category</th>
                                 <th style={headerStyle}>Material</th>
-                                <th style={headerStyle} className="text-center">
-                                    Qty
-                                    <div className="d-flex justify-content-between text-muted" style={{ fontSize: '0.7rem', marginTop: '4px' }}>
-                                        <span>Value</span><span>Unit</span>
-                                    </div>
-                                </th>
+                                <th style={headerStyle} className="text-end">Qty</th>
+                                <th style={headerStyle}>Unit</th>
                                 <th style={headerStyle} className="text-end">Recyclability %</th>
-                                <th style={headerStyle}>Scrap Rate Reason</th>
+                                <th style={headerStyle} className="text-end">Scrap Rate</th>
+                                <th style={headerStyle}>Reason</th>
                                 <th style={headerStyle} className="text-center">Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {excluded.map(item => (
-                                <tr key={item.id}>
-                                    <td style={cellStyle}>{item.category}</td>
-                                    <td style={cellStyle}>{item.material}</td>
-                                    <td style={cellStyle} className="text-center">
-                                        <div className="d-flex justify-content-between">
-                                            <span>{item.qtyValue}</span>
-                                            <span className="text-muted ms-2">{item.qtyUnit}</span>
-                                        </div>
-                                    </td>
-                                    <td style={cellStyle} className="text-end">{item.recyclability}</td>
-                                    <td style={cellStyle}>
-                                        <span className="me-2">{item.scrapRate}</span> 
-                                        <span className="text-muted">{item.reason}</span>
-                                    </td>
+                            {computed.excludedItems.map((item) => (
+                                <tr key={item.row.id}>
+                                    <td style={cellStyle}>{item.category} — {item.sectionName}</td>
+                                    <td style={cellStyle}>{rowName(item.row)}</td>
+                                    <td style={cellStyle} className="text-end">{fmt(rowQuantity(item.row))}</td>
+                                    <td style={cellStyle}>{rowUnit(item.row)}</td>
+                                    <td style={cellStyle} className="text-end">{fmt(recyclePct(item.row), 2)}</td>
+                                    <td style={cellStyle} className="text-end">{fmt(scrapRate(item.row), 2)}</td>
+                                    <td style={cellStyle}><span className="text-muted">{item.reason}</span></td>
                                     <td style={cellStyle} className="text-center">
                                         <div className="d-flex justify-content-center gap-3">
-                                            <FaEdit style={{ cursor: 'pointer', color: 'var(--app-text-muted)' }} title="Edit" onClick={() => handleEdit(item)} />
-                                            <FaChevronUp style={{ cursor: 'pointer', color: '#198754' }} title="Include" onClick={() => handleInclude(item)} />
+                                            <FaEdit style={{ cursor: 'pointer', color: 'var(--app-text-muted)' }} title="Edit" onClick={() => setEditingItem(item)} />
+                                            {item.reason === 'Manually Excluded' && (
+                                                <FaChevronUp style={{ cursor: 'pointer', color: '#198754' }} title="Include in calculation" onClick={() => setIncludedFlag(item, true)} />
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
@@ -209,15 +211,14 @@ const Recycling = () => {
                         </tbody>
                     </table>
                 </div>
-
             </div>
 
             {/* Modal */}
-            <EditRecyclabilityModal 
-                show={!!editingItem} 
-                item={editingItem} 
-                onClose={() => setEditingItem(null)} 
-                onSave={handleSave} 
+            <EditRecyclabilityModal
+                show={!!editingItem}
+                item={modalItem}
+                onClose={() => setEditingItem(null)}
+                onSave={handleModalSave}
             />
 
             <style>{`
