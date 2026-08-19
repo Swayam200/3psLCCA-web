@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useProjectData } from '../../../../contexts/ProjectDataContext';
 import '../ConstructionWorkData.css';
 import MaterialTable from '../MaterialTable';
+import AddComponentModal from '../AddComponentModal';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -34,6 +35,7 @@ const Foundation = ({ controller }) => {
         const saved = projectData.foundation_data;
         return (saved && saved.length > 0) ? saved : DEFAULT_SECTIONS;
     });
+    const [showAddModal, setShowAddModal] = useState(false);
 
     useEffect(() => {
         updateProjectData('foundation_data', sections);
@@ -77,12 +79,12 @@ const Foundation = ({ controller }) => {
         });
     }, []);
 
-    const handleAddSection = () => {
-        const name = `Section ${sections.length + 1}`;
+    const handleAddSection = (name) => {
+
         setSections((prev) => {
             const next = [
                 ...prev,
-                { id: uid(), name, rows: [] },
+                { id: uid(), name: name.trim(), rows: [] },
             ];
             return next;
         });
@@ -104,12 +106,19 @@ const Foundation = ({ controller }) => {
             <button
                 className="btn btn-sm mt-3"
                 style={{ backgroundColor: 'transparent', color: 'var(--app-text-primary)', border: '1px solid var(--app-border-mid)', transition: 'background-color 0.2s', fontWeight: 500 }}
-                onClick={handleAddSection}
+                onClick={() => setShowAddModal(true)}
                 onMouseEnter={(e) => { e.target.style.backgroundColor = 'var(--app-bg-alt)'; }}
                 onMouseLeave={(e) => { e.target.style.backgroundColor = 'transparent'; }}
             >
                 + Add Component Section
             </button>
+
+            <AddComponentModal 
+                show={showAddModal} 
+                onHide={() => setShowAddModal(false)} 
+                onAdd={handleAddSection} 
+                defaultName={`Section ${sections.length + 1}`} 
+            />
         </div>
     );
 };

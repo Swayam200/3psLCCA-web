@@ -36,7 +36,7 @@ const ConstructionWorkData = ({ controller, projectData, data, onUpdate, project
     return (
         <div className="d-flex flex-column h-100 overflow-hidden" style={{ backgroundColor: 'var(--app-bg-main)', color: 'var(--app-text-primary)' }}>
             {/* Header */}
-            <div className="d-flex align-items-start justify-content-between border-bottom" style={{ padding: '14px 20px 10px', backgroundColor: 'var(--app-bg-card)', borderColor: 'var(--app-border-light) !important', flexShrink: 0 }}>
+            <div className="d-flex flex-wrap align-items-start justify-content-between border-bottom gap-2" style={{ padding: '14px 20px 10px', backgroundColor: 'var(--app-bg-card)', borderColor: 'var(--app-border-light) !important', flexShrink: 0 }}>
                 <div>
                     <h5 className="m-0 fw-bold" style={{ fontSize: '0.95rem', color: 'var(--app-text-primary)' }}>Structure Management</h5>
                     <div className="text-muted mt-1" style={{ fontSize: '0.78rem' }}>

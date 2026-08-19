@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useProjectData } from '../../../../contexts/ProjectDataContext';
 import '../ConstructionWorkData.css';
 import MaterialTable from '../MaterialTable';
+import AddComponentModal from '../AddComponentModal';
 
 let _uid = 0;
 const uid = () => `row-${++_uid}`;
@@ -25,6 +26,7 @@ const SuperStructure = ({ controller }) => {
         const saved = projectData.superstructure_data;
         return (saved && saved.length > 0) ? saved : DEFAULT_SECTIONS;
     });
+    const [showAddModal, setShowAddModal] = useState(false);
 
     useEffect(() => {
         updateProjectData('superstructure_data', sections);
@@ -32,7 +34,16 @@ const SuperStructure = ({ controller }) => {
     const handleRowChange = useCallback((sId, rId, field, val) => setSections((prev) => prev.map((s) => s.id !== sId ? s : { ...s, rows: s.rows.map((r) => r.id !== rId ? r : { ...r, [field]: val }) })), []);
     const handleRowDelete = useCallback((sId, rId) => setSections((prev) => prev.map((s) => s.id !== sId ? s : { ...s, rows: s.rows.filter((r) => r.id !== rId) })), []);
     const handleAddRow = useCallback((sId, newRowData) => setSections((prev) => prev.map((s) => s.id !== sId ? s : { ...s, rows: [...s.rows, { id: uid(), ...newRowData }] })), []);
-    const handleAddSection = () => setSections((prev) => [...prev, { id: uid(), name: `Section ${prev.length + 1}`, rows: [] }]);
+    const handleAddSection = (name) => {
+
+        setSections((prev) => {
+            const next = [
+                ...prev,
+                { id: uid(), name: name.trim(), rows: [] },
+            ];
+            return next;
+        });
+    };
 
     return (
         <div>
@@ -40,12 +51,18 @@ const SuperStructure = ({ controller }) => {
             <button
                 className="btn btn-sm mt-3"
                 style={{ backgroundColor: 'transparent', color: 'var(--app-text-primary)', border: '1px solid var(--app-border-mid)', transition: 'background-color 0.2s', fontWeight: 500 }}
-                onClick={handleAddSection}
+                onClick={() => setShowAddModal(true)}
                 onMouseEnter={(e) => { e.target.style.backgroundColor = 'var(--app-bg-alt)'; }}
                 onMouseLeave={(e) => { e.target.style.backgroundColor = 'transparent'; }}
             >
                 + Add Component Section
             </button>
+            <AddComponentModal 
+                show={showAddModal} 
+                onHide={() => setShowAddModal(false)} 
+                onAdd={handleAddSection} 
+                defaultName={`Section ${sections.length + 1}`} 
+            />
         </div>
     );
 };

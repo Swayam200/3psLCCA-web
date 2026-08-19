@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Navbar, Nav, NavDropdown, Button, Tooltip, OverlayTrigger } from 'react-bootstrap';
-import { FaHome, FaLock, FaLockOpen, FaInfoCircle, FaCheckCircle, FaUndo, FaSave, FaCalculator, FaHistory, FaFolderOpen, FaPlus, FaSignOutAlt, FaCog } from 'react-icons/fa';
+import { FaHome, FaLock, FaLockOpen, FaInfoCircle, FaCheckCircle, FaUndo, FaSave, FaCalculator, FaHistory, FaFolderOpen, FaPlus, FaSignOutAlt, FaCog, FaBars } from 'react-icons/fa';
 import SaveCheckpointModal from './SaveCheckpointModal';
 import CheckpointManagerModal from './CheckpointManagerModal';
 import NewProjectModal from './NewProjectModal';
@@ -111,7 +111,7 @@ const CustomNavBtn = ({ variant, outlineColor, outlineHoverBg, children, icon: I
     );
 };
 
-const ProjectNavbar = ({ onBackToHome, setActiveNode, onSaveCheckpoint, onDeleteCheckpoint, onNewProject, onOpenProject, checkpoints, addLog, isLocked, setIsLocked, projectName, projectData, onRenameProject, onExportProject, projectId }) => {
+const ProjectNavbar = ({ onBackToHome, setActiveNode, onSaveCheckpoint, onDeleteCheckpoint, onNewProject, onOpenProject, checkpoints, addLog, isLocked, setIsLocked, projectName, projectData, onRenameProject, onExportProject, projectId, onToggleSidebar }) => {
     const [showSaveModal, setShowSaveModal] = useState(false);
     const [showManagerModal, setShowManagerModal] = useState(false);
     const [showNewProjectModal, setShowNewProjectModal] = useState(false);
@@ -128,7 +128,7 @@ const ProjectNavbar = ({ onBackToHome, setActiveNode, onSaveCheckpoint, onDelete
     };
 
     return (
-        <Navbar expand="lg" className="px-3 border-bottom custom-project-nav" style={{ 
+        <Navbar expand="lg" className="px-3 border-bottom custom-project-nav flex-shrink-0" style={{ 
             backgroundColor: 'var(--app-bg-card)', 
             borderBottomColor: 'var(--app-border-light)',
             minHeight: '48px',
@@ -142,10 +142,15 @@ const ProjectNavbar = ({ onBackToHome, setActiveNode, onSaveCheckpoint, onDelete
             `}</style>
             
             {/* Logo and Brand Name */}
-            <Link to="/" className="d-flex align-items-center me-3 navbar-brand" style={{ cursor: 'pointer', color: 'var(--app-text-primary)', fontWeight: 'bold', textDecoration: 'none' }} onClick={() => addLog("Project closed. Returning to home.")}>
-                <img src={Logo3psLCCA} alt="3psLCCA Logo" width="28" height="28" className="me-2" style={{ objectFit: 'contain' }} />
-                <span style={{ fontSize: '1rem' }}>3psLCCA</span>
-            </Link>
+            <div className="d-flex align-items-center">
+                <Button variant="link" className="d-md-none p-0 me-3 text-secondary d-flex align-items-center justify-content-center" onClick={onToggleSidebar} style={{ color: 'var(--app-text-primary)' }}>
+                    <FaBars size={20} />
+                </Button>
+                <Link to="/" className="d-flex align-items-center me-3 navbar-brand m-0" style={{ cursor: 'pointer', color: 'var(--app-text-primary)', fontWeight: 'bold', textDecoration: 'none' }} onClick={() => addLog("Project closed. Returning to home.")}>
+                    <img src={Logo3psLCCA} alt="3psLCCA Logo" width="28" height="28" className="me-2" style={{ objectFit: 'contain' }} />
+                    <span style={{ fontSize: '1rem' }}>3psLCCA</span>
+                </Link>
+            </div>
             
             <Navbar.Toggle aria-controls="project-navbar-nav" className="border-0 shadow-none" style={{ filter: 'invert(0.5)' }} />
             <Navbar.Collapse id="project-navbar-nav">
