@@ -4,7 +4,7 @@ import ProjectNavbar from './ProjectNavbar';
 import Sidebar from './Sidebar';
 import { FaLock } from 'react-icons/fa';
 
-<<<<<<< HEAD
+
 // The AI assistant only exists in builds made with VITE_AI_ENABLED=true. The
 // comparison must stay inline (not a shared constant) so Vite folds it to a
 // literal and drops the dynamic import — and with it the whole src/lib/ai
