@@ -4,13 +4,18 @@
  * Receives a LaTeX document string via postMessage, compiles it to PDF using
  * the SwiftLaTeX PdfTeX WebAssembly engine, and returns the PDF bytes.
  *
- * Lifecycle:
- *   1. Caller posts { type: 'compile-latex', tex, swiftlatexBase, texliveMode }
- *   2. Worker loads PdfTeXEngine.js and the Wasm binary
- *   3. Compiles the LaTeX format (preamble + packages)
- *   4. Writes main.tex + any assets to the in-memory filesystem
- *   5. Compiles LaTeX → PDF
- *   6. Posts back { type: 'success', pdf } or { type: 'error', log }
+ * The engine and its compiled format are built once and kept for the
+ * worker's lifetime: repeat compiles skip the ~5 s format stage entirely,
+ * and because the engine also retains the cross-reference files
+ * (.aux/.toc/.lof/.lot) from the previous run, repeat reports usually
+ * converge in a single compile pass (see the rerun-until-stable loop).
+ *
+ * Messages:
+ *   { type: 'prepare', swiftlatexBase?, texliveEndpoint? }
+ *     → warms the engine + format; replies { type: 'prepared' } (errors are
+ *       silent — a later compile surfaces them properly).
+ *   { type: 'compile-latex', tex, assets?, passes?, swiftlatexBase?, ... }
+ *     → { type: 'success', pdf, ... } | { type: 'error', ... }
  *
  * TeX Live assets are fetched from the static vendor directory under the
  * configured texliveEndpoint — no external server or CDN is required.
@@ -35,14 +40,6 @@ const writeAssets = (engine, assets = {}) => {
   }
 };
 
-const closeEngine = (engine) => {
-  try {
-    engine?.closeWorker?.();
-  } catch {
-    // Best-effort cleanup only. The outer worker will be terminated by the caller.
-  }
-};
-
 const hasFatalLatexError = (log = '') => (
   /! (LaTeX|Font) Error:/.test(log)
   || /Fatal error occurred/.test(log)
@@ -51,65 +48,83 @@ const hasFatalLatexError = (log = '') => (
   || /not loadable: Metric \(TFM\) file not found/.test(log)
 );
 
-self.onmessage = async (event) => {
-  if (event.data?.type !== 'compile-latex') return;
-
-  const startedAt = performance.now();
-  const swiftlatexBase = event.data.swiftlatexBase || DEFAULT_SWIFTLATEX_BASE;
+const resolveEndpoints = (data = {}) => {
+  const swiftlatexBase = data.swiftlatexBase || DEFAULT_SWIFTLATEX_BASE;
   const swiftlatexBaseUrl = new URL(swiftlatexBase, self.location.href);
-  const texliveMode = event.data.texliveMode || 'local';
+  const texliveMode = data.texliveMode || 'local';
   const texliveEndpoint = texliveMode === 'remote'
     ? REMOTE_TEXLIVE_ENDPOINT
-    : (event.data.texliveEndpoint || new URL('texlive/', swiftlatexBaseUrl).href);
-  let engine;
+    : (data.texliveEndpoint || new URL('texlive/', swiftlatexBaseUrl).href);
+  return { swiftlatexBaseUrl, texliveMode, texliveEndpoint };
+};
+
+let enginePromise = null;
+
+/** Load the wasm engine and build the LaTeX format once per worker. */
+const getEngine = (data) => {
+  if (!enginePromise) {
+    enginePromise = (async () => {
+      const { swiftlatexBaseUrl, texliveEndpoint } = resolveEndpoints(data);
+
+      post('status', { message: 'Loading SwiftLaTeX report engine...' });
+      self.SWIFTLATEX_ENGINE_PATH = new URL('swiftlatexpdftex.js', swiftlatexBaseUrl).href;
+      importScripts(new URL('PdfTeXEngine.js', swiftlatexBaseUrl).href);
+
+      const EngineClass = self.PdfTeXEngine || self.exports?.PdfTeXEngine || PdfTeXEngine;
+      if (!EngineClass) {
+        throw new Error('SwiftLaTeX PdfTeXEngine was not exposed by the vendored script.');
+      }
+
+      const engine = new EngineClass();
+      await engine.loadEngine();
+      configureTexliveEndpoint(engine, texliveEndpoint);
+
+      post('status', { message: 'Preparing static SwiftLaTeX format...' });
+      const formatResult = await engine.compileFormat();
+      if (formatResult?.status !== 0 || !formatResult?.pdf) {
+        const error = new Error('SwiftLaTeX format generation failed.');
+        error.latexLog = formatResult?.log || 'SwiftLaTeX did not return a format-generation log.';
+        throw error;
+      }
+      engine.writeMemFSFile('swiftlatexpdftex.fmt', formatResult.pdf);
+      return engine;
+    })().catch((error) => {
+      enginePromise = null;
+      throw error;
+    });
+  }
+  return enginePromise;
+};
+
+const compile = async (data) => {
+  const startedAt = performance.now();
+  const { texliveMode, texliveEndpoint } = resolveEndpoints(data);
 
   try {
-    if (!event.data.tex) {
+    if (!data.tex) {
       throw new Error('A LaTeX document is required.');
     }
 
-    post('status', { message: 'Loading SwiftLaTeX report engine...' });
-    self.SWIFTLATEX_ENGINE_PATH = new URL('swiftlatexpdftex.js', swiftlatexBaseUrl).href;
-    importScripts(new URL('PdfTeXEngine.js', swiftlatexBaseUrl).href);
-
-    const EngineClass = self.PdfTeXEngine || self.exports?.PdfTeXEngine || PdfTeXEngine;
-    if (!EngineClass) {
-      throw new Error('SwiftLaTeX PdfTeXEngine was not exposed by the vendored script.');
-    }
-
-    engine = new EngineClass();
-    await engine.loadEngine();
-    configureTexliveEndpoint(engine, texliveEndpoint);
-
-    post('status', { message: 'Preparing static SwiftLaTeX format...' });
-    const formatResult = await engine.compileFormat();
-    if (formatResult?.status !== 0 || !formatResult?.pdf) {
-      post('error', {
-        status: formatResult?.status ?? 1,
-        log: formatResult?.log || 'SwiftLaTeX did not return a format-generation log.',
-        texliveMode,
-        texliveEndpoint,
-      });
-      return;
-    }
-    engine.writeMemFSFile('swiftlatexpdftex.fmt', formatResult.pdf);
-
-    writeAssets(engine, event.data.assets);
-    engine.writeMemFSFile('main.tex', event.data.tex);
+    const engine = await getEngine(data);
+    writeAssets(engine, data.assets);
+    engine.writeMemFSFile('main.tex', data.tex);
     engine.setEngineMainFile('main.tex');
 
-    // Two passes by default, like the desktop pipeline: the first pass
-    // writes the .aux/.toc into the engine's in-memory filesystem, the
-    // second resolves the table of contents, cross-references and
-    // "Page n of m" totals.
-    const passes = Math.max(1, event.data.passes ?? 2);
+    // Rerun-until-stable, the rule latexmk uses: a pass that leaves the
+    // cross-reference files (.aux/.toc/.lof/.lot) unchanged has already
+    // resolved the table of contents and "Page n of m" totals. A fresh
+    // document converges in two passes; with references retained from an
+    // earlier run of the same project it converges in one.
+    const maxPasses = Math.max(1, data.passes ?? 3);
     let result;
-    for (let pass = 1; pass <= passes; pass += 1) {
-      post('status', { message: `Compiling LaTeX report PDF (pass ${pass}/${passes})...` });
+    let passesRun = 0;
+    for (let pass = 1; pass <= maxPasses; pass += 1) {
+      post('status', { message: `Compiling LaTeX report PDF (pass ${pass})...` });
       result = await engine.compileLaTeX();
+      passesRun = pass;
       if (!result.pdf) break;
+      if (result.aux !== undefined && result.aux === result.auxBefore) break;
     }
-    closeEngine(engine);
 
     const elapsedMs = Math.round(performance.now() - startedAt);
     if (!result.pdf || hasFatalLatexError(result.log || '')) {
@@ -128,18 +143,37 @@ self.onmessage = async (event) => {
       pdf: result.pdf,
       log: result.log || '',
       elapsedMs,
+      passesRun,
       texliveMode,
       texliveEndpoint,
       status: result.status,
     });
   } catch (error) {
-    closeEngine(engine);
     post('error', {
       status: -1,
       message: error?.message || String(error),
+      log: error?.latexLog || '',
       stack: error?.stack || '',
       texliveMode,
       texliveEndpoint,
     });
+  }
+};
+
+self.onmessage = async (event) => {
+  const data = event.data || {};
+  if (data.type === 'prepare') {
+    // Opportunistic warm-up (engine download + format build) while the user
+    // is still choosing sections; a later compile surfaces real errors.
+    try {
+      await getEngine(data);
+    } catch {
+      // Silent by design.
+    }
+    post('prepared');
+    return;
+  }
+  if (data.type === 'compile-latex') {
+    await compile(data);
   }
 };

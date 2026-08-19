@@ -26,7 +26,15 @@ its 2020-era build had a fatal-error bug, below).
     returned log (the terminal stream loses the final error on abnormal
     exit). (3) Static hosting: treat `text/html` 200s as not-found
     (dev-server SPA fallback) and fall back to the request name when the
-    server sends no `fileid`/`pkid` header.
+    server sends no `fileid`/`pkid` header. (4) Negative-cache every
+    missing-file response, not just upstream's `301` CDN convention —
+    without this the engine re-probes the same nonexistent file (e.g.
+    virtual-font lookups for plain Type1 fonts) with a blocking XHR on
+    every glyph use, which measured as most of a compile pass's time.
+    (5) Compile results carry FNV-1a fingerprints of the cross-reference
+    files (`.aux/.toc/.lof/.lot`) before and after the pass, so callers
+    can stop rerunning as soon as a pass leaves them unchanged (the
+    latexmk convergence rule).
   - `Makefile` — export `_malloc`/`FS`/`UTF8ToString`/`intArrayFromString`
     (auto-exported by 2020 emscripten, opt-in now), explicit
     `STACK_SIZE=16MB` (new default is 64KB), `ENVIRONMENT=worker`.
