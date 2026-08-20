@@ -113,7 +113,6 @@ const Foundation = () => {
     }, []);
 
     const handleAddSection = (name) => {
-
         setSections((prev) => {
             const next = [
                 ...prev,

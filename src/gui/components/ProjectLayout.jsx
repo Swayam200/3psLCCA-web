@@ -4,7 +4,6 @@ import ProjectNavbar from './ProjectNavbar';
 import Sidebar from './Sidebar';
 import { FaLock } from 'react-icons/fa';
 
-
 // The AI assistant only exists in builds made with VITE_AI_ENABLED=true. The
 // comparison must stay inline (not a shared constant) so Vite folds it to a
 // literal and drops the dynamic import — and with it the whole src/lib/ai
@@ -76,7 +75,7 @@ const LockedOverlay = () => {
     );
 };
 
-const ProjectLayout = ({ children, activeNode, setActiveNode, onBackToHome, checkpoints, onSaveCheckpoint, onDeleteCheckpoint, onNewProject, onOpenProject, addLog, isLocked, setIsLocked, projectName, projectData, onRenameProject, onExportProject, projectId, saveState }) => {
+const ProjectLayout = ({ children, activeNode, setActiveNode, onBackToHome, onNewProject, onOpenProject, addLog, isLocked, setIsLocked, projectName, projectData, onRenameProject, onExportProject, projectId, saveState }) => {
     const [showMobileSidebar, setShowMobileSidebar] = useState(false);
 
     return (

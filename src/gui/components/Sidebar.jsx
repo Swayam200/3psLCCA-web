@@ -155,7 +155,7 @@ const Sidebar = ({ activeNode, setActiveNode, isMobile = false }) => {
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [isResizing]);
+    }, [isResizing, isMobile]);
 
     const handleMouseDown = (e) => {
         if (isMobile) return;

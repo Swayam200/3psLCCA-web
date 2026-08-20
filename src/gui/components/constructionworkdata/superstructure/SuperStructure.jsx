@@ -60,7 +60,6 @@ const SuperStructure = () => {
     }, []);
     const handleAddRow = useCallback((sId, newRowData) => setSections((prev) => prev.map((s) => s.id !== sId ? s : { ...s, rows: [...s.rows, { id: uid(), ...newRowData }] })), []);
     const handleAddSection = (name) => {
-
         setSections((prev) => {
             const next = [
                 ...prev,

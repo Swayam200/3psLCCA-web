@@ -1,14 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Modal, Button, Form } from 'react-bootstrap';
 
 const AddComponentModal = ({ show, onHide, onAdd, defaultName }) => {
     const [name, setName] = useState(defaultName || '');
-
-    useEffect(() => {
-        if (show) {
-            setName(defaultName || '');
-        }
-    }, [show, defaultName]);
+    const [prevShow, setPrevShow] = useState(show);
+    if (show !== prevShow) {
+        setPrevShow(show);
+        if (show) setName(defaultName || '');
+    }
 
     const handleAdd = () => {
         if (!name.trim()) return;
@@ -17,115 +16,88 @@ const AddComponentModal = ({ show, onHide, onAdd, defaultName }) => {
     };
 
     return (
-        <Modal 
-            show={show} 
-            onHide={onHide} 
-            centered 
+        <Modal
+            show={show}
+            onHide={onHide}
+            centered
             contentClassName="add-component-modal"
             style={{ fontFamily: '"Segoe UI", sans-serif' }}
-            backdropClassName="add-component-backdrop"
         >
             <style>{`
                 .add-component-modal {
-                    background-color: #2b2d3d;
-                    border: 1px solid #1a1b26;
-                    color: #ffffff;
+                    background-color: var(--app-bg-card);
+                    border: 1px solid var(--app-border-mid);
+                    color: var(--app-text-primary);
                     border-radius: 12px;
-                    overflow: hidden;
-                    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
                 }
                 .add-component-modal .modal-header {
-                    background-color: #3b3e51;
-                    border-bottom: 1px solid #1a1b26;
-                    padding: 0.5rem 1rem;
-                    display: flex;
-                    align-items: center;
+                    border-bottom: 1px solid var(--app-border-light);
+                    padding: 1rem 1.5rem;
                 }
                 .add-component-modal .modal-body {
                     padding: 1.5rem;
                 }
                 .add-component-modal .form-label {
-                    font-size: 0.95rem;
+                    font-size: 0.9rem;
                     font-weight: 600;
-                    margin-bottom: 0.75rem;
-                    color: #ffffff;
+                    margin-bottom: 0.5rem;
                 }
                 .add-component-modal .form-control {
-                    background-color: #2b2d3d;
-                    border: 2px solid #b794f6;
-                    color: #ffffff;
-                    font-size: 1rem;
-                    padding: 0.75rem 1rem;
-                    border-radius: 12px;
+                    background-color: var(--app-bg-alt);
+                    border: 1px solid var(--app-border-mid);
+                    color: var(--app-text-primary);
+                    font-size: 0.9rem;
+                    padding: 0.6rem;
                 }
                 .add-component-modal .form-control:focus {
-                    background-color: #2b2d3d;
-                    border-color: #b794f6;
-                    box-shadow: 0 0 0 0.25rem rgba(183, 148, 246, 0.25);
-                    color: #ffffff;
+                    background-color: var(--app-bg-alt);
+                    border-color: var(--app-primary-accent);
+                    box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--app-primary-accent) 15%, transparent);
+                    color: var(--app-text-primary);
                 }
-                .modal-actions {
+                .add-component-modal .modal-actions {
                     display: flex;
                     justify-content: flex-end;
                     gap: 12px;
                     margin-top: 1.5rem;
                 }
-                .btn-modal-cancel {
+                .add-component-modal .btn-modal-cancel {
                     background-color: transparent;
-                    border: 1px solid #6b7280;
-                    color: #ffffff;
+                    border: 1px solid var(--app-border-mid);
+                    color: var(--app-text-primary);
                     font-weight: 600;
-                    padding: 0.6rem 1.5rem;
-                    border-radius: 12px;
-                    transition: all 0.2s;
+                    padding: 0.5rem 1.5rem;
+                    border-radius: 8px;
                 }
-                .btn-modal-cancel:hover {
-                    background-color: #3b3e51;
+                .add-component-modal .btn-modal-cancel:hover {
+                    background-color: var(--app-bg-alt);
+                    color: var(--app-text-primary);
                 }
-                .btn-modal-add {
-                    background-color: #b794f6;
+                .add-component-modal .btn-modal-add {
+                    background-color: var(--app-primary-accent);
                     border: none;
-                    color: #000000;
-                    font-weight: 700;
-                    padding: 0.6rem 2rem;
-                    border-radius: 12px;
-                    transition: all 0.2s;
+                    color: #000;
+                    font-weight: 600;
+                    padding: 0.5rem 1.5rem;
+                    border-radius: 8px;
                 }
-                .btn-modal-add:hover {
-                    filter: brightness(0.9);
-                }
-                .mac-dots {
-                    display: flex;
-                    gap: 6px;
-                    margin-right: 15px;
-                }
-                .mac-dot {
-                    width: 12px;
-                    height: 12px;
-                    border-radius: 50%;
-                }
-                .add-component-backdrop {
-                    background-color: rgba(0,0,0,0.6);
+                .add-component-modal .btn-modal-add:hover {
+                    background-color: var(--app-primary-accent);
+                    opacity: 0.9;
+                    color: #000;
                 }
             `}</style>
-            <Modal.Header>
-                <div className="d-flex align-items-center w-100">
-                    <div className="mac-dots">
-                        <div className="mac-dot" style={{ backgroundColor: '#ff5f56' }}></div>
-                        <div className="mac-dot" style={{ backgroundColor: '#5c5c5c' }}></div>
-                        <div className="mac-dot" style={{ backgroundColor: '#27c93f' }}></div>
-                    </div>
-                    <Modal.Title className="fw-bold mx-auto pe-5" style={{ fontSize: '1.1rem', color: '#e5e7eb' }}>
-                        New Component
-                    </Modal.Title>
-                </div>
+            <Modal.Header closeButton>
+                <Modal.Title className="fw-bold" style={{ fontSize: '1.1rem' }}>
+                    New Component
+                </Modal.Title>
             </Modal.Header>
             <Modal.Body>
                 <Form>
                     <Form.Group className="mb-0">
                         <Form.Label>Enter Component Name:</Form.Label>
-                        <Form.Control 
-                            type="text" 
+                        <Form.Control
+                            type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             onKeyDown={(e) => {
