@@ -3,6 +3,7 @@ import { useProjectData } from '../../../../contexts/ProjectDataContext';
 import { normalizeConstructionSections } from '../../../../utils/projectPageSchema';
 import '../ConstructionWorkData.css';
 import MaterialTable from '../MaterialTable';
+import AddComponentModal from '../AddComponentModal';
 
 let _uid = 0;
 const uid = () => `row-${++_uid}`;
@@ -28,6 +29,7 @@ const Miscellaneous = () => {
         const saved = projectData.miscellaneous_data;
         return (saved && saved.length > 0) ? normalizeConstructionSections(saved, 'miscellaneous') : defaultSections();
     });
+    const [showAddModal, setShowAddModal] = useState(false);
 
     useEffect(() => {
         const next = projectData.miscellaneous_data?.length
@@ -57,7 +59,15 @@ const Miscellaneous = () => {
         }));
     }, []);
     const handleAddRow = useCallback((sId, newRowData) => setSections((prev) => prev.map((s) => s.id !== sId ? s : { ...s, rows: [...s.rows, { id: uid(), ...newRowData }] })), []);
-    const handleAddSection = () => setSections((prev) => [...prev, { id: uid(), name: `Section ${prev.length + 1}`, rows: [] }]);
+    const handleAddSection = (name) => {
+        setSections((prev) => {
+            const next = [
+                ...prev,
+                { id: uid(), name: name.trim(), rows: [] },
+            ];
+            return next;
+        });
+    };
 
     return (
         <div>
@@ -76,12 +86,18 @@ const Miscellaneous = () => {
             <button
                 className="btn btn-sm mt-3"
                 style={{ backgroundColor: 'transparent', color: 'var(--app-text-primary)', border: '1px solid var(--app-border-mid)', transition: 'background-color 0.2s', fontWeight: 500 }}
-                onClick={handleAddSection}
+                onClick={() => setShowAddModal(true)}
                 onMouseEnter={(e) => { e.target.style.backgroundColor = 'var(--app-bg-alt)'; }}
                 onMouseLeave={(e) => { e.target.style.backgroundColor = 'transparent'; }}
             >
                 + Add Component Section
             </button>
+            <AddComponentModal 
+                show={showAddModal} 
+                onHide={() => setShowAddModal(false)} 
+                onAdd={handleAddSection} 
+                defaultName={`Section ${sections.length + 1}`} 
+            />
         </div>
     );
 };

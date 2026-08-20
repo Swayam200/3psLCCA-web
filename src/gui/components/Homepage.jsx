@@ -391,10 +391,10 @@ const Homepage = ({ onProjectOpen, onProjectCreate, userName = 'ritik!', isDarkM
     theme.activeIconBg = 'var(--app-surface-pressed)';
 
     return (
-        <div className="d-flex vh-100" style={{ backgroundColor: theme.bgMain, color: theme.textPrimary, fontFamily: 'Inter, sans-serif', transition: 'background-color 0.3s ease' }}>
+        <div className="d-flex flex-column flex-md-row vh-100" style={{ backgroundColor: theme.bgMain, color: theme.textPrimary, fontFamily: 'Inter, sans-serif', transition: 'background-color 0.3s ease' }}>
 
-            {/* Left Sidebar */}
-            <div className="d-flex flex-column align-items-center" style={{ width: '85px', backgroundColor: theme.bgSidebar, borderRight: `1px solid ${theme.border}`, zIndex: 10, transition: 'background-color 0.3s ease' }}>
+            {/* Desktop Left Sidebar */}
+            <div className="d-none d-md-flex flex-column align-items-center flex-shrink-0" style={{ width: '85px', backgroundColor: theme.bgSidebar, borderRight: `1px solid ${theme.border}`, zIndex: 10, transition: 'background-color 0.3s ease' }}>
                 {/* Home Icon */}
                 <div
                     className="d-flex flex-column align-items-center justify-content-center w-100 py-3"
@@ -445,85 +445,88 @@ const Homepage = ({ onProjectOpen, onProjectCreate, userName = 'ritik!', isDarkM
             <div className="flex-grow-1 d-flex flex-column overflow-hidden">
 
                 {/* Header */}
-                <header className="d-flex justify-content-between align-items-center px-5 py-3" style={{ borderBottom: `1px solid ${theme.border}`, backgroundColor: theme.bgMain, transition: 'background-color 0.3s ease' }}>
-                    <h4 className="m-0" style={{ color: theme.textSecondary, fontWeight: '400', fontSize: '1.4rem' }}>
-                        Good {getGreetingTime()}, <span style={{ color: theme.activeIconColor, fontWeight: '700' }}>{userName}</span>
+                <header className="d-flex justify-content-between align-items-center px-3 px-md-5 py-3" style={{ borderBottom: `1px solid ${theme.border}`, backgroundColor: theme.bgMain, transition: 'background-color 0.3s ease' }}>
+                    <h4 className="m-0" style={{ color: theme.textSecondary, fontWeight: '400', fontSize: 'clamp(1.1rem, 3vw, 1.4rem)' }}>
+                        Good {getGreetingTime()}, <br className="d-block d-sm-none" /><span style={{ color: theme.activeIconColor, fontWeight: '700' }}>{userName}</span>
                     </h4>
                     <AppLogo />
                 </header>
 
                 {/* Content */}
-                <main className="flex-grow-1 px-5 py-4 d-flex flex-column overflow-y-auto">
+                <main className="flex-grow-1 px-3 px-md-5 py-3 py-md-4 d-flex flex-column overflow-y-auto">
 
                     {/* Projects Header & Filters */}
-                    <div className="d-flex justify-content-between align-items-center mb-4 pb-2" style={{ borderBottom: `1px solid ${theme.border}` }}>
-                        <div className="d-flex align-items-center gap-3">
+                    <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 pb-2" style={{ borderBottom: `1px solid ${theme.border}` }}>
+                        <div className="d-flex align-items-center justify-content-between justify-content-md-start gap-3 flex-grow-1">
                             <h6 className="m-0 fw-bold text-uppercase" style={{ fontSize: '0.85rem', color: theme.textSecondary, letterSpacing: '1px' }}>
                                 RECENT PROJECTS
                             </h6>
-                            <button className="btn btn-sm rounded-circle d-flex align-items-center justify-content-center" style={{ width: '28px', height: '28px', border: `1px solid ${theme.border}`, backgroundColor: theme.inputBg, color: theme.textSecondary }}>
+                            <button className="btn btn-sm rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: '28px', height: '28px', border: `1px solid ${theme.border}`, backgroundColor: theme.inputBg, color: theme.textSecondary }}>
                                 <AiOutlineRedo size={14} />
                             </button>
                         </div>
 
-                        <div className="d-flex align-items-center gap-2" style={{ marginTop: '-4px' }}>
+                        <div className="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center justify-content-md-end gap-2 flex-grow-1" style={{ marginTop: '-4px' }}>
                             <input
                                 type="text"
                                 placeholder="Search projects..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="form-control form-control-sm me-2 shadow-sm"
+                                className="form-control form-control-sm shadow-sm flex-grow-1"
                                 style={{
                                     backgroundColor: theme.inputBg,
                                     border: `1px solid ${theme.border}`,
                                     color: theme.textPrimary,
-                                    width: '280px',
+                                    minWidth: '200px',
+                                    maxWidth: '280px',
                                     borderRadius: '6px',
                                     padding: '0.4rem 0.8rem'
                                 }}
                             />
-                            <button 
-                                className="btn btn-sm px-4 shadow-sm" 
-                                onClick={() => setFilter('recent')}
-                                style={{ 
-                                    backgroundColor: filter === 'recent' ? theme.inputBg : theme.filterBtnUnselectedBg, 
-                                    color: filter === 'recent' ? theme.activeIconColor : theme.textSecondary, 
-                                    border: `1px solid ${filter === 'recent' ? theme.activeIconColor : theme.border}`, 
-                                    borderRadius: '6px', 
-                                    fontWeight: filter === 'recent' ? '600' : 'normal',
-                                    padding: '0.4rem' 
-                                }}
-                            >
-                                Recent
-                            </button>
-                            <button 
-                                className="btn btn-sm px-4 shadow-sm" 
-                                onClick={() => setFilter('name')}
-                                style={{ 
-                                    backgroundColor: filter === 'name' ? theme.inputBg : theme.filterBtnUnselectedBg, 
-                                    color: filter === 'name' ? theme.activeIconColor : theme.textSecondary, 
-                                    border: `1px solid ${filter === 'name' ? theme.activeIconColor : theme.border}`, 
-                                    borderRadius: '6px', 
-                                    fontWeight: filter === 'name' ? '600' : 'normal',
-                                    padding: '0.4rem' 
-                                }}
-                            >
-                                All
-                            </button>
-                            <button 
-                                className="btn btn-sm px-4 shadow-sm" 
-                                onClick={() => setFilter('pinned')}
-                                style={{ 
-                                    backgroundColor: filter === 'pinned' ? theme.inputBg : theme.filterBtnUnselectedBg, 
-                                    color: filter === 'pinned' ? theme.activeIconColor : theme.textSecondary, 
-                                    border: `1px solid ${filter === 'pinned' ? theme.activeIconColor : theme.border}`, 
-                                    borderRadius: '6px', 
-                                    fontWeight: filter === 'pinned' ? '600' : 'normal',
-                                    padding: '0.4rem' 
-                                }}
-                            >
-                                Starred
-                            </button>
+                            <div className="d-flex gap-2 justify-content-between mt-2 mt-sm-0">
+                                <button 
+                                    className="btn btn-sm px-3 px-md-4 shadow-sm flex-grow-1 flex-sm-grow-0" 
+                                    onClick={() => setFilter('recent')}
+                                    style={{ 
+                                        backgroundColor: filter === 'recent' ? theme.inputBg : theme.filterBtnUnselectedBg, 
+                                        color: filter === 'recent' ? theme.activeIconColor : theme.textSecondary, 
+                                        border: `1px solid ${filter === 'recent' ? theme.activeIconColor : theme.border}`, 
+                                        borderRadius: '6px', 
+                                        fontWeight: filter === 'recent' ? '600' : 'normal',
+                                        padding: '0.4rem' 
+                                    }}
+                                >
+                                    Recent
+                                </button>
+                                <button 
+                                    className="btn btn-sm px-3 px-md-4 shadow-sm flex-grow-1 flex-sm-grow-0" 
+                                    onClick={() => setFilter('name')}
+                                    style={{ 
+                                        backgroundColor: filter === 'name' ? theme.inputBg : theme.filterBtnUnselectedBg, 
+                                        color: filter === 'name' ? theme.activeIconColor : theme.textSecondary, 
+                                        border: `1px solid ${filter === 'name' ? theme.activeIconColor : theme.border}`, 
+                                        borderRadius: '6px', 
+                                        fontWeight: filter === 'name' ? '600' : 'normal',
+                                        padding: '0.4rem' 
+                                    }}
+                                >
+                                    All
+                                </button>
+                                <button 
+                                    className="btn btn-sm px-3 px-md-4 shadow-sm flex-grow-1 flex-sm-grow-0" 
+                                    onClick={() => setFilter('pinned')}
+                                    style={{ 
+                                        backgroundColor: filter === 'pinned' ? theme.inputBg : theme.filterBtnUnselectedBg, 
+                                        color: filter === 'pinned' ? theme.activeIconColor : theme.textSecondary, 
+                                        border: `1px solid ${filter === 'pinned' ? theme.activeIconColor : theme.border}`, 
+                                        borderRadius: '6px', 
+                                        fontWeight: filter === 'pinned' ? '600' : 'normal',
+                                        padding: '0.4rem' 
+                                    }}
+                                >
+                                    Starred
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -646,25 +649,67 @@ const Homepage = ({ onProjectOpen, onProjectCreate, userName = 'ritik!', isDarkM
                 </main>
 
                 {/* Footer */}
-                <footer className="px-5 py-2" style={{ borderTop: `1px solid ${theme.border}`, backgroundColor: theme.bgMain, transition: 'background-color 0.3s ease' }}>
-                    <div className="d-flex justify-content-between align-items-start mt-1">
-                        <div className="d-flex flex-column align-items-start ps-2">
+                <footer className="px-3 px-md-5 py-3 py-md-2" style={{ borderTop: `1px solid ${theme.border}`, backgroundColor: theme.bgMain, transition: 'background-color 0.3s ease' }}>
+                    <div className="d-flex flex-column flex-md-row justify-content-between align-items-center align-items-md-start mt-1 gap-4 gap-md-0 text-center text-md-start">
+                        <div className="d-flex flex-column align-items-center align-items-md-start ps-md-2">
                             <span className="mb-2" style={{ fontSize: '0.65rem', color: theme.textSecondary, fontWeight: 'bold', letterSpacing: '1px' }}>DEVELOPED AT</span>
                             <img src={theme.logoIITB} alt="IIT Bombay Logo" height="50" style={{ opacity: isDarkMode ? 0.9 : 1 }} />
                         </div>
-                        <div className="d-flex flex-column align-items-end pe-2">
+                        <div className="d-flex flex-column align-items-center align-items-md-end pe-md-2">
                             <span className="mb-2" style={{ fontSize: '0.65rem', color: theme.textSecondary, fontWeight: 'bold', letterSpacing: '1px' }}>SUPPORTED BY</span>
-                            <div className="d-flex align-items-center gap-4 mt-1">
+                            <div className="d-flex flex-wrap justify-content-center justify-content-md-end align-items-center gap-3 gap-md-4 mt-1">
                                 <img src={theme.logoConstructSteel} alt="constructsteel Logo" height="22" />
                                 <img src={theme.logoMOS} alt="Ministry of Steel Logo" height="30" />
                                 <img src={theme.logoINSDAG} alt="INSDAG Logo" height="30" />
                             </div>
-                            <div className="mt-2">
+                            <div className="mt-3 mt-md-2">
                                 <span style={{ fontSize: '0.7rem', color: theme.textSecondary }}>3psLCCA v2026.04.1</span>
                             </div>
                         </div>
                     </div>
                 </footer>
+            </div>
+
+            {/* Mobile Bottom Nav */}
+            <div className="d-flex d-md-none flex-row align-items-center justify-content-around w-100 flex-shrink-0" style={{ backgroundColor: theme.bgSidebar, borderTop: `1px solid ${theme.border}`, zIndex: 10, transition: 'background-color 0.3s ease' }}>
+                <div
+                    className="d-flex flex-column align-items-center justify-content-center py-2 flex-grow-1"
+                    style={{ cursor: 'pointer', backgroundColor: activeTab === 'home' ? theme.activeIconBg : 'transparent', color: activeTab === 'home' ? theme.activeIconColor : theme.textSecondary, transition: 'all 0.2s' }}
+                    onClick={() => setActiveTab('home')}
+                >
+                    <BsHouseDoorFill size={20} className="mb-1" />
+                    <span style={{ fontSize: '10px', fontWeight: activeTab === 'home' ? '600' : 'normal' }}>Home</span>
+                </div>
+
+                <div
+                    className="d-flex flex-column align-items-center justify-content-center py-2 flex-grow-1"
+                    style={{ cursor: 'pointer', backgroundColor: activeTab === 'new' ? theme.activeIconBg : 'transparent', color: activeTab === 'new' ? theme.activeIconColor : theme.textSecondary, transition: 'all 0.2s' }}
+                    onClick={handleNewProject}
+                >
+                    <BsFileEarmarkPlus size={20} className="mb-1" />
+                    <span style={{ fontSize: '10px', fontWeight: activeTab === 'new' ? '600' : 'normal' }}>New</span>
+                </div>
+
+                <div
+                    className="d-flex flex-column align-items-center justify-content-center py-2 flex-grow-1"
+                    style={{ cursor: 'pointer', backgroundColor: activeTab === 'open' ? theme.activeIconBg : 'transparent', color: activeTab === 'open' ? theme.activeIconColor : theme.textSecondary, transition: 'all 0.2s' }}
+                    onClick={() => {
+                        setActiveTab('open');
+                        onProjectOpen();
+                    }}
+                >
+                    <BsFolder2Open size={20} className="mb-1" />
+                    <span style={{ fontSize: '10px', fontWeight: activeTab === 'open' ? '600' : 'normal' }}>Open</span>
+                </div>
+
+                <div
+                    className="d-flex flex-column align-items-center justify-content-center py-2 flex-grow-1"
+                    style={{ cursor: 'pointer', backgroundColor: activeTab === 'settings' ? theme.activeIconBg : 'transparent', color: activeTab === 'settings' ? theme.activeIconColor : theme.textSecondary, transition: 'all 0.2s', borderLeft: `1px solid ${theme.border}` }}
+                    onClick={() => { setActiveTab('settings'); setShowSettingsModal(true); }}
+                >
+                    <BsGearFill size={18} className="mb-1" />
+                    <span style={{ fontSize: '10px' }}>Settings</span>
+                </div>
             </div>
 
             {/* New Project Modal */}

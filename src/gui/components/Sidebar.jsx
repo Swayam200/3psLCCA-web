@@ -127,13 +127,13 @@ const TreeNode = ({ label, childrenData, depth, activeNode, setActiveNode }) => 
     );
 };
 
-const Sidebar = ({ activeNode, setActiveNode }) => {
+const Sidebar = ({ activeNode, setActiveNode, isMobile = false }) => {
     const [sidebarWidth, setSidebarWidth] = useState(250);
     const [isResizing, setIsResizing] = useState(false);
 
     React.useEffect(() => {
         const handleMouseMove = (e) => {
-            if (!isResizing) return;
+            if (!isResizing || isMobile) return;
             // Depending on the layout, clientX might not perfectly match width, but it's close enough if standard left align.
             // Minimum 200px, maximum 600px width
             const newWidth = Math.min(Math.max(e.clientX, 200), 600);
@@ -155,16 +155,17 @@ const Sidebar = ({ activeNode, setActiveNode }) => {
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [isResizing]);
+    }, [isResizing, isMobile]);
 
     const handleMouseDown = (e) => {
+        if (isMobile) return;
         setIsResizing(true);
         document.body.style.cursor = 'col-resize';
         e.preventDefault();
     };
 
     return (
-        <div className="position-relative flex-shrink-0 h-100" style={{ width: `${sidebarWidth}px` }}>
+        <div className="position-relative flex-shrink-0 h-100" style={{ width: isMobile ? '100%' : `${sidebarWidth}px` }}>
             <div className="d-flex flex-column sidebar-scrollbar w-100 h-100 overflow-y-auto" style={{
                 backgroundColor: 'var(--app-bg-card)',
                 color: 'var(--app-text-primary)',
@@ -219,23 +220,25 @@ const Sidebar = ({ activeNode, setActiveNode }) => {
                 </div>
             </div> {/* End of inner container */}
 
-            {/* Draggable Resizer Line */}
-            <div
-                onMouseDown={handleMouseDown}
-                style={{
-                    position: 'absolute',
-                    top: 0,
-                    right: -3,
-                    width: '6px',
-                    height: '100%',
-                    cursor: 'col-resize',
-                    zIndex: 100,
-                    backgroundColor: isResizing ? 'color-mix(in srgb, var(--app-primary-accent) 80%, transparent)' : 'transparent',
-                    transition: 'background-color 0.2s ease',
-                }}
-                onMouseEnter={(e) => { if (!isResizing) e.target.style.backgroundColor = 'color-mix(in srgb, var(--app-primary-accent) 50%, transparent)'; }}
-                onMouseLeave={(e) => { if (!isResizing) e.target.style.backgroundColor = 'transparent'; }}
-            />
+            {/* Draggable Resizer Line (Only on Desktop) */}
+            {!isMobile && (
+                <div
+                    onMouseDown={handleMouseDown}
+                    style={{
+                        position: 'absolute',
+                        top: 0,
+                        right: -3,
+                        width: '6px',
+                        height: '100%',
+                        cursor: 'col-resize',
+                        zIndex: 100,
+                        backgroundColor: isResizing ? 'color-mix(in srgb, var(--app-primary-accent) 80%, transparent)' : 'transparent',
+                        transition: 'background-color 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => { if (!isResizing) e.target.style.backgroundColor = 'color-mix(in srgb, var(--app-primary-accent) 50%, transparent)'; }}
+                    onMouseLeave={(e) => { if (!isResizing) e.target.style.backgroundColor = 'transparent'; }}
+                />
+            )}
         </div>
     );
 };

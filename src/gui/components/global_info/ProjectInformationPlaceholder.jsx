@@ -335,7 +335,7 @@ const ProjectInformationPlaceholder = ({ controller }) => {
     // ── Render ────────────────────────────────────────────────────────────────
 
     return (
-        <div ref={containerRef} style={{ padding: '24px', color: 'var(--app-text-primary)' }}>
+        <div ref={containerRef} className="p-3 p-md-4" style={{ color: 'var(--app-text-primary)' }}>
 
             {/* ── Project Information ──────────────────────────────────────── */}
             <SectionHeader title="Project Information" />

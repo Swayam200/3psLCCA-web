@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Offcanvas } from 'react-bootstrap';
 import ProjectNavbar from './ProjectNavbar';
 import Sidebar from './Sidebar';
 import { FaLock } from 'react-icons/fa';
@@ -75,6 +76,8 @@ const LockedOverlay = () => {
 };
 
 const ProjectLayout = ({ children, activeNode, setActiveNode, onBackToHome, onNewProject, onOpenProject, addLog, isLocked, setIsLocked, projectName, projectData, onRenameProject, onExportProject, projectId, saveState }) => {
+    const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+
     return (
         <div className="d-flex flex-column overflow-hidden" style={{ height: '100vh', width: '100vw' }}>
             <ProjectNavbar 
@@ -91,9 +94,12 @@ const ProjectLayout = ({ children, activeNode, setActiveNode, onBackToHome, onNe
                 onRenameProject={onRenameProject}
                 onExportProject={onExportProject}
                 saveState={saveState}
+                onToggleSidebar={() => setShowMobileSidebar(true)}
             />
             <div className="d-flex flex-grow-1 overflow-hidden">
-                <Sidebar activeNode={activeNode} setActiveNode={setActiveNode} />
+                <div className="d-none d-md-flex flex-shrink-0 h-100">
+                    <Sidebar activeNode={activeNode} setActiveNode={setActiveNode} />
+                </div>
                 <div className="flex-grow-1 overflow-y-auto" style={{ backgroundColor: 'var(--app-bg-main)', transition: 'background-color 0.3s ease' }}>
                     <div style={{ position: 'relative', minHeight: '100%' }}>
                         {children}
@@ -106,6 +112,19 @@ const ProjectLayout = ({ children, activeNode, setActiveNode, onBackToHome, onNe
                     <AiFabLazy activeNode={activeNode} />
                 </React.Suspense>
             )}
+
+            <Offcanvas show={showMobileSidebar} onHide={() => setShowMobileSidebar(false)} placement="start" style={{ width: '280px', backgroundColor: 'var(--app-bg-card)', borderRight: '1px solid var(--app-border-light)' }}>
+                <Offcanvas.Header closeButton closeVariant={document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'white' : undefined} style={{ borderBottom: '1px solid var(--app-border-light)' }}>
+                    <Offcanvas.Title style={{ color: 'var(--app-text-primary)' }}>Sections</Offcanvas.Title>
+                </Offcanvas.Header>
+                <Offcanvas.Body className="p-0 overflow-hidden d-flex flex-column">
+                    <Sidebar 
+                        activeNode={activeNode} 
+                        setActiveNode={(node) => { setActiveNode(node); setShowMobileSidebar(false); }} 
+                        isMobile={true} 
+                    />
+                </Offcanvas.Body>
+            </Offcanvas>
         </div>
     );
 };

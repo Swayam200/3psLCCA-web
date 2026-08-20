@@ -3,6 +3,7 @@ import { useProjectData } from '../../../../contexts/ProjectDataContext';
 import { normalizeConstructionSections } from '../../../../utils/projectPageSchema';
 import '../ConstructionWorkData.css';
 import MaterialTable from '../MaterialTable';
+import AddComponentModal from '../AddComponentModal';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -29,6 +30,7 @@ const Foundation = () => {
         const saved = projectData.foundation_data;
         return (saved && saved.length > 0) ? normalizeConstructionSections(saved, 'foundation') : defaultSections();
     });
+    const [showAddModal, setShowAddModal] = useState(false);
 
     useEffect(() => {
         const next = projectData.foundation_data?.length
@@ -110,12 +112,11 @@ const Foundation = () => {
         });
     }, []);
 
-    const handleAddSection = () => {
-        const name = `Section ${sections.length + 1}`;
+    const handleAddSection = (name) => {
         setSections((prev) => {
             const next = [
                 ...prev,
-                { id: uid(), name, rows: [] },
+                { id: uid(), name: name.trim(), rows: [] },
             ];
             return next;
         });
@@ -139,12 +140,19 @@ const Foundation = () => {
             <button
                 className="btn btn-sm mt-3"
                 style={{ backgroundColor: 'transparent', color: 'var(--app-text-primary)', border: '1px solid var(--app-border-mid)', transition: 'background-color 0.2s', fontWeight: 500 }}
-                onClick={handleAddSection}
+                onClick={() => setShowAddModal(true)}
                 onMouseEnter={(e) => { e.target.style.backgroundColor = 'var(--app-bg-alt)'; }}
                 onMouseLeave={(e) => { e.target.style.backgroundColor = 'transparent'; }}
             >
                 + Add Component Section
             </button>
+
+            <AddComponentModal 
+                show={showAddModal} 
+                onHide={() => setShowAddModal(false)} 
+                onAdd={handleAddSection} 
+                defaultName={`Section ${sections.length + 1}`} 
+            />
         </div>
     );
 };
