@@ -4,6 +4,7 @@ import {
     computeMachineryTotal,
     computeMaterialEmissions,
     computeTrafficReroutingData,
+    resolveTrafficMode,
     computeTransportEmissions,
     normalizeMachineryData,
     parseNumber,
@@ -207,7 +208,7 @@ export const deriveTrafficAndRoadData = (projectData) => {
 
     return {
         ...traffic,
-        mode: traffic.mode || traffic.calculation_mode || 'GLOBAL',
+        mode: resolveTrafficMode(projectData),
         vehicle_data: normalizedVehicles,
         severity_minor: parseNumber(traffic.severity_minor ?? traffic.severity?.severity_minor ?? traffic.severity?.minor),
         severity_major: parseNumber(traffic.severity_major ?? traffic.severity?.severity_major ?? traffic.severity?.major),
