@@ -1,4 +1,4 @@
-import { parseNumber } from '../carbon_emission/carbonUtils.js'
+import { parseNumber, resolveTrafficMode } from '../carbon_emission/carbonUtils.js'
 
 const VEHICLES = [
   ['small_cars', 'Small cars'],
@@ -44,7 +44,7 @@ export const buildReportModel = (project = {}, calculation = {}) => {
   const machinery = carbon.machinery_emissions_data || {}
   const recycling = project.recycling_data || {}
   const currency = general.project_currency || project.currency || 'INR'
-  const trafficMode = String(traffic.mode || traffic.calculation_mode || 'GLOBAL').toUpperCase()
+  const trafficMode = resolveTrafficMode(project)
 
   const constructionRows = CONSTRUCTION.flatMap(([key, category]) => (
     activeRows(project[key]).map(({ section, row }) => ({

@@ -344,11 +344,26 @@ export const computeMachineryTotal = (data = {}) => {
         : computeMachineryDetailedTotal(normalized.detailed.rows);
 };
 
+/**
+ * Resolve the traffic calculation mode the way desktop does
+ * (traffic_emissions.py _load_traffic_context): an explicitly stored mode
+ * wins; an EMPTY mode falls back to INDIA when bridge_data says the project
+ * is in India — deliberately bridge_data only, not general_info, so web and
+ * desktop can never disagree on the same project file.
+ */
+export const resolveTrafficMode = (projectData = {}) => {
+    const traffic = projectData.traffic_and_road_data || projectData.traffic_data || {};
+    const explicit = String(traffic.mode ?? traffic.calculation_mode ?? '').trim().toUpperCase();
+    if (explicit) return explicit;
+    const country = String(projectData.bridge_data?.project_country ?? '').trim().toUpperCase();
+    return country === 'INDIA' ? 'INDIA' : 'GLOBAL';
+};
+
 export const computeTrafficReroutingData = (projectData = {}) => {
     const traffic = projectData.traffic_data || {};
     const carbon = projectData.carbon_emission_data || {};
     const saved = carbon.diversion_emissions_data || carbon.diversion_emissions || {};
-    const calculationMode = String(traffic.calculation_mode || traffic.mode || 'GLOBAL').toUpperCase();
+    const calculationMode = resolveTrafficMode(projectData);
     const mode = calculationMode === 'INDIA' ? 'Calculate by Vehicle' : 'Enter Directly';
     const factors = saved.emission_factors || saved.factors ||
         VEHICLE_TYPES.reduce((acc, vehicle) => ({ ...acc, [vehicle.key]: vehicle.defaultEf }), {});

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import darbhangaData from '../utils/material_database/INDIA_Bihar_Darbhanga_2025.json';
 import mumbaiData from '../utils/material_database/INDIA_Maharashtra_Mumbai_2023.json';
 import { searchMaterials, resolveDbKey, isSearchableQuery } from './materialSearch.js';
+import { resolveCarbonDenom, denomToWebUnit } from '../../../utils/carbonUnits.js';
 
 const DB_MAP = {
     "INDIA/Bihar/Darbhanga-2025": darbhangaData,
@@ -158,10 +159,10 @@ const MaterialAddModal = ({ sectionName, onClose, onAdd, projectData, editData }
             setIncludeCarbon(true);
             setEmissionFactor(item.carbon_emission);
             setEmissionSource(item.carbon_emission_src);
-            // Units mapping might be needed if they don't match exactly
-            if (item.carbon_emission_units_den === 'cum') setEmissionPerUnit('m³');
-            else if (item.carbon_emission_units_den === 'kg') setEmissionPerUnit('kg');
-            else if (item.carbon_emission_units_den === 'MT') setEmissionPerUnit('t');
+            // Desktop-canonical unit resolution: "_den" wins, otherwise the
+            // ratio in carbon_emission_units yields its denominator.
+            const webUnit = denomToWebUnit(resolveCarbonDenom(item));
+            if (webUnit) setEmissionPerUnit(webUnit);
         }
 
         setShowSuggestions(false);

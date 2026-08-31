@@ -1,3 +1,5 @@
+import { resolveCarbonDenom, denomToWebUnit, mentionsCo2 } from './carbonUnits.js';
+
 const SHEETS = [
     { name: 'CAT#Foundation', key: 'foundation_data' },
     { name: 'CAT#Sub-Structure', key: 'substructure_data' },
@@ -13,7 +15,7 @@ export const CONSTRUCTION_EXCEL_COLUMNS = [
     'CID#Rate',
     'CID#Rate_Src',
     'CID#Carbon_Emission_Factor',
-    'CID#Carbon_Emission_units',
+    'CID#Carbon_Emission_units_Den',
     'CID#Conversion_Factor',
     'CID#Carbon_Emission_Src',
     'CID#Scrap_Rate',
@@ -29,6 +31,9 @@ const FIELD_MAP = {
     rate: 'rate',
     rate_src: 'source',
     carbon_emission_factor: 'carbonFactor',
+    // Two deliberately separate columns, like desktop's importer:
+    // the bare denominator (e.g. "kg") and the full "kgCO2e/<unit>" ratio.
+    carbon_emission_units_den: 'carbonUnitDen',
     carbon_emission_units: 'carbonUnit',
     conversion_factor: 'conversionFactor',
     carbon_emission_src: 'carbonSource',
@@ -111,12 +116,43 @@ const validateRow = (row) => {
 
     if (row.rate !== '' && Number(row.rate) < 0) warnings.push('Rate is negative - please verify');
     if (row.rate !== '' && Number(row.rate) === 0) warnings.push('Rate is zero - verify this is intentional');
-    if (row.carbonFactor !== '' && !row.carbonUnit) {
-        warnings.push('Carbon emission factor is present but its unit is missing');
+
+    // Carbon-column validation, mirroring desktop's excel_importer.py.
+    const ef = String(row.carbonFactor ?? '').trim();
+    const den = String(row.carbonUnitDen ?? '').trim();
+    const units = String(row.carbonUnit ?? '').trim();
+    if (ef && !den && !units) {
+        warnings.push(
+            'carbon_emission provided but neither carbon_emission_units_den '
+            + 'nor carbon_emission_units is filled in',
+        );
+    }
+    if (den && mentionsCo2(den)) {
+        errors.push(
+            `'carbon_emission_units_den' must be a bare denominator `
+            + `(e.g. 'kg'), not a full ratio - got '${den}'. Use `
+            + `'carbon_emission_units' for the full 'kgCO2e/<unit>' string.`,
+        );
+    }
+    if (units && !mentionsCo2(units)) {
+        errors.push(
+            `'carbon_emission_units' must be a full ratio starting with `
+            + `'kgCO2e/' (e.g. 'kgCO2e/kg') - got '${units}', which doesn't `
+            + `contain 'CO2'. If this is meant to be a bare denominator, use `
+            + `'carbon_emission_units_den' instead.`,
+        );
+    }
+    if (ef && (den || units) && Number.isFinite(Number(ef)) && Number(ef) === 0) {
+        warnings.push('Carbon emission factor is zero - carbon calc will produce 0');
     }
 
     return { ...row, errors, warnings, selected: errors.length === 0 && !row.duplicate };
 };
+
+// Warnings validateRow re-derives on every pass; strip them before
+// revalidating an edited row so they don't accumulate as duplicates.
+const REDERIVED_WARNING_PREFIXES = ['Rate is ', 'carbon_emission provided', 'Carbon emission factor is zero'];
+const isRederivedWarning = (warning) => REDERIVED_WARNING_PREFIXES.some((prefix) => warning.startsWith(prefix));
 
 const existingMaterialNames = (projectData) => {
     const names = new Set();
@@ -221,12 +257,20 @@ export function updatePreviewRow(preview, sheetName, rowId, field, value) {
                 : {
                     ...sheet,
                     rows: sheet.rows.map((row) => (
-                        row.id !== rowId ? row : validateRow({ ...row, [field]: value, errors: [], warnings: row.warnings.filter((warning) => !warning.startsWith('Rate is ')) })
+                        row.id !== rowId ? row : validateRow({ ...row, [field]: value, errors: [], warnings: row.warnings.filter((warning) => !isRederivedWarning(warning)) })
                     )),
                 }
         )),
     };
 }
+
+const previewRowPerUnit = (row) => {
+    const denom = resolveCarbonDenom({
+        carbon_emission_units_den: row.carbonUnitDen,
+        carbon_emission_units: row.carbonUnit,
+    });
+    return denomToWebUnit(denom) || denom || '';
+};
 
 const previewRowToMaterial = (row) => ({
     id: uid(),
@@ -239,7 +283,7 @@ const previewRowToMaterial = (row) => ({
     conversionFactor: row.conversionFactor === '' ? 1 : Number(row.conversionFactor),
     carbonEmission: row.carbonFactor === '' ? null : {
         factor: Number(row.carbonFactor),
-        perUnit: row.carbonUnit || '',
+        perUnit: previewRowPerUnit(row),
         source: row.carbonSource || '',
     },
     scrapRate: row.scrapRate === '' ? 0 : Number(row.scrapRate),
