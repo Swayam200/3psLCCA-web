@@ -1,9 +1,14 @@
 /**
  * HTML report page — renders the report document (reportDocument.js) as a
- * printable, LaTeX-styled article. "Print / Save as PDF" hands the page to
- * the browser's own print engine; nothing heavy is downloaded.
+ * printable, LaTeX-styled article.
+ *
+ * Two views of the same document:
+ *   • continuous — one scrolling page, instant;
+ *   • page preview — Paged.js lays the article out into real A4 pages
+ *     (page numbers, running headers, numbered contents), and "Print" hands
+ *     exactly those pages to the browser's print engine (Save as PDF).
  */
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ReportSectionModal from '../gui/components/outputs/ReportSectionModal.jsx';
 import { buildReportDocument } from './reportDocument.js';
@@ -13,8 +18,10 @@ import {
     FRAMEWORK_FIGURE, INTRODUCTION, PREPARED_USING, REPORT_TITLE, SUMMARY_LEAD,
 } from './reportContent.js';
 import { PillarBarsFigure, PillarDonutFigure, StageBarsFigure } from './ReportCharts.jsx';
+import { paginate, teardown } from './pagedPreview.js';
 import Equation from './Equation.jsx';
 import './report.css';
+import './reportShell.css';
 
 const FIGURE_COMPONENTS = {
     pillar_donut: PillarDonutFigure,
@@ -39,7 +46,7 @@ const Notes = ({ notes }) => (notes ? <p className="note"><b>{notes.label}:</b> 
 /** desktop fields_to_latex: two-column table with bold group rows. */
 const FieldsTable = ({ tableNo, caption, rows, notes }) => (
     <>
-        <figure className="table">
+        <figure className="table" id={`table-${tableNo}`}>
             <Caption kind="Table" no={tableNo} text={caption} />
             <table className="kv">
                 <tbody>
@@ -55,7 +62,7 @@ const FieldsTable = ({ tableNo, caption, rows, notes }) => (
 
 /** longtable_sections: header row + bold section rows + data rows. */
 const SectionedTable = ({ tableNo, caption, headers, sections, renderRow, compact = true }) => (
-    <figure className="table long">
+    <figure className="table long" id={`table-${tableNo}`}>
         <Caption kind="Table" no={tableNo} text={caption} />
         <table className={compact ? 'compact' : ''}>
             <thead><tr>{headers.map((h, i) => <th key={i} className={h.align || ''}>{h.label ?? h}</th>)}</tr></thead>
@@ -78,6 +85,9 @@ const ctr = (v, key) => <td key={key} className="ctr">{v}</td>;
 
 const TitlePage = ({ page, currency }) => (
     <section className="title-page">
+        {/* Source of the running header; must sit inside the first page's
+            content or Paged.js gives it a page of its own. */}
+        <span className="running-title">{page.projectName}</span>
         <div className="tri-bar-vertical" />
         <div className="logos">
             {page.agencyLogo
@@ -127,27 +137,34 @@ const TitlePage = ({ page, currency }) => (
     </section>
 );
 
-const Toc = ({ entries, tables, figures }) => (
+/** Contents entry: title link, dotted leader, page number (resolved by Paged.js). */
+const TocItem = ({ href, level, children }) => (
+    <li className={`l${level}`}>
+        <a href={href}>{children}</a>
+        <span className="dots" />
+        <span className="pg"><a href={href} aria-hidden="true" /></span>
+    </li>
+);
+
+const Toc = ({ entries, tables, figures, runningTitle }) => (
     <section className="toc">
+        {runningTitle && <span className="running-title">{runningTitle}</span>}
         <h2>Contents</h2>
         <ol>
             {entries.map((e) => (
-                <li key={e.id} className={`l${e.level}`}>
-                    <a href={`#${e.id}`}>{e.number ? `${e.number} ` : ''}{e.title}</a>
-                    <span className="dots" />
-                </li>
+                <TocItem key={e.id} href={`#${e.id}`} level={e.level}>{e.number ? `${e.number} ` : ''}{e.title}</TocItem>
             ))}
         </ol>
         {tables.length > 0 && (
             <>
                 <h3>List of Tables</h3>
-                <ol>{tables.map((t) => <li key={t.no} className="l2"><span>Table {t.no}. {t.caption}</span><span className="dots" /></li>)}</ol>
+                <ol>{tables.map((t) => <TocItem key={t.no} href={`#table-${t.no}`} level={2}>Table {t.no}. {t.caption}</TocItem>)}</ol>
             </>
         )}
         {figures.length > 0 && (
             <>
                 <h3>List of Figures</h3>
-                <ol>{figures.map((f) => <li key={f.no} className="l2"><span>Figure {f.no}. {f.caption}</span><span className="dots" /></li>)}</ol>
+                <ol>{figures.map((f) => <TocItem key={f.no} href={`#figure-${f.no}`} level={2}>Figure {f.no}. {f.caption}</TocItem>)}</ol>
             </>
         )}
     </section>
@@ -191,7 +208,7 @@ const GlobalTraffic = ({ s }) => (
 );
 
 const SimpleRowsTable = ({ tableNo, caption, headers, rows, totalRow }) => (
-    <figure className="table">
+    <figure className="table" id={`table-${tableNo}`}>
         <Caption kind="Table" no={tableNo} text={caption} />
         <table>
             <thead><tr>{headers.map((h, i) => <th key={i} className={i ? 'num' : ''}>{h}</th>)}</tr></thead>
@@ -246,7 +263,7 @@ const TransportSection = ({ s }) => (
         <p className="intro">{s.intro}</p>
         {s.deliveries.length === 0 && <p className="empty">No transport deliveries recorded.</p>}
         {s.deliveries.length > 0 && (
-            <figure className="table">
+            <figure className="table" id={`table-${s.summaryNo}`}>
                 <Caption kind="Table" no={s.summaryNo} text="Transport Emissions — Summary by Vehicle" />
                 <table className="compact">
                     <thead><tr><th>Delivery</th><th>Vehicle</th><th>From-To</th><th className="num">Distance (km)</th><th className="num">Capacity (t)</th><th className="num">Gross Wt (t)</th><th className="num">Emission Factor</th><th className="num">Total Emissions (kgCO₂e)</th></tr></thead>
@@ -259,7 +276,7 @@ const TransportSection = ({ s }) => (
             </figure>
         )}
         {s.deliveries.map((d) => (
-            <figure className="table long" key={d.index}>
+            <figure className="table long" key={d.index} id={`table-${d.tableNo}`}>
                 <Caption kind="Table" no={d.tableNo} text={d.caption} />
                 <table className="compact">
                     <thead><tr><th>Material</th><th>Category</th><th className="num">(kg) Conversion Factor</th><th className="num">Quantity (kg)</th><th className="num">Trips</th><th className="num">Emissions (kgCO₂e)</th></tr></thead>
@@ -283,7 +300,7 @@ const MachinerySection = ({ s }) => (
                     rows={s.rows.map((r) => [r.source, r.consumption, r.days, r.ef, r.emissions])} />
             </>
         ) : (
-            <figure className="table long">
+            <figure className="table long" id={`table-${s.tableNo}`}>
                 <Caption kind="Table" no={s.tableNo} text={s.caption} />
                 <table className="compact">
                     <thead><tr><th>Equipment Name</th><th>Energy Source</th><th className="num">Fuel / Power Rating</th><th className="num">Avg Hrs / Day</th><th className="num">No. of Days</th><th className="num">Emission Factor (kgCO₂e/unit)</th><th className="num">Consumption</th><th className="num">Emissions (kgCO₂e)</th></tr></thead>
@@ -325,7 +342,7 @@ const ResultsSection = ({ r }) => {
     return (
         <>
             <p className="intro">{r.intro}</p>
-            <figure className="table long">
+            <figure className="table long" id={`table-${r.tableNo}`}>
                 <Caption kind="Table" no={r.tableNo} text={r.caption} />
                 <table className="compact">
                     <thead><tr><th>Description</th><th className="num">Present Value ({r.currency})</th></tr></thead>
@@ -347,7 +364,7 @@ const ResultsSection = ({ r }) => {
             {r.figures.map((f) => {
                 const Chart = FIGURE_COMPONENTS[f.key];
                 return (
-                    <figure className="fig" key={f.key}>
+                    <figure className="fig" key={f.key} id={`figure-${f.figureNo}`}>
                         <div className="chart"><Chart results={r.rawResults} currency={r.currency} /></div>
                         <Caption kind="Figure" no={f.figureNo} text={f.caption} />
                     </figure>
@@ -493,23 +510,17 @@ const InputSection = ({ s }) => {
 const numberSections = (doc) => {
     const toc = [];
     let n = 0;
-    const numbered = { intro: null, input: null, results: null, summary: null, inputs: [] };
+    const numbered = { intro: null, input: null, results: null, summary: null };
     if (doc.introduction) { n += 1; numbered.intro = String(n); toc.push({ id: 'introduction', number: numbered.intro, title: 'Introduction to Life Cycle Cost Assessment', level: 1 }); }
     if (doc.inputSections.length) {
         n += 1; numbered.input = String(n);
         toc.push({ id: 'input-data', number: numbered.input, title: 'Input data', level: 1 });
         doc.inputSections.forEach((s, i) => {
             const sub = `${n}.${i + 1}`;
-            const entry = { id: s.id, number: sub, title: s.title, level: 2, children: [] };
-            toc.push(entry);
+            toc.push({ id: s.id, number: sub, title: s.title, level: 2 });
             if (s.kind === 'group') {
-                s.children.forEach((c, j) => {
-                    const subsub = `${sub}.${j + 1}`;
-                    entry.children.push({ id: c.id, number: subsub });
-                    toc.push({ id: c.id, number: subsub, title: c.title, level: 3 });
-                });
+                s.children.forEach((c, j) => toc.push({ id: c.id, number: `${sub}.${j + 1}`, title: c.title, level: 3 }));
             }
-            numbered.inputs.push(entry);
         });
     }
     if (doc.results) { n += 1; numbered.results = String(n); toc.push({ id: 'lcca-results', number: numbered.results, title: 'LCCA results', level: 1 }); }
@@ -518,11 +529,23 @@ const numberSections = (doc) => {
     return { toc, numbered };
 };
 
+const initialPaged = () => {
+    try {
+        return new URLSearchParams(window.location.search).get('paged') === '1';
+    } catch {
+        return false;
+    }
+};
+
 /* ── Page ────────────────────────────────────────────────────────────────── */
 
 const ReportPage = ({ projectId, projectData }) => {
     const [selections, setSelections] = useState({});
     const [showSections, setShowSections] = useState(false);
+    const [paged, setPaged] = useState(initialPaged);
+    const [pagedState, setPagedState] = useState({ status: 'idle', total: 0, ms: 0 });
+    const sourceRef = useRef(null);
+    const pagesRef = useRef(null);
 
     const results = projectData?.outputs_data?.results || null;
     const currency = projectData?.general_info?.project_currency || projectData?.currency || 'INR';
@@ -540,33 +563,75 @@ const ReportPage = ({ projectId, projectData }) => {
         return () => { document.title = previous; };
     }, [doc.meta.projectName]);
 
+    // Page preview: lay the (already rendered) article out into A4 pages.
+    useEffect(() => {
+        if (!paged || !sourceRef.current || !pagesRef.current) return undefined;
+        let cancelled = false;
+        setPagedState({ status: 'working', total: 0, ms: 0 });
+        const started = performance.now();
+        const clone = sourceRef.current.cloneNode(true);
+        clone.classList.remove('source');
+        paginate({ html: clone.outerHTML, container: pagesRef.current })
+            .then(({ total }) => { if (!cancelled) setPagedState({ status: 'ready', total, ms: Math.round(performance.now() - started) }); })
+            .catch((error) => { if (!cancelled) setPagedState({ status: 'error', total: 0, ms: 0, error: error?.message || String(error) }); });
+        return () => { cancelled = true; teardown(); };
+    }, [paged, doc]);
+
     const inputNumber = (i) => `${numbered.input}.${i + 1}`;
+    const firstMainId = doc.introduction ? 'introduction' : doc.inputSections.length ? 'input-data' : doc.results ? 'lcca-results' : 'summary';
+    const mainClass = (id, extra = '') => `${extra}${id === firstMainId ? ' main-start' : ''}`.trim();
 
     return (
-        <div className="lcca-report-shell">
+        <div className={`lcca-report-shell${paged ? ' is-paged' : ''}`} data-paged-ready={paged && pagedState.status === 'ready' ? 'true' : 'false'}>
             <div className="lcca-report-toolbar">
                 <Link className="btn-like" to={`/project/${projectId}/Results`}>← Back to Results</Link>
                 <button type="button" onClick={() => setShowSections(true)}>Sections…</button>
-                <span className="hint">
-                    {doc.meta.hasResults ? `${doc.tables.length} tables · ${doc.figures.length} figures` : 'No calculation results yet — input sections only'}
-                </span>
-                <span className="spacer" />
-                <span className="hint">Choose “Save as PDF” in the print dialog</span>
-                <button type="button" className="primary" onClick={() => window.print()}>Print / Save as PDF</button>
+                {paged ? (
+                    <>
+                        <button type="button" onClick={() => setPaged(false)}>Continuous view</button>
+                        <span className="hint">
+                            {pagedState.status === 'working' && 'Laying out pages…'}
+                            {pagedState.status === 'ready' && `${pagedState.total} pages · laid out in ${(pagedState.ms / 1000).toFixed(1)} s`}
+                            {pagedState.status === 'error' && `Page layout failed: ${pagedState.error}`}
+                        </span>
+                        <span className="spacer" />
+                        <span className="hint">Choose “Save as PDF” in the print dialog</span>
+                        <button type="button" className="primary" disabled={pagedState.status !== 'ready'} onClick={() => window.print()}>Print / Save as PDF</button>
+                    </>
+                ) : (
+                    <>
+                        <span className="hint">
+                            {doc.meta.hasResults ? `${doc.tables.length} tables · ${doc.figures.length} figures` : 'No calculation results yet — input sections only'}
+                        </span>
+                        <span className="spacer" />
+                        <button type="button" className="primary" onClick={() => setPaged(true)}>Page preview / Print</button>
+                    </>
+                )}
             </div>
 
             <ReportSectionModal show={showSections} onHide={() => setShowSections(false)} onConfirm={(next) => { setSelections(next); setShowSections(false); }} />
 
-            <article className="lcca-report" data-testid="lcca-html-report">
+            {paged && (
+                <div className="lcca-paged">
+                    {pagedState.status !== 'ready' && (
+                        <div className="lcca-paged-status">
+                            {pagedState.status === 'error' ? `Page layout failed: ${pagedState.error}` : 'Laying out pages…'}
+                        </div>
+                    )}
+                    <div ref={pagesRef} />
+                </div>
+            )}
+
+            <article ref={sourceRef} className="lcca-report source" data-testid="lcca-html-report">
                 {doc.titlePage && <TitlePage page={doc.titlePage} currency={doc.meta.currency} />}
 
-                <Toc entries={toc} tables={doc.tables} figures={doc.figures} />
+                <Toc entries={toc} tables={doc.tables} figures={doc.figures} runningTitle={doc.titlePage ? null : doc.meta.projectName} />
 
                 {doc.introduction && (
-                    <section id="introduction">
+                    <section id="introduction" className={mainClass('introduction')}>
                         <h2><span className="num">{numbered.intro}</span>Introduction to Life Cycle Cost Assessment</h2>
                         <p>{INTRODUCTION}</p>
-                        <figure className="fig">
+                        <figure className="fig" id={`figure-${doc.introduction.figureNo}`}>
                             <img src={asset(FRAMEWORK_FIGURE.src)} alt={FRAMEWORK_FIGURE.caption} />
                             <Caption kind="Figure" no={doc.introduction.figureNo} text={FRAMEWORK_FIGURE.caption} />
                         </figure>
@@ -574,7 +639,7 @@ const ReportPage = ({ projectId, projectData }) => {
                 )}
 
                 {doc.inputSections.length > 0 && (
-                    <section id="input-data" className="page-break">
+                    <section id="input-data" className={mainClass('input-data', 'page-break')}>
                         <h2><span className="num">{numbered.input}</span>Input data</h2>
                         {doc.inputSections.map((s, i) => (
                             <section key={s.id} id={s.id}>
@@ -593,14 +658,14 @@ const ReportPage = ({ projectId, projectData }) => {
                 )}
 
                 {doc.results && (
-                    <section id="lcca-results" className="page-break">
+                    <section id="lcca-results" className={mainClass('lcca-results', 'page-break')}>
                         <h2><span className="num">{numbered.results}</span>LCCA results</h2>
                         <h3><span className="num">{numbered.results}.1</span>Life cycle cost results</h3>
                         <ResultsSection r={doc.results} />
                     </section>
                 )}
 
-                <section id="summary" className="page-break">
+                <section id="summary" className={mainClass('summary', 'page-break')}>
                     <h2><span className="num">{numbered.summary}</span>Summary and conclusions</h2>
                     <SummarySection summary={doc.summary} />
                 </section>

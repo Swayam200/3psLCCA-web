@@ -28,6 +28,7 @@
     "jspdf-autotable": "^5.0.7",
     "jszip": "^3.10.1",
     "katex": "^0.18.5",
+    "pagedjs": "^0.4.3",
     "pako": "^2.1.0",
     "react": "^19.2.4",
     "react-bootstrap": "^2.10.10",
