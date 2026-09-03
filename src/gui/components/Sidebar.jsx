@@ -26,6 +26,7 @@ const SIDEBAR_TREE = {
         "Demolition": [],
     },
     "Results": {},
+    "Report": {},
 };
 
 const ICON_MAP = {
@@ -40,6 +41,7 @@ const ICON_MAP = {
     "Recycling": "autorenew",
     "Demolition": "trash",
     "Results": "bar-chart",
+    "Report": "list",
 };
 
 const TreeNode = ({ label, childrenData, depth, activeNode, setActiveNode }) => {

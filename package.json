@@ -13,6 +13,7 @@
     "test:report": "REPORT_RUNTIME_TEST=1 node --test tests/reportRuntime.test.js",
     "test:demo": "node --test ai-demo/test.js",
     "verify:parity": "node scripts/verify-engine-parity.mjs",
+    "report:sample": "node scripts/print-report-sample.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -26,6 +27,7 @@
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
     "jszip": "^3.10.1",
+    "katex": "^0.18.5",
     "pako": "^2.1.0",
     "react": "^19.2.4",
     "react-bootstrap": "^2.10.10",
@@ -44,6 +46,8 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
+    "latex.css": "^1.14.0",
+    "playwright": "^1.62.1",
     "pyodide": "^314.0.2",
     "vite": "^8.0.12"
   },

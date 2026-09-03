@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useProjectData } from '../../../contexts/ProjectDataContext';
 import { Button, Form, ProgressBar } from 'react-bootstrap';
 import JSZip from 'jszip';
@@ -28,6 +29,8 @@ const AiCueSlot = (props) => (AiCueLazy ? (
 
 const Outputs = ({ addLog, navTrigger }) => {
     const { projectData, updateProjectData } = useProjectData();
+    const navigate = useNavigate();
+    const { projectId } = useParams();
 
     const projectInputs = React.useMemo(() => {
         return projectData ? buildCalculationProjectInputs(projectData) : null;
@@ -408,7 +411,15 @@ const Outputs = ({ addLog, navTrigger }) => {
             <div ref={reportRef} ref-id="report-container" className="p-4" style={{ color: 'var(--app-text-primary)', position: 'relative', backgroundColor: 'var(--app-bg-main)' }}>
                 {/* Desktop layout: page title, then the report button under it */}
                 <h2 className="mb-3" style={{ color: 'var(--app-primary-accent)' }}>Results</h2>
-                <div className="mb-4">
+                <div className="mb-4 d-flex flex-wrap gap-2">
+                    <Button
+                        variant="outline-primary"
+                        onClick={() => navigate(`/project/${projectId}/report`)}
+                        style={{ borderColor: 'var(--app-primary-accent)', color: 'var(--app-primary-accent)', fontWeight: 600 }}
+                        data-testid="view-html-report"
+                    >
+                        View Report
+                    </Button>
                     <Button
                         onClick={handleDownloadReport}
                         disabled={isGeneratingPdf}
