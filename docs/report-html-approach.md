@@ -81,17 +81,21 @@ project sidebar. The **Sections…** button reuses the existing section picker.
 | Very long table rows are never split, and a table header repeats on each printed page | Print CSS rules. | Generally better than LaTeX's `longtable` continuation notes. |
 | Remarks/notes fields are printed as plain text | Same as the LaTeX pipeline (`html_to_latex` strips formatting). | None. |
 
-## What was deliberately kept
+## How the two reports are offered
 
-- The LaTeX pipeline is untouched and still available as **Generate PDF
-  Report** on the Results page. The proposal is to make the HTML report the
-  default and keep LaTeX as an "advanced / desktop-identical" option for
-  capable machines.
+- **View Report** on the Results page opens the standard (HTML) report. This
+  is the default for everyone.
+- The LaTeX pipeline is untouched and lives under **Advanced** on the Results
+  page as **Generate desktop-identical PDF**. It is switched off by default; a
+  user can enable it there or in **Settings → Reports**, and can also make it
+  the main button (the standard report then stays one click away). An ⓘ
+  button explains both options in plain language. On computers that report
+  4 GB of memory or less the option carries a warning. Choices are stored per
+  browser.
 
-## Open decisions for review
+## Open decision
 
-1. Adopt the HTML report as the default report path? (LaTeX stays available.)
-2. Is "Print → Save as PDF" acceptable, or is a one-click download required?
+1. Is "Print → Save as PDF" acceptable, or is a one-click download required?
 
 ## Files
 

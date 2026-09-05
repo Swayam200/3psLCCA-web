@@ -8,6 +8,7 @@ import { FaCheckCircle, FaFileUpload } from 'react-icons/fa';
 import { computeAllSummaries } from './lifecycleSummary';
 import { generateReport } from './reportEngine';
 import ReportSectionModal from './ReportSectionModal';
+import ReportActions from './ReportActions.jsx';
 import ResultsView from './ResultsView';
 import { buildCalculationProjectInputs } from '../../../utils/projectDerivations';
 import {
@@ -411,27 +412,11 @@ const Outputs = ({ addLog, navTrigger }) => {
             <div ref={reportRef} ref-id="report-container" className="p-4" style={{ color: 'var(--app-text-primary)', position: 'relative', backgroundColor: 'var(--app-bg-main)' }}>
                 {/* Desktop layout: page title, then the report button under it */}
                 <h2 className="mb-3" style={{ color: 'var(--app-primary-accent)' }}>Results</h2>
-                <div className="mb-4 d-flex flex-wrap gap-2">
-                    <Button
-                        variant="outline-primary"
-                        onClick={() => navigate(`/project/${projectId}/report`)}
-                        style={{ borderColor: 'var(--app-primary-accent)', color: 'var(--app-primary-accent)', fontWeight: 600 }}
-                        data-testid="view-html-report"
-                    >
-                        View Report
-                    </Button>
-                    <Button
-                        onClick={handleDownloadReport}
-                        disabled={isGeneratingPdf}
-                        style={{ backgroundColor: 'var(--app-primary-accent)', border: 'none', color: '#1e1e28', fontWeight: 600, opacity: isGeneratingPdf ? 0.6 : 1 }}
-                    >
-                        {isGeneratingPdf ? (
-                            <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Generating...</>
-                        ) : (
-                            'Generate PDF Report'
-                        )}
-                    </Button>
-                </div>
+                <ReportActions
+                    onViewReport={() => navigate(`/project/${projectId}/report`)}
+                    onGenerateDesktopPdf={handleDownloadReport}
+                    isGeneratingPdf={isGeneratingPdf}
+                />
 
                 {isGeneratingPdf && reportProgress && (
                     <div className="mb-4" data-testid="report-progress">
