@@ -531,9 +531,9 @@ const numberSections = (doc) => {
 
 const initialPaged = () => {
     try {
-        return new URLSearchParams(window.location.search).get('paged') === '1';
+        return new URLSearchParams(window.location.search).get('paged') !== '0';
     } catch {
-        return false;
+        return true;
     }
 };
 

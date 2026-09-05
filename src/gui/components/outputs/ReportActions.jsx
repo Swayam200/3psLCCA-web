@@ -15,7 +15,7 @@ import { REPORT_LATEX, effectivePrimaryReport, deviceMemoryGb, isLowMemoryDevice
 
 const REPORT_INFO = {
     title: 'Which report should I use?',
-    standard: 'Standard report (recommended): opens instantly as a web page you can read on screen, then “Page preview / Print” gives a numbered A4 document you save as PDF from the browser. Nothing to download; works on any laptop.',
+    standard: 'Standard report (recommended): opens in the browser as numbered A4 pages within a few seconds, ready to read on screen or save as PDF. Nothing to download; works on any laptop.',
     desktop: 'Desktop-identical PDF: runs the desktop application’s own LaTeX typesetting inside the browser. The layout matches the desktop program page for page, but it downloads about 60 MB the first time, takes 10–20 seconds per report and needs a capable computer (8 GB of memory or more).',
     same: 'Both reports contain the same sections, tables and numbers. Only the typesetting differs.',
 };

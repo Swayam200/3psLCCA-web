@@ -53,9 +53,9 @@ await page.evaluate(({ id, data, name }) => {
     sessionStorage.setItem('isGuest', 'true');
 }, { id: projectId, data: project, name: project.name || 'M_20_2L_OF_S' });
 
-// 1. Continuous view: how fast the report is readable.
+// 1. Continuous view (?paged=0): how fast the report is readable.
 const t0 = Date.now();
-await page.goto(`${baseUrl}/project/${projectId}/report`, { waitUntil: 'networkidle' });
+await page.goto(`${baseUrl}/project/${projectId}/report?paged=0`, { waitUntil: 'networkidle' });
 await page.waitForSelector('[data-testid="lcca-html-report"]', { timeout: 60_000 });
 await page.evaluate(() => document.fonts.ready);
 const renderMs = Date.now() - t0;
@@ -67,9 +67,9 @@ const stats = await page.evaluate(() => ({
     words: document.querySelector('.lcca-report').innerText.split(/\s+/).length,
 }));
 
-// 2. Page preview (Paged.js): what actually prints.
+// 2. Default view — Paged.js pages: what actually prints.
 const t1 = Date.now();
-await page.goto(`${baseUrl}/project/${projectId}/report?paged=1`, { waitUntil: 'networkidle' });
+await page.goto(`${baseUrl}/project/${projectId}/report`, { waitUntil: 'networkidle' });
 await page.waitForSelector('.lcca-report-shell[data-paged-ready="true"]', { timeout: 120_000 });
 const pagedMs = Date.now() - t1;
 

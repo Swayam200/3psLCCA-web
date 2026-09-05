@@ -33,9 +33,9 @@ Modern fonts, numbered sections, booktabs-style tables). Charts are drawn by
 the same code as the Results page; equations in Appendix B are the desktop's
 own LaTeX formulas rendered by KaTeX.
 
-The report opens as a continuous, scrollable page. **Page preview / Print**
-lays it out into real A4 pages in the browser (Paged.js, ~300 KB, loaded on
-demand): title page without a number, contents / list of tables / list of
+The report opens directly as real A4 pages laid out in the browser (Paged.js,
+~300 KB, loaded on demand; pages appear as they are laid out, about 2.5 s for
+the whole reference project on a laptop): title page without a number, contents / list of tables / list of
 figures on roman-numbered pages with page numbers and dotted leaders, the body
 numbered from 1 with a running header (project name on the left, report title
 on the right) and the page number in the footer, and Appendix C on a landscape
@@ -73,7 +73,7 @@ project sidebar. The **Sections…** button reuses the existing section picker.
 
 | Difference | Why | Impact |
 |---|---|---|
-| **Page numbers come from a page-preview step**, not from the print dialog directly | A web page has no pages until it is printed and CSS cannot ask "which page am I on", so the report is first laid out into pages in the browser (Paged.js) and those pages are printed. The continuous view has no numbers in the contents list; the page preview and the PDF do. | One extra click (**Page preview / Print**) and ~2–3 s. Front matter is numbered i, ii, …; the body restarts at 1, like the LaTeX report. |
+| **Pages are laid out in the browser before printing** | A web page has no pages until it is printed and CSS cannot ask "which page am I on", so the report is laid out into pages in the browser (Paged.js) and those pages are printed. A plain continuous view is one click away (**Continuous view**) but has no page numbers. | ~2–3 s of layout when the report opens. Front matter is numbered i, ii, …; the body restarts at 1, like the LaTeX report. |
 | **Layout is similar, not identical** | Browser typesetting vs TeX: line breaks, page breaks and table widths differ; the PDF is 34 pages instead of 38 (browser tables are more compact, figures scale to width). | Cosmetic. Numbers and structure are identical. |
 | **Saving the PDF is a print dialog**, not an automatic download | The browser writes the PDF; the user picks "Save as PDF" (the file name is pre-filled). | Workflow change. A one-click download is possible later with a JS PDF writer if wanted. |
 | **Charts are vector drawings** (same code as the Results page) instead of matplotlib PNGs | No Python needed. | Sharper in print; visual style matches the on-screen Results page rather than matplotlib. |

@@ -22,8 +22,7 @@ const ReportSettingsTab = ({ theme }) => {
             <div className="mb-3">
                 <div className="fw-bold">Standard report <span style={{ ...muted, fontWeight: 400 }}>(recommended, always available)</span></div>
                 <div style={muted}>
-                    Opens instantly as a web page. “Page preview / Print” lays it out as a numbered A4 document that you save as PDF
-                    from the browser. Nothing to download; works on any laptop.
+                    Opens in the browser as numbered A4 pages within a few seconds; save it as PDF from the browser. Nothing to download; works on any laptop.
                 </div>
             </div>
 
