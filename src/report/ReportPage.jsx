@@ -12,7 +12,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ReportSectionModal from '../gui/components/outputs/ReportSectionModal.jsx';
 import { buildReportDocument } from './reportDocument.js';
-import { reportFileStem } from './reportFormat.js';
+import { EMDASH, reportFileStem } from './reportFormat.js';
 import {
     APPENDIX_A, APPENDIX_B, APPENDIX_B_GLOSSARY, APP_LOGO, CONSTRUCTION_LEGEND, DISCLAIMER,
     FRAMEWORK_FIGURE, INTRODUCTION, PREPARED_USING, REPORT_TITLE, SUMMARY_LEAD,
@@ -180,13 +180,13 @@ const ConstructionSection = ({ section }) => (
                     headers={['Material', { label: 'Quantity', align: 'num' }, { label: 'Unit', align: 'ctr' }, { label: 'Rate/Unit', align: 'num' }, { label: 'Rate Source', align: 'ctr' }, { label: `Total (${table.currency})`, align: 'num' }]}
                     sections={table.sections}
                     renderRow={(r) => [
-                        <td key="m">{r.material}{r.mark && <sup className="mark">{r.mark}</sup>}</td>,
+                        <td key="m">{r.material}{r.mark && <sup className="src-mark">{r.mark}</sup>}</td>,
                         num(r.quantity, 'q'), ctr(r.unit, 'u'), num(r.rate, 'r'), ctr(r.source ?? '—', 's'), num(r.total, 't'),
                     ]}
                 />
                 <p className="caption-note">
                     All rates and totals in {table.currency}.{' '}
-                    {CONSTRUCTION_LEGEND.map(([mark, meaning]) => <span key={mark}><sup className="mark">{mark}</sup> {meaning};&nbsp; </span>)}
+                    {CONSTRUCTION_LEGEND.map(([mark, meaning]) => <span key={mark}><sup className="src-mark">{mark}</sup> {meaning};&nbsp; </span>)}
                 </p>
             </Fragment>
         ))}
@@ -242,7 +242,7 @@ const MaterialSection = ({ s }) => (
                 tableNo={s.incNo} caption="Materials Included in Carbon Emissions Calculation"
                 headers={['Material', { label: 'Quantity', align: 'num' }, { label: 'Unit', align: 'ctr' }, { label: 'Conversion Factor', align: 'num' }, { label: 'Emission Factor', align: 'num' }, { label: 'Emission Factor Unit', align: 'ctr' }, { label: 'Total (kgCO₂e)', align: 'num' }]}
                 sections={s.included}
-                renderRow={(r) => [<td key="m">{r.material}</td>, num(r.quantity, 'q'), ctr(r.unit, 'u'), num(r.cf, 'c'), num(r.ef, 'e'), ctr(r.efUnit, 'eu'), num(r.total, 't')]}
+                renderRow={(r) => [<td key="m">{r.material}</td>, num(r.quantity, 'q'), ctr(r.unit, 'u'), num(r.cf, 'c'), num(r.ef, 'e'), ctr(r.efUnit || EMDASH, 'eu'), num(r.total, 't')]}
             />
         )}
         {s.excluded.length > 0 && (
@@ -302,7 +302,7 @@ const MachinerySection = ({ s }) => (
         ) : (
             <figure className="table long" id={`table-${s.tableNo}`}>
                 <Caption kind="Table" no={s.tableNo} text={s.caption} />
-                <table className="compact">
+                <table className="compact wide">
                     <thead><tr><th>Equipment Name</th><th>Energy Source</th><th className="num">Fuel / Power Rating</th><th className="num">Avg Hrs / Day</th><th className="num">No. of Days</th><th className="num">Emission Factor (kgCO₂e/unit)</th><th className="num">Consumption</th><th className="num">Emissions (kgCO₂e)</th></tr></thead>
                     <tbody>
                         {s.rows.map((r, i) => <tr key={i}><td>{r.name}</td><td>{r.source}</td>{num(r.rate, 'r')}{num(r.hrs, 'h')}{num(r.days, 'd')}{num(r.ef, 'e')}{num(r.consumption, 'c')}{num(r.emissions, 'm')}</tr>)}

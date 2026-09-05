@@ -16,14 +16,27 @@ const toNumber = (value) => {
     return Number.isFinite(n) ? n : null;
 };
 
-/** `f"{val:,.2f}"` — desktop's number cell. */
+/** Insert thousands separators into the integer part of a fixed-point string. */
+const group = (fixed) => {
+    const [int, frac] = fixed.split('.');
+    const sign = int.startsWith('-') ? '-' : '';
+    const digits = sign ? int.slice(1) : int;
+    const grouped = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return frac === undefined ? `${sign}${grouped}` : `${sign}${grouped}.${frac}`;
+};
+
+/**
+ * `f"{val:,.2f}"` — desktop's number cell.
+ *
+ * Rounds with toFixed, not Intl: toFixed rounds the exact binary value like
+ * Python's format does (0.975 → "0.97"), whereas Intl.NumberFormat rounds
+ * the shortest decimal representation (0.975 → "0.98") and would disagree
+ * with the desktop report on half-way cases.
+ */
 export const fmt = (value, decimals = DECIMALS) => {
     const n = toNumber(value);
     if (n === null) return EMDASH;
-    return n.toLocaleString('en-US', {
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals,
-    });
+    return group(n.toFixed(decimals));
 };
 
 /** `f"{val:.2f}"` — no thousands separator (percentages, factors). */
