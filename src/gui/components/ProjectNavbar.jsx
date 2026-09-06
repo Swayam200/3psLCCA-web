@@ -233,6 +233,8 @@ const ProjectNavbar = ({ onBackToHome, setActiveNode, onNewProject, onOpenProjec
                     <Button 
                         variant="link"
                         className="p-1 mx-1 text-secondary"
+                        aria-label={isLocked ? 'Unlock project' : 'Lock project'}
+                        aria-pressed={isLocked}
                         onClick={() => {
                             if (isLocked) {
                                 if (window.confirm("Unlock the project to edit its inputs?\n\nNothing is deleted: your inputs stay as they are and the current results remain on the Results page, but they will be out of date until you calculate again.")) {

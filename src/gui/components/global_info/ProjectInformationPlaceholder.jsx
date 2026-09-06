@@ -11,7 +11,6 @@ import ProfileAvatar from '../ProfileAvatar';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const BASE_DOCS_URL = 'https://yourdocs.com/general/';
 
 const COUNTRIES = countriesData.map((c) => c.COUNTRY);
 

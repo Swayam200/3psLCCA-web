@@ -37,7 +37,7 @@ const INITIAL_STATE = Object.values(SECTION_KEYS).reduce((acc, key) => {
     return acc;
 }, {});
 
-const ReportSectionModal = ({ show, onHide, onConfirm }) => {
+const ReportSectionModal = ({ show, onHide, onConfirm, confirmLabel = 'Generate PDF Report' }) => {
     const [selections, setSelections] = useState(INITIAL_STATE);
 
     const handleToggle = (key) => {
@@ -181,7 +181,7 @@ const ReportSectionModal = ({ show, onHide, onConfirm }) => {
                     onClick={() => onConfirm(selections)}
                     style={{ backgroundColor: 'var(--app-primary-accent)', borderColor: 'var(--app-primary-accent)', color: '#000' }}
                 >
-                    Generate PDF Report
+                    {confirmLabel}
                 </Button>
             </Modal.Footer>
             <style>{`

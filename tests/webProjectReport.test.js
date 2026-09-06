@@ -176,3 +176,15 @@ test('BUG-04: web transport deliveries resolve their material and emissions in t
     assert.equal(delivery.rows[0].emissions, '600.00');
     assert.equal(delivery.summary.total, '600.00');
 });
+
+test('BUG-09/10/17: a report without results is a draft with no placeholder conclusions; labels and provenance follow the data', () => {
+    const doc = buildReportDocument({ ...webProject(), maintenance_repair_data: { periodic_maintenance_carbon_cost: 2, bearing_exp_joint_cost: 8 } }, { results: null, currency: 'INR' });
+    assert.equal(doc.meta.hasResults, false);
+    assert.equal(doc.summary, null);
+    const appendixA = doc.appendices.find((a) => a.kind === 'appendix-a');
+    assert.match(appendixA.rateStatement, /unit rates taken from QA/);
+    const maintenance = findSection(doc, 'maintenance');
+    const labels = Object.fromEntries(maintenance.rows.filter((r) => r.label).map((r) => [r.label, r.value]));
+    assert.equal(labels['Periodic Maintenance Carbon Cost'], '2 (% of initial carbon emission cost)');
+    assert.equal(labels['Bearing & Expansion Joint Replacement Cost'], '8 (% of superstructure cost)');
+});

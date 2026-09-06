@@ -6,7 +6,6 @@ import '../financialdata/FinancialData.css';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const BASE_DOCS_URL = 'https://yourdocs.com/demolition/';
 
 const DEMOLITION_SECTIONS = [
     {
@@ -89,22 +88,10 @@ function SectionHeader({ title }) {
     );
 }
 
-function FieldHint({ text, docSlug }) {
+function FieldHint({ text }) {
     return (
         <div style={{ fontSize: '0.8rem', color: 'var(--app-text-muted)', marginBottom: '8px' }}>
             {text}
-            {docSlug && (
-                <a
-                    href={`${BASE_DOCS_URL}${docSlug}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-decoration-none ms-1"
-                    style={{ color: 'var(--app-primary-accent)', fontSize: '0.75rem' }}
-                    title="View documentation"
-                >
-                    ⓘ
-                </a>
-            )}
         </div>
     );
 }

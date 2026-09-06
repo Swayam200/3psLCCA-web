@@ -210,7 +210,7 @@ const DeliveryModal = ({ show, onHide, onSave, initialData }) => {
                         <Form.Control size="sm" type="number" value={vehicle.empty_weight} onChange={(event) => setVehicleField('empty_weight', event.target.value)} />
                     </div>
                     <div className="col-md-3">
-                        <Form.Label>EMISSION FACTOR *</Form.Label>
+                        <Form.Label>EMISSION FACTOR (kgCO₂e / t·km) *</Form.Label>
                         <Form.Control size="sm" type="number" value={vehicle.emission_factor} onChange={(event) => setVehicleField('emission_factor', event.target.value)} />
                     </div>
                 </div>

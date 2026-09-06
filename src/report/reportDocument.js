@@ -96,20 +96,22 @@ const FINANCIAL_FIELDS = [
 ];
 
 const PCT_IC = '(% of initial construction cost)';
+const PCT_CARBON = '(% of initial carbon emission cost)';
+const PCT_SUPER = '(% of superstructure cost)';
 const MAINTENANCE_FIELDS = [
     { group: 'Routine Maintenance' },
     ['routine_inspection_cost', 'Routine Inspection Cost', PCT_IC], ['routine_inspection_freq', 'Routine Inspection Frequency', '(year)'],
     { group: 'Periodic Maintenance' },
     ['periodic_maintenance_cost', 'Periodic Maintenance Cost', PCT_IC],
-    ['periodic_maintenance_carbon_cost', 'Periodic Maintenance Carbon Cost', PCT_IC],
+    ['periodic_maintenance_carbon_cost', 'Periodic Maintenance Carbon Cost', PCT_CARBON],
     ['periodic_maintenance_freq', 'Periodic Maintenance Frequency', '(year)'],
     { group: 'Major Inspection' },
     ['major_inspection_cost', 'Major Inspection Cost', PCT_IC], ['major_inspection_freq', 'Major Inspection Frequency', '(year)'],
     { group: 'Major Repair' },
-    ['major_repair_cost', 'Major Repair Cost', PCT_IC], ['major_repair_carbon_cost', 'Major Repair Carbon Cost', PCT_IC],
+    ['major_repair_cost', 'Major Repair Cost', PCT_IC], ['major_repair_carbon_cost', 'Major Repair Carbon Cost', PCT_CARBON],
     ['major_repair_freq', 'Major Repair Frequency', '(year)'], ['major_repair_duration', 'Major Repair Duration', '(months)'],
     { group: 'Bearings & Expansion Joints' },
-    ['bearing_exp_joint_cost', 'Bearing & Expansion Joint Replacement Cost', PCT_IC],
+    ['bearing_exp_joint_cost', 'Bearing & Expansion Joint Replacement Cost', PCT_SUPER],
     ['bearing_exp_joint_freq', 'Bearing & Expansion Joint Replacement Frequency', '(year)'],
     ['bearing_exp_joint_duration', 'Bearing & Expansion Joint Replacement Duration', '(days)'],
 ];
@@ -307,6 +309,31 @@ const collectForRecycling = (chunks) => {
 };
 
 const WEB_MATERIAL_PREFIX = /^(foundation_data|substructure_data|superstructure_data|miscellaneous_data)-/;
+
+/**
+ * Appendix A: say where the construction unit rates actually came from
+ * instead of asserting a schedule of rates that may not have been used.
+ */
+const rateProvenanceStatement = (chunks) => {
+    const sources = new Set();
+    let manual = 0;
+    let total = 0;
+    for (const [chunkId] of STRUCTURE_CHUNKS) {
+        for (const items of Object.values(obj(chunks[chunkId]))) {
+            for (const item of arr(items)) {
+                if (obj(item.state).in_trash === true) continue;
+                total += 1;
+                const source = String(obj(item.values).rate_source || '').trim();
+                if (source && source !== EMDASH) sources.add(source); else manual += 1;
+            }
+        }
+    }
+    if (!total) return 'No construction items were entered.';
+    const list = [...sources].join(', ');
+    if (sources.size && manual === 0) return `Initial construction costs are based on estimated quantities and unit rates taken from ${list}.`;
+    if (sources.size) return `Initial construction costs are based on estimated quantities and unit rates taken from ${list} where a source is recorded; the remaining ${manual} of ${total} rates were entered by the user.`;
+    return 'Initial construction costs are based on estimated quantities and unit rates entered by the user; no schedule of rates was referenced.';
+};
 
 /** transport_emissions_latex */
 const buildTransport = (chunks) => {
@@ -743,11 +770,11 @@ export const buildReportDocument = (projectData = {}, { results = null, currency
     }
 
     // 4. Summary and conclusions
-    doc.summary = Object.keys(engineResults).length ? buildSummary(engineResults) : { stageLabel: '', stagePct: '', pillarLabel: '', pillarPct: '' };
+    doc.summary = Object.keys(engineResults).length ? buildSummary(engineResults) : null;
 
     // 5. Appendices
     doc.appendices = [
-        { id: 'appendix-a', kind: 'appendix-a' },
+        { id: 'appendix-a', kind: 'appendix-a', rateStatement: rateProvenanceStatement(chunks) },
         { id: 'appendix-b', kind: 'appendix-b' },
     ];
     if (!isGlobal) {

@@ -256,6 +256,7 @@ function ProjectViewWrapper({ projectData, setProjectData, logs, setLogs, isLock
         saveState={saveState}
       >
         {content ? React.cloneElement(content, {
+          key: activeNode,
           logs,
           onClearLogs: handleClearLogs,
           isLocked: isLocked,

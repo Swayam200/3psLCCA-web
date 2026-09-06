@@ -391,7 +391,7 @@ const MaterialAddModal = ({ sectionName, onClose, onAdd, projectData, editData }
                                 </div>
                                 <div className="row" style={{ opacity: includeCarbon ? 1 : 0.5, pointerEvents: includeCarbon ? 'auto' : 'none' }}>
                                     <div className="col-md-4">
-                                        <label className="form-label mb-1">Emission Factor</label>
+                                        <label className="form-label mb-1">Emission Factor (kgCO₂e per unit below)</label>
                                         <input
                                             type="text"
                                             className="form-control form-control-sm"
@@ -401,7 +401,7 @@ const MaterialAddModal = ({ sectionName, onClose, onAdd, projectData, editData }
                                         />
                                     </div>
                                     <div className="col-md-4">
-                                        <label className="form-label mb-1">Per Unit</label>
+                                        <label className="form-label mb-1">Per unit of material</label>
                                         <UnitDropdown value={emissionPerUnit} onChange={setEmissionPerUnit} />
                                     </div>
                                     <div className="col-md-4">

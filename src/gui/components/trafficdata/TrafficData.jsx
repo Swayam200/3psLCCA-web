@@ -193,6 +193,7 @@ function InfoIcon({ title, message }) {
 function SectionHeader({ title }) { return <h5 className="mb-4 fw-bold pb-2 mt-4" style={{ borderBottom: '1px solid var(--app-border-dark)', fontSize: '1rem', color: 'var(--app-text-primary)', transition: 'all 0.3s' }}>{title}</h5>; }
 
 function InputField({ label, hint, infoTitle, infoMessage, value, onChange, unit, required, step, decimals }) {
+    const inputId = `traffic-${String(label).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
     const displayValue = value === null || value === undefined || value === ''
         ? ''
         : decimals != null
@@ -201,7 +202,7 @@ function InputField({ label, hint, infoTitle, infoMessage, value, onChange, unit
 
     return (
         <div className="mb-4">
-            <label className="fw-bold mb-1 d-block" style={{ fontSize: '0.9rem', color: 'var(--app-text-secondary)', transition: 'color 0.3s' }}>
+            <label htmlFor={inputId} className="fw-bold mb-1 d-block" style={{ fontSize: '0.9rem', color: 'var(--app-text-secondary)', transition: 'color 0.3s' }}>
                 {label}{required && <span className="text-danger"> *</span>}
             </label>
             {hint && (
@@ -211,7 +212,7 @@ function InputField({ label, hint, infoTitle, infoMessage, value, onChange, unit
                 </div>
             )}
             <div className="input-group">
-                <input type="number" step={step} className="form-control" value={displayValue} onChange={(e) => onChange(e.target.value)} />
+                <input id={inputId} type="number" step={step} className="form-control" value={displayValue} onChange={(e) => onChange(e.target.value)} />
                 {unit && <span className="input-group-text border-start-0" style={{ fontSize: '0.8rem', backgroundColor: 'var(--app-input-bg)', borderColor: 'var(--app-input-border)' }}>{unit}</span>}
             </div>
         </div>
@@ -449,6 +450,7 @@ const TrafficData = () => {
     const [hasValidated, setHasValidated] = useState(false);
     const [wpiEditor, setWpiEditor] = useState(null);
     const reroutingSelectRef = useRef(null);
+    const accidentShareTotal = VEHICLES.reduce((sum, v) => sum + (Number(form.vehicles?.[v.key]?.accident_percentage) || 0), 0);
 
     useEffect(() => {
         updateProjectData('traffic_data', serializeTrafficForm(form));
@@ -599,7 +601,7 @@ const TrafficData = () => {
             <SectionHeader title="Vehicle Traffic Data" />
             <div className="table-responsive mb-4">
                 <table className="table table-bordered table-sm text-center align-middle" style={{ backgroundColor: 'var(--app-bg-card)', borderColor: 'var(--app-border-mid)', marginBottom: 0 }}>
-                    <thead><tr><th style={{ width: '35%', backgroundColor: 'var(--app-bg-alt)', color: 'var(--app-text-primary)', borderColor: 'var(--app-border-mid)', fontWeight: 500, padding: '12px 8px' }}>Vehicle Type</th><th style={{ width: '25%', backgroundColor: 'var(--app-bg-alt)', color: 'var(--app-text-primary)', borderColor: 'var(--app-border-mid)', fontWeight: 500, padding: '12px 8px' }}>Vehicles / Day</th><th style={{ width: '20%', backgroundColor: 'var(--app-bg-alt)', color: 'var(--app-text-primary)', borderColor: 'var(--app-border-mid)', fontWeight: 500, padding: '12px 8px' }}>Accident (% of vehicles)</th><th style={{ width: '20%', backgroundColor: 'var(--app-bg-alt)', color: 'var(--app-text-primary)', borderColor: 'var(--app-border-mid)', fontWeight: 500, padding: '12px 8px' }}>Power to weight ratio (PWR)</th></tr></thead>
+                    <thead><tr><th style={{ width: '35%', backgroundColor: 'var(--app-bg-alt)', color: 'var(--app-text-primary)', borderColor: 'var(--app-border-mid)', fontWeight: 500, padding: '12px 8px' }}>Vehicle Type</th><th style={{ width: '25%', backgroundColor: 'var(--app-bg-alt)', color: 'var(--app-text-primary)', borderColor: 'var(--app-border-mid)', fontWeight: 500, padding: '12px 8px' }}>Vehicles / Day</th><th style={{ width: '20%', backgroundColor: 'var(--app-bg-alt)', color: 'var(--app-text-primary)', borderColor: 'var(--app-border-mid)', fontWeight: 500, padding: '12px 8px' }}>Share of accidents (%)</th><th style={{ width: '20%', backgroundColor: 'var(--app-bg-alt)', color: 'var(--app-text-primary)', borderColor: 'var(--app-border-mid)', fontWeight: 500, padding: '12px 8px' }}>Power to weight ratio (PWR)</th></tr></thead>
                     <tbody>
                         {VEHICLES.map(v => (
                             <tr key={v.key}>
@@ -619,6 +621,14 @@ const TrafficData = () => {
                             </tr>
                         ))}
                     </tbody>
+                    <tfoot>
+                        <tr>
+                            <td className="text-start ps-3" style={{ fontSize: '0.8rem', color: 'var(--app-text-muted)' }}>Share of accidents by vehicle type — must total 100 %</td>
+                            <td />
+                            <td className="text-end pe-2 fw-bold" data-testid="accident-share-total" style={{ color: Math.abs(accidentShareTotal - 100) > 0.1 ? '#dc3545' : 'var(--app-text-primary)' }}>{accidentShareTotal.toFixed(2)} %</td>
+                            <td />
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
 
@@ -682,7 +692,7 @@ const TrafficData = () => {
             <InputField label="Rerouting Distance" hint="Distance travel by the road users due to rerouting during construction." unit="(km)" step="0.001" decimals={3} value={form.road_params.additional_reroute_distance_km} onChange={(v) => setForm(prev => ({ ...prev, road_params: { ...prev.road_params, additional_reroute_distance_km: Number(v) } }))} />
             <InputField label="Rerouting Time" hint="Travel time incurred by road users due to rerouting during construction." unit="(min)" step="0.001" decimals={3} value={form.road_params.additional_travel_time_min} onChange={(v) => setForm(prev => ({ ...prev, road_params: { ...prev.road_params, additional_travel_time_min: Number(v) } }))} />
             <InputField label="Crash Rate along Rerouting Route" hint="Number of accidents per million kilometers of road length per day." unit="(acc / M km)" required step="0.01" decimals={2} value={form.road_params.crash_rate_accidents_per_million_km} onChange={(v) => setForm(prev => ({ ...prev, road_params: { ...prev.road_params, crash_rate_accidents_per_million_km: Number(v) } }))} />
-            <InputField label="Work Zone Multiplier" hint="Multiplier applied to reflect higher accident risk or delays due to construction work zone conditions." required step="0.0001" decimals={4} value={form.road_params.work_zone_multiplier} onChange={(v) => setForm(prev => ({ ...prev, road_params: { ...prev.road_params, work_zone_multiplier: Number(v) } }))} />
+            <InputField label="Work Zone Multiplier" hint="Scales the work-zone accident adjustment: 1 applies the full work-zone accident risk (default), 0 switches it off. Values between 0 and 1 apply it partially." required step="0.0001" decimals={4} value={form.road_params.work_zone_multiplier} onChange={(v) => setForm(prev => ({ ...prev, road_params: { ...prev.road_params, work_zone_multiplier: Number(v) } }))} />
 
             <SectionHeader title="Traffic Flow" />
             <InputField label="Number of Peak Hours" required value={form.num_peak_hours} onChange={(v) => {

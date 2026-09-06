@@ -10,7 +10,6 @@ const uid = () => `row-${++_uid}`;
 // calcTotal removed as it's in MaterialTable.jsx
 
 const DEFAULT_SECTIONS = [
-    { id: 'bearing',       name: 'Bearing',         rows: [] },
     { id: 'railing',       name: 'Railing',         rows: [] },
     { id: 'drain_spouts',  name: 'Drainage Spouts', rows: [] },
     { id: 'asphalt',       name: 'Asphalt Work',    rows: [] },

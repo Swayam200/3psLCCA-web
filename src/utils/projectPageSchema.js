@@ -740,7 +740,7 @@ export const validateTrafficData = (value) => {
             return sum + (numberValue(data.vehicles[key]?.accident_percentage) || 0);
         }, 0);
         if (Math.abs(accidentTotal - 100) > 0.1) {
-            errors.push('Vehicle accident percentages must sum to 100.');
+            errors.push('Shares of accidents by vehicle type must total 100 %.');
         }
         for (const key of ['hcv', 'mcv']) {
             const row = data.vehicles[key];
@@ -770,7 +770,7 @@ export const validateTrafficData = (value) => {
     }
     const workZoneMultiplier = numberValue(data.road_params.work_zone_multiplier);
     if (workZoneMultiplier === null || workZoneMultiplier < 0 || workZoneMultiplier > 1) {
-        errors.push('Work zone multiplier must be between 0 and 1.');
+        errors.push('Work zone multiplier must be between 0 and 1 (1 = full work-zone accident risk, 0 = off).');
     }
     const activePeaks = Object.entries(data.peak_distribution)
         .filter(([key]) => key.startsWith('peak_hour_'))
