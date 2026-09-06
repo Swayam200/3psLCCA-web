@@ -216,12 +216,9 @@ const ProjectNavbar = ({ onBackToHome, setActiveNode, onNewProject, onOpenProjec
                     onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--app-primary-accent)'; e.currentTarget.style.borderColor = 'var(--app-primary-accent)'; e.currentTarget.style.color = 'var(--app-bg-card)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.borderColor = 'var(--app-border-mid)'; e.currentTarget.style.color = 'var(--app-text-secondary)'; }}
                     onClick={() => {
-                        addLog("Calculation request initiated...");
-                        setTimeout(() => addLog("Calculation engine: processing LCCA data models."), 300);
-                        setTimeout(() => {
-                            addLog("Calculation success: output matrices generated.");
-                            setIsLocked(true);
-                        }, 1200);
+                        // The calculation itself runs on the Results page; the
+                        // project is locked there once it succeeds.
+                        addLog("Opening Results — run the calculation from there.");
                         setActiveNode('Results');
                     }}
                 >
@@ -238,9 +235,9 @@ const ProjectNavbar = ({ onBackToHome, setActiveNode, onNewProject, onOpenProjec
                         className="p-1 mx-1 text-secondary"
                         onClick={() => {
                             if (isLocked) {
-                                if (window.confirm("Unlocking will clear the current results and reset all inputs.\n\nContinue?")) {
+                                if (window.confirm("Unlock the project to edit its inputs?\n\nNothing is deleted: your inputs stay as they are and the current results remain on the Results page, but they will be out of date until you calculate again.")) {
                                     setIsLocked(false);
-                                    addLog("Project unlocked. Operations resumed.");
+                                    addLog("Project unlocked. Inputs can be edited; recalculate to refresh the results.");
                                 }
                             } else {
                                 setIsLocked(true);

@@ -1,260 +1,138 @@
-/* eslint-disable no-unused-vars */
-import React, { useEffect, useState } from 'react';
+/**
+ * Recyclability editor for one construction material.
+ *
+ * Only the two recycling inputs are editable here — scrap rate and recovery
+ * after demolition — because everything else (quantity, unit, rate, carbon
+ * factor) belongs to Construction Work Data and is edited there. Those
+ * values are shown read-only for context, straight from the row, and the
+ * preview is computed from what is on screen.
+ */
+import { useEffect, useMemo, useState } from 'react';
 import { Modal, Button, Form, Row, Col } from 'react-bootstrap';
 
+const parse = (value) => {
+    const n = parseFloat(String(value ?? '').replace(/,/g, ''));
+    return Number.isFinite(n) ? n : 0;
+};
+
+const fmt = (value, digits = 3) => new Intl.NumberFormat('en-IN', {
+    minimumFractionDigits: Math.min(digits, 3),
+    maximumFractionDigits: digits,
+}).format(value);
+
+const unitSymbol = (unit) => String(unit || '').split(/\s[—-]\s/)[0].trim() || '—';
+
 const EditRecyclabilityModal = ({ show, onClose, item, onSave }) => {
-    const [formData, setFormData] = useState({
-        materialName: item?.material || 'Steel Rebar (Fe500)',
-        itemId: '',
-        quantityValue: item?.qtyValue || '2.102',
-        quantityUnit: item?.qtyUnit || 'm - Metre',
-        rateCost: '88341.0',
-        rateSource: '',
-        emissionFactor: '2.6',
-        perUnit: 'kg - Kilogram',
-        emissionSource: '',
-        conversionFactor: '1000.0',
-        scrapRate: item?.scrapRate || '32500.000',
-        recoveryPercent: item?.recyclability || '75.000',
-        grade: '',
-        type: ''
-    });
+    const [scrapRate, setScrapRate] = useState('');
+    const [recoveryPercent, setRecoveryPercent] = useState('');
+    const [errors, setErrors] = useState({});
 
     useEffect(() => {
         if (!show) return;
-        setFormData({
-            materialName: item?.material || 'Steel Rebar (Fe500)',
-            itemId: item?.itemId || '',
-            quantityValue: item?.quantityValue || item?.qtyValue || '2.102',
-            quantityUnit: item?.quantityUnit || item?.qtyUnit || 'm - Metre',
-            rateCost: item?.rateCost || '88341.0',
-            rateSource: item?.rateSource || '',
-            emissionFactor: item?.emissionFactor || '2.6',
-            perUnit: item?.perUnit || 'kg - Kilogram',
-            emissionSource: item?.emissionSource || '',
-            conversionFactor: item?.conversionFactor || '1000.0',
-            scrapRate: item?.scrapRate || '32500.000',
-            recoveryPercent: item?.recoveryPercent || item?.recyclability || '75.000',
-            grade: item?.grade || '',
-            type: item?.type || ''
-        });
+        // Reset the two inputs each time the dialog opens for a (new) row.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setScrapRate(item?.scrapRate ?? '');
+        setRecoveryPercent(item?.recoveryPercent ?? item?.recyclability ?? '');
+        setErrors({});
     }, [show, item]);
+
+    const quantity = parse(item?.qtyValue);
+    const unit = unitSymbol(item?.qtyUnit);
+    const currency = item?.currency || '';
+    const preview = useMemo(() => {
+        const pct = parse(recoveryPercent);
+        const rate = parse(scrapRate);
+        const recyclable = quantity * (pct / 100);
+        return { pct, rate, recyclable, recovered: recyclable * rate };
+    }, [quantity, recoveryPercent, scrapRate]);
 
     if (!show) return null;
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+    const validate = () => {
+        const next = {};
+        const pct = parse(recoveryPercent);
+        const rate = parse(scrapRate);
+        if (recoveryPercent === '' || pct < 0 || pct > 100) next.recoveryPercent = 'Enter a recovery between 0 and 100 %.';
+        if (scrapRate === '' || rate < 0) next.scrapRate = 'Enter a scrap rate of 0 or more.';
+        setErrors(next);
+        return Object.keys(next).length === 0;
     };
 
     const handleSave = () => {
-        onSave({ ...item, ...formData });
+        if (!validate()) return;
+        onSave({ ...item, scrapRate, recoveryPercent });
         onClose();
     };
 
+    const readOnly = (label, value, testId) => (
+        <Col md={4} className="mb-2">
+            <div style={{ fontSize: '0.75rem', color: 'var(--app-text-muted)' }}>{label}</div>
+            <div data-testid={testId} style={{ fontSize: '0.9rem', color: 'var(--app-text-primary)' }}>{value}</div>
+        </Col>
+    );
+
+    const emissionFactor = item?.emissionFactor === '' || item?.emissionFactor === undefined || item?.emissionFactor === null
+        ? null : parse(item.emissionFactor);
+
     return (
-        <Modal 
-            show={show} 
-            onHide={onClose} 
-            centered 
-            size="lg"
-            className="custom-edit-modal"
-            contentClassName="bg-dark text-light border-0"
-            style={{ fontFamily: '"Segoe UI", system-ui, sans-serif' }}
-        >
-            <style>{`
-                .custom-edit-modal .modal-content {
-                    background-color: var(--app-bg-card) !important;
-                    color: var(--app-text-primary) !important;
-                    border-radius: 8px;
-                    border: 1px solid var(--app-border-mid) !important;
-                    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-                }
-                .custom-edit-modal .modal-header {
-                    border-bottom: 1px solid var(--app-border-light);
-                    padding: 12px 20px;
-                }
-                .custom-edit-modal .modal-footer {
-                    border-top: 1px solid var(--app-border-light);
-                    padding: 12px 20px;
-                }
-                .custom-edit-modal .form-control, .custom-edit-modal .form-select {
-                    background-color: var(--app-input-bg) !important;
-                    border: 1px solid var(--app-input-border) !important;
-                    color: var(--app-input-text) !important;
-                    font-size: 0.85rem;
-                }
-                .custom-edit-modal .form-control:focus, .custom-edit-modal .form-select:focus {
-                    border-color: var(--app-primary-accent) !important;
-                    box-shadow: 0 0 0 2px rgba(154, 205, 50, 0.25) !important;
-                }
-                .custom-edit-modal .form-label {
-                    color: var(--app-text-secondary);
-                    font-size: 0.85rem;
-                    margin-bottom: 4px;
-                }
-                .custom-edit-modal .section-box {
-                    background-color: var(--app-bg-main);
-                    border: 1px solid var(--app-border-light);
-                    border-radius: 6px;
-                    padding: 16px;
-                    margin-bottom: 16px;
-                }
-                .btn-green-save {
-                    background-color: var(--app-primary-accent) !important;
-                    border-color: var(--app-primary-accent) !important;
-                    color: #000 !important;
-                    font-weight: 600;
-                    padding: 6px 16px;
-                    font-size: 0.85rem;
-                }
-                .btn-cancel-dark {
-                    background-color: var(--app-bg-alt) !important;
-                    border: 1px solid var(--app-border-mid) !important;
-                    color: var(--app-text-secondary) !important;
-                    padding: 6px 16px;
-                    font-size: 0.85rem;
-                }
-                .btn-cancel-dark:hover {
-                    color: var(--app-text-primary) !important;
-                    background-color: var(--app-border-light) !important;
-                }
-                /* Need to override close button to make it visible on dark background if necessary, 
-                   but 'btn-close-white' is standard bootstrap */
-            `}</style>
-
-            <Modal.Header closeButton closeVariant={document.documentElement.style.getPropertyValue('--app-bg-main') === '#f5f6f8' ? undefined : "white"}>
-                <Modal.Title className="fw-bold" style={{ fontSize: '1rem' }}>
-                    Edit Recyclability - {formData.materialName}
-                </Modal.Title>
+        <Modal show={show} onHide={onClose} centered size="lg" contentClassName="border-0" data-testid="recyclability-modal">
+            <Modal.Header closeButton style={{ backgroundColor: 'var(--app-bg-card)', color: 'var(--app-text-primary)', borderBottom: '1px solid var(--app-border-mid)' }}>
+                <Modal.Title style={{ fontSize: '1rem' }}>Recyclability — {item?.material || 'Material'}</Modal.Title>
             </Modal.Header>
-
-            <Modal.Body className="p-4">
-                <Row className="mb-3">
-                    <Col>
-                        <Form.Label>Material Name <span className="text-danger">*</span></Form.Label>
-                        <Form.Control type="text" name="materialName" value={formData.materialName} onChange={handleChange} />
-                    </Col>
-                </Row>
-
-                <Row className="mb-3">
-                    <Col>
-                        <Form.Label>Item ID / SOR Code</Form.Label>
-                        <Form.Control type="text" placeholder="e.g. 12.01 (Leave blank for manual)" name="itemId" value={formData.itemId} onChange={handleChange} />
-                    </Col>
-                </Row>
-
-                <Form.Group className="mb-3" controlId="allowDbEditing">
-                    <Form.Check type="checkbox" label={<span style={{ color: 'var(--app-text-secondary)', fontSize: '0.85rem' }}>Allow editing DB-filled values</span>} />
-                </Form.Group>
-
-                <Row className="mb-3">
-                    <Col md={6}>
-                        <Form.Label>Quantity <span className="text-danger">*</span></Form.Label>
-                        <Form.Control type="text" name="quantityValue" value={formData.quantityValue} onChange={handleChange} />
-                    </Col>
-                    <Col md={6}>
-                        <Form.Label>Unit <span className="text-danger">*</span></Form.Label>
-                        <Form.Select name="quantityUnit" value={formData.quantityUnit} onChange={handleChange}>
-                            <option>m - Metre</option>
-                            <option>t - Tonnes</option>
-                            <option>m³ - Cubic Metre</option>
-                        </Form.Select>
-                    </Col>
-                </Row>
-
-                <Row className="mb-4">
-                    <Col md={6}>
-                        <Form.Label>Rate (Cost)</Form.Label>
-                        <Form.Control type="text" name="rateCost" value={formData.rateCost} onChange={handleChange} />
-                    </Col>
-                    <Col md={6}>
-                        <Form.Label>Rate Source</Form.Label>
-                        <Form.Control type="text" placeholder="e.g. DSR 2023, Market Rate" name="rateSource" value={formData.rateSource} onChange={handleChange} />
-                    </Col>
-                </Row>
-
-                {/* Carbon Emission Section */}
-                <div className="section-box">
-                    <div className="d-flex justify-content-between align-items-center mb-3">
-                        <h6 className="m-0" style={{ fontSize: '0.9rem', color: 'var(--app-logo-accent)', fontWeight: 'bold' }}>Carbon Emission</h6>
-                        <Form.Check type="checkbox" id="includeCarbon" label="Include" defaultChecked style={{ fontSize: '0.85rem', color: 'var(--app-text-primary)' }} />
+            <Modal.Body style={{ backgroundColor: 'var(--app-bg-main)', color: 'var(--app-text-primary)' }}>
+                <div className="p-3 rounded mb-3" style={{ backgroundColor: 'var(--app-bg-card)', border: '1px solid var(--app-border-mid)' }}>
+                    <div className="d-flex justify-content-between align-items-baseline mb-2">
+                        <h6 className="m-0" style={{ fontSize: '0.85rem', color: 'var(--app-logo-accent)', fontWeight: 'bold' }}>From Construction Work Data</h6>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--app-text-muted)' }}>Edit these on the construction page</span>
                     </div>
-                    <Row className="mb-3">
-                        <Col md={4}>
-                            <Form.Label>Emission Factor</Form.Label>
-                            <Form.Control type="text" name="emissionFactor" value={formData.emissionFactor} onChange={handleChange} />
-                        </Col>
-                        <Col md={4}>
-                            <Form.Label>Per Unit (kgCO2e / ...)</Form.Label>
-                            <Form.Select name="perUnit" value={formData.perUnit} onChange={handleChange}>
-                                <option>kg - Kilogram</option>
-                            </Form.Select>
-                        </Col>
-                        <Col md={4}>
-                            <Form.Label>Emission Factor Source</Form.Label>
-                            <Form.Control type="text" placeholder="e.g. ICE v3.0, IPCC" name="emissionSource" value={formData.emissionSource} onChange={handleChange} />
-                        </Col>
+                    <Row>
+                        {readOnly('Quantity', `${fmt(quantity)} ${unit}`, 'recyclability-quantity')}
+                        {readOnly('Rate', item?.rateCost === '' || item?.rateCost === undefined ? '—' : `${fmt(parse(item.rateCost), 2)} ${currency}/${unit}`, 'recyclability-rate')}
+                        {readOnly('Emission factor', emissionFactor === null ? '—' : `${fmt(emissionFactor, 3)} ${item?.perUnit || 'kgCO₂e/unit'}`, 'recyclability-ef')}
                     </Row>
-                    <div className="mb-2">
-                        <Form.Label>Conversion Factor</Form.Label>
-                        <div className="d-flex align-items-center gap-2">
-                            <span style={{ fontSize: '0.85rem' }}>1 {formData.quantityUnit.split(' ')[0]} =</span>
-                            <Form.Control type="text" style={{ width: '90px' }} name="conversionFactor" value={formData.conversionFactor} onChange={handleChange} />
-                            <span style={{ fontSize: '0.85rem' }}>kg</span>
-                            <span style={{ color: 'var(--app-text-muted)', fontSize: '0.75rem', marginLeft: '8px' }}>e.g. density for Length → Mass</span>
-                        </div>
-                    </div>
-                    <div className="mt-3" style={{ fontSize: '0.85rem', color: 'var(--app-primary-accent)' }}>
-                        {formData.quantityValue} {formData.quantityUnit.split(' ')[0]} × 1000 × {formData.emissionFactor} kgCO2e/kg = <span className="fw-bold" style={{ color: 'var(--app-text-primary)' }}>5,465.200 kgCO2e</span>
-                    </div>
                 </div>
 
-                {/* Recyclability Section */}
-                <div className="section-box mb-0">
-                    <div className="d-flex justify-content-between align-items-center mb-3">
-                        <h6 className="m-0" style={{ fontSize: '0.9rem', color: 'var(--app-logo-accent)', fontWeight: 'bold' }}>Recyclability</h6>
-                        <Form.Check type="checkbox" id="includeRecyclability" label="Include" defaultChecked style={{ fontSize: '0.85rem', color: 'var(--app-text-primary)' }} />
-                    </div>
-                    <Row className="mb-3">
-                        <Col md={6}>
-                            <Form.Label>Scrap Rate (per unit)</Form.Label>
-                            <Form.Control type="text" name="scrapRate" value={formData.scrapRate} onChange={handleChange} />
-                        </Col>
-                        <Col md={6}>
-                            <Form.Label>Recovery after Demolition (%)</Form.Label>
-                            <Form.Control type="text" name="recoveryPercent" value={formData.recoveryPercent} onChange={handleChange} />
-                        </Col>
-                    </Row>
-                    <Row>
-                        <Col md={6}>
-                            <Form.Label>Grade</Form.Label>
-                            <Form.Control type="text" placeholder="e.g. M25, Fe500" name="grade" value={formData.grade} onChange={handleChange} />
-                        </Col>
-                        <Col md={6}>
-                            <Form.Label>Type</Form.Label>
-                            <Form.Select name="type" value={formData.type} onChange={handleChange}>
-                                <option value="">e.g. Concrete, Steel</option>
-                            </Form.Select>
-                        </Col>
-                    </Row>
+                <Row className="mb-2">
+                    <Col md={6}>
+                        <Form.Label htmlFor="recyclability-scrap-rate">Scrap rate ({currency ? `${currency} per ${unit}` : `per ${unit}`})</Form.Label>
+                        <Form.Control
+                            id="recyclability-scrap-rate"
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={scrapRate}
+                            isInvalid={Boolean(errors.scrapRate)}
+                            onChange={(e) => setScrapRate(e.target.value)}
+                            data-testid="recyclability-scrap-rate"
+                        />
+                        <Form.Control.Feedback type="invalid">{errors.scrapRate}</Form.Control.Feedback>
+                    </Col>
+                    <Col md={6}>
+                        <Form.Label htmlFor="recyclability-recovery">Recovery after demolition (%)</Form.Label>
+                        <Form.Control
+                            id="recyclability-recovery"
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="any"
+                            value={recoveryPercent}
+                            isInvalid={Boolean(errors.recoveryPercent)}
+                            onChange={(e) => setRecoveryPercent(e.target.value)}
+                            data-testid="recyclability-recovery"
+                        />
+                        <Form.Control.Feedback type="invalid">{errors.recoveryPercent}</Form.Control.Feedback>
+                    </Col>
+                </Row>
+
+                <div className="mt-3" style={{ fontSize: '0.85rem', color: 'var(--app-primary-accent)' }} data-testid="recyclability-preview">
+                    {fmt(quantity)} {unit} × {fmt(preview.pct, 2)} % = {fmt(preview.recyclable)} {unit} recyclable
+                    {' → '}
+                    {fmt(preview.recyclable)} {unit} × {fmt(preview.rate, 2)} = <span className="fw-bold" style={{ color: 'var(--app-text-primary)' }}>{fmt(preview.recovered, 2)} {currency}</span> recovered
                 </div>
             </Modal.Body>
-
-            <Modal.Footer className="d-flex justify-content-between">
-                <Button 
-                    style={{ backgroundColor: 'var(--app-border-dark)', border: '1px solid var(--app-border-mid)', color: 'var(--app-text-inverse)', fontSize: '0.85rem', padding: '6px 16px' }}
-                >
-                    Save to Custom DB...
-                </Button>
-                <div className="d-flex gap-2">
-                    <Button className="btn-cancel-dark" onClick={onClose}>
-                        Cancel
-                    </Button>
-                    <Button className="btn-green-save" onClick={handleSave}>
-                        Save Recyclability Data
-                    </Button>
-                </div>
+            <Modal.Footer style={{ backgroundColor: 'var(--app-bg-card)', borderTop: '1px solid var(--app-border-mid)' }}>
+                <Button variant="outline-secondary" onClick={onClose}>Cancel</Button>
+                <Button onClick={handleSave} style={{ backgroundColor: 'var(--app-primary-accent)', border: 'none' }} data-testid="recyclability-save">Save</Button>
             </Modal.Footer>
         </Modal>
     );
