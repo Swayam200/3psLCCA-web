@@ -1,0 +1,93 @@
+/*
+ * Paged-media rules for the report — read ONLY by Paged.js.
+ *
+ * Kept in a separate file imported as raw text (`?raw`) so that no CSS
+ * tooling (Vite/Lightning CSS) rewrites or drops at-rules and properties the
+ * browser itself does not understand: @page margin boxes, named pages,
+ * string-set, target-counter(), counter-reset: page.
+ *
+ * Visual rules for the report body live in report.css and apply to the
+ * page fragments as well.
+ */
+
+@page {
+    size: A4;
+    margin: 20mm 18mm 22mm 18mm;
+    @top-left {
+        content: string(report-project);
+        font-family: 'Latin Modern', Georgia, serif;
+        font-size: 8.5pt;
+        color: #8a8aa0;
+        vertical-align: bottom;
+        padding-bottom: 3mm;
+    }
+    @top-right {
+        content: "Bridge Life Cycle Cost Analysis Report";
+        font-family: 'Latin Modern', Georgia, serif;
+        font-size: 8.5pt;
+        color: #8a8aa0;
+        vertical-align: bottom;
+        padding-bottom: 3mm;
+    }
+    @bottom-center {
+        content: counter(page);
+        font-family: 'Latin Modern', Georgia, serif;
+        font-size: 9.5pt;
+        color: #3d4a5c;
+        vertical-align: top;
+        padding-top: 4mm;
+    }
+}
+
+/* Title page: no header, no number (desktop: \begin{titlepage}). */
+@page cover {
+    @top-left { content: none; }
+    @top-right { content: none; }
+    @bottom-center { content: none; }
+}
+
+/* Contents / lists: roman numerals, no header (desktop: \pagenumbering{roman}). */
+@page frontmatter {
+    @top-left { content: none; }
+    @top-right { content: none; }
+    @bottom-center {
+        content: counter(page, lower-roman);
+        font-family: 'Latin Modern', Georgia, serif;
+        font-size: 9.5pt;
+        color: #3d4a5c;
+        vertical-align: top;
+        padding-top: 4mm;
+    }
+}
+
+/* Wide appendix tables (WPI) on their own landscape page (LaTeX \begin{landscape}). */
+@page landscape-page {
+    size: A4 landscape;
+    margin: 16mm 14mm;
+}
+
+.lcca-report .title-page { page: cover; break-after: page; }
+.lcca-report .toc { page: frontmatter; counter-reset: page 1; break-after: page; }
+.lcca-report .main-start { counter-reset: page 1; }
+.lcca-report .landscape-page { page: landscape-page; break-before: page; }
+
+/* Running header text (project name), set from the hidden span. */
+.lcca-report .running-title { string-set: report-project content(text); }
+
+/* Contents, list of tables and list of figures: leaders + page numbers.
+   The numbers themselves are written into `.pg a` by the PageNumbers
+   handler in pagedPreview.js once every page is laid out. */
+.lcca-report .toc li .dots { display: block; flex: 1; border-bottom: 1px dotted #b8bec8; transform: translateY(-0.3em); }
+.lcca-report .toc li .pg { display: inline-block; }
+
+/* Page fragments must not repeat the on-screen "sheet" chrome. */
+.lcca-report { max-width: none; margin: 0; padding: 0; box-shadow: none; }
+.lcca-report .title-page { min-height: 0; height: 100%; }
+.lcca-report .title-page .tri-bar-vertical { top: -20mm; bottom: -22mm; left: -18mm; }
+/* Let the cover's colour bar bleed into the page margin. */
+.pagedjs_cover_page .pagedjs_area, .pagedjs_cover_page .pagedjs_page_content,
+.pagedjs_page[data-page-name="cover"] .pagedjs_area, .pagedjs_page[data-page-name="cover"] .pagedjs_page_content { overflow: visible; }
+.lcca-report figure.table.long { break-inside: auto; }
+.lcca-report figure.table, .lcca-report figure.fig { break-inside: avoid; }
+.lcca-report tr { break-inside: avoid; }
+.lcca-report h2, .lcca-report h3, .lcca-report h4 { break-after: avoid; }

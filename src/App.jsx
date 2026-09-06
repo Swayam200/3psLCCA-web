@@ -26,6 +26,9 @@ import { projectStorageService } from './lib/projectStorageService'
 import { loadGuestSession, saveGuestSession, clearGuestSession } from './lib/guestSession'
 import './App.css'
 
+// The HTML report (fonts, KaTeX) only loads when someone opens it.
+const ReportRoute = React.lazy(() => import('./report/ReportRoute.jsx'))
+
 function ProtectedRoute({ isLoggedIn, children }) {
   if (!isLoggedIn) {
     return <Navigate to="/login" replace />;
@@ -576,6 +579,14 @@ function App() {
             setUserSettings={setUserSettings}
             onLogout={handleLogout}
           />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/project/:projectId/report" element={
+        <ProtectedRoute isLoggedIn={isLoggedIn}>
+          <React.Suspense fallback={<div className="p-5 text-center">Loading report…</div>}>
+            <ReportRoute />
+          </React.Suspense>
         </ProtectedRoute>
       } />
 

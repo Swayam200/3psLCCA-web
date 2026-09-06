@@ -37,3 +37,6 @@ __pycache__/
 *.pyc
 .claude/
 public/report-smoke/
+
+# Generated sample PDFs (npm run report:sample)
+report-samples/

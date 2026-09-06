@@ -283,7 +283,7 @@ const W_PIE = 620;
 const H_PIE = 440;
 
 /** CHART 0 — simple pillar donut (desktop SimplePillarPlotter). */
-const SimpleDonut = ({ items, currency, svgRef }) => {
+export const SimpleDonut = ({ items, currency, svgRef }) => {
     const k = 100;
     const cx0 = W_PIE / 2;
     const cy0 = H_PIE / 2 - 20;
@@ -320,7 +320,7 @@ const SimpleDonut = ({ items, currency, svgRef }) => {
 };
 
 /** CHART 1 — nested stage+pillar donut (desktop SustainabilityCircularPlotter). */
-const NestedDonut = ({ data, currency, svgRef }) => {
+export const NestedDonut = ({ data, currency, svgRef }) => {
     const k = 92;
     const cx0 = W_PIE / 2;
     const cy0 = H_PIE / 2 - 20;
@@ -424,7 +424,7 @@ const BarFrame = ({ currency, yScale, children, svgRef, legend, legendTitle }) =
 };
 
 /** Simple bars with value labels above (desktop StageBarPlotter). */
-const SimpleBars = ({ items, currency, svgRef, legendTitle = 'Life Cycle Stages' }) => {
+export const SimpleBars = ({ items, currency, svgRef, legendTitle = 'Life Cycle Stages' }) => {
     const values = items.map(([, v]) => v);
     const maxV = Math.max(0, ...values);
     const minV = Math.min(0, ...values);
@@ -461,7 +461,7 @@ const SimpleBars = ({ items, currency, svgRef, legendTitle = 'Life Cycle Stages'
 };
 
 /** Stacked bars (desktop SustainabilityBarPlotter / PillarBreakdownBarPlotter). */
-const StackedBars = ({ groups, segments, currency, svgRef, legendTitle }) => {
+export const StackedBars = ({ groups, segments, currency, svgRef, legendTitle }) => {
     // groups: [{label, values: {segName: v}}]; segments: [[name, color]]
     const totals = groups.map((g) => segments.reduce((s, [n]) => s + (g.values[n] || 0), 0));
     const maxV = Math.max(0, ...totals);

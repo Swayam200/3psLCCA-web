@@ -3,6 +3,7 @@ import { Modal, Button, Form, Tabs, Tab } from 'react-bootstrap';
 import Select from 'react-select';
 import { data as countriesData } from './utils/countriesdata';
 import ProfileAvatar from './ProfileAvatar';
+import ReportSettingsTab from './ReportSettingsTab.jsx';
 import { getProfiles, saveProfile, deleteProfile, getActiveProfile } from '../utils/profileStorage';
 
 const countryOptions = countriesData.map(c => ({ value: c.COUNTRY, label: c.COUNTRY }));
@@ -438,6 +439,11 @@ const SettingsModal = ({ show, handleClose, isDarkMode, theme, initialUserName, 
                             </Form.Group>
 
                         </div>
+                    </Modal.Body>
+                </Tab>
+                <Tab eventKey="reports" title="Reports">
+                    <Modal.Body className="px-4 py-2" style={{ minHeight: '350px' }}>
+                        <ReportSettingsTab theme={theme} />
                     </Modal.Body>
                 </Tab>
                 {AiSettingsTabLazy && (
