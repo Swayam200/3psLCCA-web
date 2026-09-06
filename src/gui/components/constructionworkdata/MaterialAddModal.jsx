@@ -184,7 +184,22 @@ const MaterialAddModal = ({ sectionName, onClose, onAdd, projectData, editData }
         }
     };
 
+    const [entryErrors, setEntryErrors] = useState({});
+
+    const validateEntry = () => {
+        const errors = {};
+        const quantity = Number(qty);
+        const unitRate = Number(rate);
+        if (!String(workName || '').trim()) errors.workName = 'Enter a material or work item name.';
+        if (qty === '' || qty === null || !Number.isFinite(quantity)) errors.qty = 'Enter a quantity.';
+        else if (quantity <= 0) errors.qty = 'Quantity must be greater than zero. Use the recycling section for credits.';
+        if (rate !== '' && rate !== null && (!Number.isFinite(unitRate) || unitRate < 0)) errors.rate = 'Rate cannot be negative.';
+        setEntryErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
     const handleAdd = () => {
+        if (!validateEntry()) return;
         const newRowData = {
             workName,
             qty: parseFloat(qty) || 0,
@@ -249,10 +264,12 @@ const MaterialAddModal = ({ sectionName, onClose, onAdd, projectData, editData }
                                     className="form-control form-control-sm"
                                     placeholder="e.g. Ready-mix Concrete M25  (2+ chars to search, ? lists everything)"
                                     value={workName}
-                                    onChange={e => { setWorkName(e.target.value); setShowSuggestions(true); setSelectedIndex(-1); }}
+                                    aria-invalid={entryErrors.workName ? 'true' : 'false'}
+                                    onChange={e => { setWorkName(e.target.value); setShowSuggestions(true); setSelectedIndex(-1); if (entryErrors.workName) setEntryErrors((prev) => ({ ...prev, workName: undefined })); }}
                                     onKeyDown={handleKeyDown}
                                     onFocus={() => setShowSuggestions(true)}
                                 />
+                                {entryErrors.workName && <div className="invalid-feedback d-block" data-testid="material-name-error">{entryErrors.workName}</div>}
                                 {searchActive && suggestions.length === 0 && (
                                     <div
                                         className="position-absolute w-100 shadow-sm border rounded px-3 py-2"
@@ -309,14 +326,19 @@ const MaterialAddModal = ({ sectionName, onClose, onAdd, projectData, editData }
 
                             <div className="row mb-2">
                                 <div className="col-md-6">
-                                    <label className="form-label fw-medium mb-1">Quantity <span className="text-danger">*</span></label>
+                                    <label className="form-label fw-medium mb-1" htmlFor="material-qty">Quantity <span className="text-danger">*</span></label>
                                     <input
+                                        id="material-qty"
                                         type="number"
-                                        className="form-control form-control-sm"
+                                        min="0"
+                                        step="any"
+                                        className={`form-control form-control-sm${entryErrors.qty ? ' is-invalid' : ''}`}
                                         placeholder="e.g. 100"
                                         value={qty}
-                                        onChange={e => setQty(e.target.value)}
+                                        aria-invalid={entryErrors.qty ? 'true' : 'false'}
+                                        onChange={e => { setQty(e.target.value); if (entryErrors.qty) setEntryErrors((prev) => ({ ...prev, qty: undefined })); }}
                                     />
+                                    {entryErrors.qty && <div className="invalid-feedback d-block" data-testid="material-qty-error">{entryErrors.qty}</div>}
                                 </div>
                                 <div className="col-md-6">
                                     <label className="form-label fw-medium mb-1">Unit <span className="text-danger">*</span></label>
@@ -326,14 +348,19 @@ const MaterialAddModal = ({ sectionName, onClose, onAdd, projectData, editData }
 
                             <div className="row mb-2 pb-2 border-bottom border-secondary" style={{ borderColor: 'var(--app-border-mid) !important' }}>
                                 <div className="col-md-6">
-                                    <label className="form-label fw-medium mb-1">Rate (Cost)</label>
+                                    <label className="form-label fw-medium mb-1" htmlFor="material-rate">Rate (Cost)</label>
                                     <input
+                                        id="material-rate"
                                         type="number"
-                                        className="form-control form-control-sm"
+                                        min="0"
+                                        step="any"
+                                        className={`form-control form-control-sm${entryErrors.rate ? ' is-invalid' : ''}`}
                                         placeholder="0.00"
                                         value={rate}
-                                        onChange={e => setRate(e.target.value)}
+                                        aria-invalid={entryErrors.rate ? 'true' : 'false'}
+                                        onChange={e => { setRate(e.target.value); if (entryErrors.rate) setEntryErrors((prev) => ({ ...prev, rate: undefined })); }}
                                     />
+                                    {entryErrors.rate && <div className="invalid-feedback d-block" data-testid="material-rate-error">{entryErrors.rate}</div>}
                                 </div>
                                 <div className="col-md-6">
                                     <label className="form-label fw-medium mb-1">Rate Source</label>

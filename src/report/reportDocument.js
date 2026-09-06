@@ -306,6 +306,8 @@ const collectForRecycling = (chunks) => {
     return { included, excluded };
 };
 
+const WEB_MATERIAL_PREFIX = /^(foundation_data|substructure_data|superstructure_data|miscellaneous_data)-/;
+
 /** transport_emissions_latex */
 const buildTransport = (chunks) => {
     const index = {};
@@ -336,9 +338,12 @@ const buildTransport = (chunks) => {
         for (const matEntry of arr(entry.materials)) {
             const [uuid, kgFactor] = matEntry && typeof matEntry === 'object'
                 ? [matEntry.uuid, numOr(matEntry.kg_factor, 1)] : [matEntry, 1];
-            const record = index[uuid];
+            // Desktop references rows by id; the web transport page prefixes
+            // the id with its structure chunk (e.g. "foundation_data-<id>").
+            const record = index[uuid] || index[String(uuid ?? '').replace(WEB_MATERIAL_PREFIX, '')];
             if (!record) {
-                rows.push({ material: 'Unknown', category: '', cf: EMDASH, qtyKg: EMDASH, trips: EMDASH, emissions: fmt(0) });
+                const savedName = (matEntry && typeof matEntry === 'object' && matEntry.material_name) || '';
+                rows.push({ material: savedName || 'Unknown', category: '', cf: EMDASH, qtyKg: EMDASH, trips: EMDASH, emissions: fmt(0) });
                 continue;
             }
             const v = obj(record.item.values);

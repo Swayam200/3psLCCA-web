@@ -404,8 +404,26 @@ const serializeTrafficForm = (form) => {
     const baseData = WPI_DATABASE['2019'].data;
     const selectedData = cloneData(form.wpi_data);
 
+    // Mirror the form's sub-objects onto the flat keys the calculation
+    // payload, desktop files and the report read, so the saved project has
+    // one consistent set of values whichever shape a consumer looks at.
+    const laneValue = form.alternate_road?.alternate_road_carriageway || '';
+    const lane = LANE_TYPES.find((item) => item.name === laneValue || item.code === laneValue);
+    const numberOrZero = (value) => (Number.isFinite(Number(value)) && value !== '' && value !== null ? Number(value) : 0);
+    const flatMirror = {
+        alternate_road_carriageway: lane?.code || laneValue,
+        carriage_width_in_m: numberOrZero(form.alternate_road?.carriage_width_in_m),
+        hourly_capacity: numberOrZero(form.alternate_road?.hourly_capacity),
+        severity_minor: numberOrZero(form.severity?.severity_minor),
+        severity_major: numberOrZero(form.severity?.severity_major),
+        severity_fatal: numberOrZero(form.severity?.severity_fatal),
+        ...Object.fromEntries(Object.entries(form.road_params || {}).map(([key, value]) => [key, numberOrZero(value)])),
+        peak_hour_distribution: form.peak_distribution || {},
+    };
+
     return {
         ...projectForm,
+        ...flatMirror,
         force_free_flow_off_peak: Boolean(form.force_free_flow),
         wpi: {
             selected_profile_id: selectedMetadata.id || null,

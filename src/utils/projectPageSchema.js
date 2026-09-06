@@ -130,6 +130,38 @@ export const normalizeConstructionSections = (value, sectionKey = 'section') => 
     })
 );
 
+export const TRAFFIC_ALTERNATE_ROAD_KEYS = ['alternate_road_carriageway', 'carriage_width_in_m', 'hourly_capacity'];
+export const TRAFFIC_SEVERITY_KEYS = ['severity_minor', 'severity_major', 'severity_fatal'];
+export const TRAFFIC_ROAD_PARAM_KEYS = [
+    'road_roughness_mm_per_km', 'road_rise_m_per_km', 'road_fall_m_per_km',
+    'additional_reroute_distance_km', 'additional_travel_time_min',
+    'crash_rate_accidents_per_million_km', 'work_zone_multiplier',
+];
+
+const isBlank = (value) => value === undefined || value === null || value === '';
+const isZero = (value) => !isBlank(value) && Number(value) === 0;
+
+/**
+ * Pick the value for one traffic field from its nested (web form) and flat
+ * (desktop / calculation) copies: the nested value wins unless it is blank,
+ * or zero while the flat copy is a real number.
+ */
+export const pickTrafficField = (nested, flat) => {
+    if (isBlank(nested)) return flat;
+    if (isZero(nested) && !isBlank(flat) && !isZero(flat)) return flat;
+    return nested;
+};
+
+const mergeNestedWithFlat = (data, nested, keys) => {
+    const group = normalizeObject(nested);
+    const merged = { ...group };
+    keys.forEach((key) => {
+        const value = pickTrafficField(group[key], data[key]);
+        if (value !== undefined) merged[key] = value;
+    });
+    return merged;
+};
+
 export const normalizeTrafficData = (value) => {
     const data = normalizeObject(value);
     const vehicles = asObject(data.vehicles || data.vehicle_data);
@@ -149,9 +181,14 @@ export const normalizeTrafficData = (value) => {
         };
         return acc;
     }, {});
-    const alternateRoad = normalizeObject(data.alternate_road);
-    const severity = normalizeObject(data.severity);
-    const roadParams = normalizeObject(data.road_params);
+    // The web form keeps these in sub-objects; desktop files (and the
+    // calculation payload) use flat keys. Seed each sub-object from the flat
+    // key when the nested value is missing — or zero while the flat value is
+    // not, which is what an untouched import looks like after the form's
+    // first auto-save — so both views always show the same numbers.
+    const alternateRoad = mergeNestedWithFlat(data, data.alternate_road, TRAFFIC_ALTERNATE_ROAD_KEYS);
+    const severity = mergeNestedWithFlat(data, data.severity, TRAFFIC_SEVERITY_KEYS);
+    const roadParams = mergeNestedWithFlat(data, data.road_params, TRAFFIC_ROAD_PARAM_KEYS);
     const profileYear = String(data.wpi?.selected_profile_year || '')
         || data.wpi_year
         || String(data.wpi_profile || '').match(/\d{4}/)?.[0]
