@@ -174,10 +174,11 @@ export const computeRicke = (ricke, countryData, currency) => {
         sccText: cpiApplied
             ? `${formatNumber(final, DP)} ${currency} / tCO₂   (CPI-adjusted from ${formatNumber(displayed, DP)} in 2018 USD)`
             : `${formatNumber(final, DP)} ${currency} / tCO₂   (2018 USD)`,
-        ciText: cpiApplied
-            ? `66.7% Confidence Interval:  ${formatNumber(adjLo, DP)}  –  ${formatNumber(adjHi, DP)} ${currency} / tCO₂  (adjusted)\n` +
-            `${formatNumber(lo, DP)}  –  ${formatNumber(hi, DP)} USD / tCO₂  (2018 USD)`
-            : `66.7% Confidence Interval:  ${formatNumber(lo, DP)}  –  ${formatNumber(hi, DP)} ${currency} / tCO₂`,
+        // The interval bounds get the same CPI and exchange-rate treatment as
+        // the central value, so all three numbers share one currency and year.
+        ciText: `66.7% Confidence Interval:  ${formatNumber(adjLo, DP)}  –  ${formatNumber(adjHi, DP)} ${currency} / tCO₂` +
+            `${cpiApplied ? '  (CPI-adjusted)' : ''}\n` +
+            `${formatNumber(lo, DP)}  –  ${formatNumber(hi, DP)} USD / tCO₂  (2018 USD)`,
         breakdown: `① Raw (2018 USD):  ${formatNumber(displayed, DP)} USD/tCO₂\n` +
             `② After CPI (× ${cpiRatio}):  ${formatNumber(afterCpi, DP)} USD/tCO₂\n` +
             `③ Final (× ${usdToLocal} ${currency}/USD):  ${formatNumber(final, DP)} ${currency}/tCO₂`,

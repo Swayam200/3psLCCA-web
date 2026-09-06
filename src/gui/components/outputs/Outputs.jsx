@@ -28,7 +28,7 @@ const AiCueSlot = (props) => (AiCueLazy ? (
     <React.Suspense fallback={null}><AiCueLazy {...props} /></React.Suspense>
 ) : null);
 
-const Outputs = ({ addLog, navTrigger }) => {
+const Outputs = ({ addLog, navTrigger, setIsLocked }) => {
     const { projectData, updateProjectData } = useProjectData();
     const navigate = useNavigate();
     const { projectId } = useParams();
@@ -242,6 +242,12 @@ const Outputs = ({ addLog, navTrigger }) => {
             });
             setView('results');
             addLog("Calculation completed successfully.");
+            // Lock the inputs only now that a calculation has actually
+            // succeeded; a failed run leaves everything editable.
+            if (setIsLocked) {
+                setIsLocked(true);
+                addLog("Project locked to keep inputs and results in step. Use the lock icon to edit again.");
+            }
         } catch (err) {
             const message = `Calculation engine unavailable or failed: ${err.message}`;
             setFileError(message);

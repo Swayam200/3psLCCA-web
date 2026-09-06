@@ -12,6 +12,8 @@
  * code_to_latex/* (see docs/report-latex-web-plan.md).
  */
 
+import { flattenTrafficData } from '../../../utils/projectDerivations.js';
+
 const asArray = (value) => (Array.isArray(value) ? value : []);
 const asObject = (value) => (value && typeof value === 'object' && !Array.isArray(value) ? value : {});
 
@@ -30,7 +32,7 @@ const numberOr = (value, fallback) => {
  * original verbatim (keeps null vs '' and any extra keys byte-stable).
  * Only a genuine web edit overrides.
  */
-const desktopRow = (row) => {
+const desktopRow = (row, { chunkId = '', excludedIds = new Set() } = {}) => {
     const prior = asObject(row.values);
     const hasPrior = row.values !== undefined;
     const emission = asObject(row.carbonEmission);
@@ -75,20 +77,40 @@ const desktopRow = (row) => {
         ),
     };
 
+    const state = { ...asObject(row.state ?? { in_trash: false }) };
+
+    // Desktop stamps state.included_in_carbon_emission on every row and the
+    // report reads only that flag. Rows created on the web never get it, so
+    // apply the Material Emissions page's own rule here (carbonUtils
+    // getStructureMaterials/materialReason): included unless the user
+    // excluded it, and only when the factor data is complete.
+    if (!hasPrior && state.included_in_carbon_emission === undefined) {
+        const materialId = `${chunkId}-${row.id}`;
+        const userIncluded = !excludedIds.has(materialId);
+        const complete = numberOr(values.carbon_emission, 0) > 0 && numberOr(values.conversion_factor, 1) > 0;
+        state.included_in_carbon_emission = userIncluded && complete;
+        if (!state.included_in_carbon_emission) {
+            values.exclusion_reason = {
+                ...asObject(values.exclusion_reason),
+                carbon: complete ? 'Manually Excluded' : 'Incomplete Data',
+            };
+        }
+    }
+
     return {
         id: row.id,
         values,
         meta: asObject(row.meta ?? { source: 'db' }),
-        state: asObject(row.state ?? { in_trash: false }),
+        state,
     };
 };
 
 /** Web array-of-sections → desktop {"Section Name": [rows]} chunk. */
-const desktopStructureChunk = (sections) => {
+const desktopStructureChunk = (sections, rowContext) => {
     const chunk = {};
     asArray(sections).forEach((section, index) => {
         const name = section?.name || `Section ${index + 1}`;
-        chunk[name] = asArray(section?.rows).map(desktopRow);
+        chunk[name] = asArray(section?.rows).map((row) => desktopRow(row, rowContext));
     });
     return chunk;
 };
@@ -120,20 +142,22 @@ export const desktopChunksForReport = (projectData = {}, { results = null, curre
     const carbon = asObject(projectData.carbon_emission_data);
     const generalInfo = asObject(projectData.general_info);
     const resolvedCurrency = currency || generalInfo.project_currency || projectData.currency || 'INR';
+    const excludedIds = new Set(asArray(carbon.material_emissions_data?.excluded_ids));
+    const rowContext = (chunkId) => ({ chunkId, excludedIds });
 
     return {
         general_info: generalInfo,
         bridge_data: asObject(projectData.bridge_data),
         financial_data: asObject(projectData.financial_data),
-        traffic_and_road_data: asObject(projectData.traffic_data),
+        traffic_and_road_data: flattenTrafficData(asObject(projectData.traffic_data)),
         maintenance_data: asObject(projectData.maintenance_repair_data),
         demolition_data: asObject(projectData.demolition_data),
         recycling_data: asObject(projectData.recycling_data),
 
-        str_foundation: desktopStructureChunk(projectData.foundation_data),
-        str_sub_structure: desktopStructureChunk(projectData.substructure_data),
-        str_super_structure: desktopStructureChunk(projectData.superstructure_data),
-        str_misc: desktopStructureChunk(projectData.miscellaneous_data),
+        str_foundation: desktopStructureChunk(projectData.foundation_data, rowContext('foundation_data')),
+        str_sub_structure: desktopStructureChunk(projectData.substructure_data, rowContext('substructure_data')),
+        str_super_structure: desktopStructureChunk(projectData.superstructure_data, rowContext('superstructure_data')),
+        str_misc: desktopStructureChunk(projectData.miscellaneous_data, rowContext('miscellaneous_data')),
 
         transport_data: {
             vehicles: [

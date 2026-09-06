@@ -30,7 +30,7 @@ const MachineryEmissions = ({ controller }) => {
         setDetailedEntries(
             hasSavedDetailedRows
                 ? machineryData.detailed.rows.map((row) => ({ ...row, hours: row.hrs }))
-                : DEFAULT_MACHINERY_DATA.map((row) => ({ ...row, hours: 8, days: 1 }))
+                : DEFAULT_MACHINERY_DATA.map((row) => ({ ...row, hours: 0, days: 0 }))
         );
         setLumpSum({
             elec_kwh_per_day: machineryData.lumpsum.elec_consumption_per_day,
@@ -58,7 +58,7 @@ const MachineryEmissions = ({ controller }) => {
     };
 
     const handleLoadDefaults = () => {
-        const defaults = DEFAULT_MACHINERY_DATA.map(d => ({ ...d, hours: 8, days: 1 }));
+        const defaults = DEFAULT_MACHINERY_DATA.map(d => ({ ...d, hours: 0, days: 0 }));
         setDetailedEntries(defaults);
         saveToEngine(mode, defaults, lumpSum, remarks);
     };
@@ -414,6 +414,9 @@ const MachineryEmissions = ({ controller }) => {
                                 </div>
                             </div>
 
+                            <div className="mb-2" style={{ fontSize: '0.8rem', color: 'var(--app-text-muted)' }} data-testid="machinery-sample-note">
+                                The equipment list is a sample with typical ratings and emission factors. Rows start at 0 hours and 0 days and contribute nothing until you enter the hours per day and number of days for the machinery actually used; remove rows you do not need.
+                            </div>
                             {/* Action Buttons Row */}
                             <div className="d-flex align-items-center gap-2">
                                 <button className="machinery-btn-secondary px-3" style={{ fontSize: '13px' }} onClick={() => handleAddEntry()}>+ Add Equipment</button>
