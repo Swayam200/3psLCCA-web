@@ -144,7 +144,7 @@ const MAINTENANCE_SECTIONS = [
             {
                 key: 'major_repair_duration',
                 label: 'Major Repair Duration',
-                hint: 'Duration of major repair works.',
+                hint: 'Duration of major repair works, in months.',
                 type: 'int',
                 min: 0,
                 max: 60,
@@ -185,7 +185,7 @@ const MAINTENANCE_SECTIONS = [
             {
                 key: 'bearing_exp_joint_duration',
                 label: 'Bearing & Expansion Joint Replacement Duration',
-                hint: 'Duration of bearing and expansion joint replacement works.',
+                hint: 'Duration of bearing and expansion joint replacement works, in days.',
                 type: 'int',
                 min: 0,
                 max: 365,
@@ -293,6 +293,14 @@ const MaintenanceAndRepair = ({ controller, engine }) => {
 
     const [errors, setErrors] = useState(new Set());
     const [validationMsg, setValidationMsg] = useState('');
+    const [statusMsg, setStatusMsg] = useState('');
+
+    // Auto-dismiss the transient status line
+    useEffect(() => {
+        if (!statusMsg) return undefined;
+        const timer = setTimeout(() => setStatusMsg(''), 3000);
+        return () => clearTimeout(timer);
+    }, [statusMsg]);
 
     // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -315,6 +323,7 @@ const MaintenanceAndRepair = ({ controller, engine }) => {
         }));
         setErrors(new Set());
         setValidationMsg('');
+        setStatusMsg('Suggested values applied');
         if (engine && engine._log) {
             engine._log('Maintenance: Suggested values applied.');
         } else if (controller && controller.engine) {
@@ -323,9 +332,11 @@ const MaintenanceAndRepair = ({ controller, engine }) => {
     };
 
     const handleClearAll = () => {
+        if (!window.confirm('Clear all maintenance and repair inputs? This cannot be undone.')) return;
         setForm(INITIAL_STATE);
         setErrors(new Set());
         setValidationMsg('');
+        setStatusMsg('');
         if (engine && engine._log) {
             engine._log('Maintenance: All fields cleared.');
         } else if (controller && controller.engine) {
@@ -398,6 +409,12 @@ const MaintenanceAndRepair = ({ controller, engine }) => {
                     Clear All
                 </button>
             </div>
+
+            {statusMsg && (
+                <div className="mb-3" style={{ fontSize: '0.85rem', color: 'var(--app-primary-accent)' }} role="status" aria-live="polite">
+                    ✓ {statusMsg}
+                </div>
+            )}
 
             {/* Validation message */}
             {validationMsg && (

@@ -23,9 +23,13 @@ const TABS = [
     { key: 'Miscellaneous', label: 'Miscellaneous', component: Miscellaneous },
 ];
 
-const ConstructionWorkData = ({ controller, projectData, data, onUpdate, projectName = 'Active Analysis', initialTab = 'Foundation', setActiveNode }) => {
+const ConstructionWorkData = ({ controller, projectData, data, onUpdate, projectName: projectNameProp, initialTab = 'Foundation', setActiveNode }) => {
     const projectContext = useProjectData();
     const currentProject = projectContext.projectData || projectData;
+    const projectName = projectNameProp
+        || currentProject?.general_info?.project_name
+        || currentProject?.name
+        || 'Untitled project';
     const { updateProjectData } = projectContext;
     const [activeTab, setActiveTab] = useState(initialTab);
     const [preview, setPreview] = useState(null);

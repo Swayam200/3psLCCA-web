@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import darbhangaData from '../utils/material_database/INDIA_Bihar_Darbhanga_2025.json';
 import mumbaiData from '../utils/material_database/INDIA_Maharashtra_Mumbai_2023.json';
 import { searchMaterials, resolveDbKey, isSearchableQuery } from './materialSearch.js';
-import { resolveCarbonDenom, denomToWebUnit } from '../../../utils/carbonUnits.js';
+import { resolveCarbonDenom, denomToWebUnit, resolveConversionFactor, canonicalUnit } from '../../../utils/carbonUnits.js';
 
 const DB_MAP = {
     "INDIA/Bihar/Darbhanga-2025": darbhangaData,
@@ -16,7 +16,7 @@ const UNIT_SELECT_STYLE = {
     borderColor: 'var(--app-border-mid)',
 };
 
-function UnitDropdown({ value, onChange }) {
+function UnitDropdown({ value, onChange, disabled = false }) {
     const handleChange = (e) => {
         if (e.target.value === 'custom_unit_trigger') {
             const customUnit = prompt('Enter custom unit:');
@@ -32,6 +32,7 @@ function UnitDropdown({ value, onChange }) {
             style={UNIT_SELECT_STYLE}
             value={value}
             onChange={handleChange}
+            disabled={disabled}
         >
             <option value={value} hidden>{value}</option>
 
@@ -94,6 +95,32 @@ const MaterialAddModal = ({ sectionName, onClose, onAdd, projectData, editData }
     // Basic fields
     const [workName, setWorkName] = useState(editData ? editData.workName : '');
     const [allowEditingDB, setAllowEditingDB] = useState(editData ? !!editData.allowEditingDB : false);
+    // Rows saved by earlier builds never stored the schedule-of-rates
+    // conversion factor. When editing such a row, recover it from the same
+    // database entry (matched by exact name) so the row can be counted.
+    const legacyDbFactor = useMemo(() => {
+        if (!editData || !dbData) return null;
+        const stored = editData.conversionFactor;
+        if (stored !== undefined && stored !== null && stored !== '' && Number(stored) > 0) return null;
+        const match = searchMaterials(dbData, editData.workName || '', sectionName)
+            .find((item) => item.name === editData.workName);
+        const dbFactor = Number(match?.conversion_factor);
+        return match && Number.isFinite(dbFactor) && dbFactor > 0 ? dbFactor : null;
+    }, [editData, dbData, sectionName]);
+    // True once the fields were filled from the schedule of rates; until the
+    // user ticks "Allow editing DB-filled values" those fields stay read-only.
+    const [dbFilled, setDbFilled] = useState(editData ? (!!editData.dbFilled || legacyDbFactor !== null) : false);
+    // Conversion factor = emission units per quantity unit (kg per MT, kg
+    // per m³ …). The SOR ships it per item; otherwise it is derived from the
+    // units or entered by the user.
+    const [conversionFactor, setConversionFactor] = useState(() => {
+        if (legacyDbFactor !== null) return String(legacyDbFactor);
+        const stored = editData?.conversionFactor;
+        return stored !== undefined && stored !== null && stored !== '' && Number(stored) > 0 ? String(stored) : '';
+    });
+    const [conversionFactorSource, setConversionFactorSource] = useState(
+        legacyDbFactor !== null ? 'db' : (editData?.conversionFactorSource || ''),
+    );
     const [qty, setQty] = useState(editData ? editData.qty : '');
     const [unit, setUnit] = useState(editData ? editData.unit : 'm³ — Cubic Metre');
     const [rate, setRate] = useState(editData ? editData.rate : '');
@@ -109,6 +136,10 @@ const MaterialAddModal = ({ sectionName, onClose, onAdd, projectData, editData }
     const [includeRecyclability, setIncludeRecyclability] = useState(editData ? !!editData.recyclability : false);
     const [grade, setGrade] = useState(editData?.recyclability ? editData.recyclability.grade : '');
     const [type, setType] = useState(editData?.recyclability ? editData.recyclability.type : '');
+    const [recoveryPercent, setRecoveryPercent] = useState(
+        editData?.postDemolitionRecoveryPercentage ? String(editData.postDemolitionRecoveryPercentage) : '',
+    );
+    const [scrapRate, setScrapRate] = useState(editData?.scrapRate ? String(editData.scrapRate) : '');
 
     // Search Suggestions
     const [showSuggestions, setShowSuggestions] = useState(false);
@@ -154,6 +185,8 @@ const MaterialAddModal = ({ sectionName, onClose, onAdd, projectData, editData }
         setRate(item.rate);
         setUnit(item.unit);
         setSource(item.rate_src);
+        setDbFilled(true);
+        setAllowEditingDB(false);
 
         if (item.carbon_emission !== 'not_available') {
             setIncludeCarbon(true);
@@ -161,13 +194,39 @@ const MaterialAddModal = ({ sectionName, onClose, onAdd, projectData, editData }
             setEmissionSource(item.carbon_emission_src);
             // Desktop-canonical unit resolution: "_den" wins, otherwise the
             // ratio in carbon_emission_units yields its denominator.
-            const webUnit = denomToWebUnit(resolveCarbonDenom(item));
-            if (webUnit) setEmissionPerUnit(webUnit);
+            const denom = resolveCarbonDenom(item);
+            const webUnit = denomToWebUnit(denom);
+            setEmissionPerUnit(webUnit || denom || '');
+            // The schedule of rates carries the factor that turns the priced
+            // unit into the emission unit (kg per MT, kg per cum, …).
+            const dbFactor = Number(item.conversion_factor);
+            if (Number.isFinite(dbFactor) && dbFactor > 0) {
+                setConversionFactor(String(dbFactor));
+                setConversionFactorSource('db');
+            } else {
+                setConversionFactor('');
+                setConversionFactorSource('');
+            }
         }
 
         setShowSuggestions(false);
         setSelectedIndex(-1);
     };
+
+    const lockDb = dbFilled && !allowEditingDB;
+    const conversion = useMemo(() => resolveConversionFactor({
+        quantityUnit: unit,
+        emissionUnit: emissionPerUnit,
+        explicit: conversionFactor,
+        trusted: conversionFactorSource === 'db' || conversionFactorSource === 'user',
+    }), [unit, emissionPerUnit, conversionFactor, conversionFactorSource]);
+    const emissionPreview = (() => {
+        const q = parseFloat(qty);
+        const ef = parseFloat(emissionFactor);
+        if (!includeCarbon || !Number.isFinite(q) || !Number.isFinite(ef) || conversion.status === 'mismatch') return null;
+        const total = q * conversion.factor * ef;
+        return `${q} ${canonicalUnit(unit) || unit} × ${conversion.factor} × ${ef} = ${total.toLocaleString('en-IN', { maximumFractionDigits: 3 })} kgCO₂e`;
+    })();
 
     const handleKeyDown = (e) => {
         if (!showSuggestions || suggestions.length === 0) return;
@@ -194,12 +253,22 @@ const MaterialAddModal = ({ sectionName, onClose, onAdd, projectData, editData }
         if (qty === '' || qty === null || !Number.isFinite(quantity)) errors.qty = 'Enter a quantity.';
         else if (quantity <= 0) errors.qty = 'Quantity must be greater than zero. Use the recycling section for credits.';
         if (rate !== '' && rate !== null && (!Number.isFinite(unitRate) || unitRate < 0)) errors.rate = 'Rate cannot be negative.';
+        if (includeCarbon && (parseFloat(emissionFactor) || 0) > 0 && conversion.status === 'mismatch') {
+            errors.conversion = conversion.note;
+        }
+        if (includeRecyclability) {
+            const pct = parseFloat(recoveryPercent);
+            if (recoveryPercent !== '' && (!Number.isFinite(pct) || pct < 0 || pct > 100)) errors.recovery = 'Recovery must be between 0 and 100 %.';
+            const scrap = parseFloat(scrapRate);
+            if (scrapRate !== '' && (!Number.isFinite(scrap) || scrap < 0)) errors.scrap = 'Scrap rate cannot be negative.';
+        }
         setEntryErrors(errors);
         return Object.keys(errors).length === 0;
     };
 
     const handleAdd = () => {
         if (!validateEntry()) return;
+        const factorSource = conversionFactorSource || (conversion.status === 'derived' || conversion.status === 'same' ? 'derived' : '');
         const newRowData = {
             workName,
             qty: parseFloat(qty) || 0,
@@ -207,8 +276,13 @@ const MaterialAddModal = ({ sectionName, onClose, onAdd, projectData, editData }
             rate: parseFloat(rate) || 0,
             source,
             allowEditingDB,
+            dbFilled,
+            conversionFactor: conversion.status === 'mismatch' ? 0 : conversion.factor,
+            conversionFactorSource: factorSource,
             carbonEmission: includeCarbon ? { factor: parseFloat(emissionFactor) || 0, perUnit: emissionPerUnit, source: emissionSource } : null,
-            recyclability: includeRecyclability ? { grade, type } : null
+            recyclability: includeRecyclability ? { grade, type } : null,
+            ...(includeRecyclability && recoveryPercent !== '' ? { postDemolitionRecoveryPercentage: parseFloat(recoveryPercent) || 0 } : {}),
+            ...(includeRecyclability && scrapRate !== '' ? { scrapRate: parseFloat(scrapRate) || 0 } : {}),
         };
         onAdd(newRowData);
     };
@@ -272,8 +346,8 @@ const MaterialAddModal = ({ sectionName, onClose, onAdd, projectData, editData }
                                 {entryErrors.workName && <div className="invalid-feedback d-block" data-testid="material-name-error">{entryErrors.workName}</div>}
                                 {searchActive && suggestions.length === 0 && (
                                     <div
-                                        className="position-absolute w-100 shadow-sm border rounded px-3 py-2"
-                                        style={{ zIndex: 1100, backgroundColor: 'var(--app-bg-card)', borderColor: 'var(--app-border-mid)', fontSize: '0.83rem', color: 'var(--app-text-secondary)' }}
+                                        className="w-100 border rounded px-3 py-2 mt-1"
+                                        style={{ backgroundColor: 'var(--app-bg-alt)', borderColor: 'var(--app-border-mid)', fontSize: '0.83rem', color: 'var(--app-text-secondary)' }}
                                         data-testid="material-search-empty"
                                     >
                                         {!dbData
@@ -310,19 +384,22 @@ const MaterialAddModal = ({ sectionName, onClose, onAdd, projectData, editData }
                                 )}
                             </div>
 
-                            <div className="mb-2 form-check d-flex align-items-center gap-2">
-                                <input
-                                    className="form-check-input mt-0"
-                                    type="checkbox"
-                                    id="allowDb"
-                                    style={{ width: '18px', height: '18px', backgroundColor: allowEditingDB ? 'var(--app-primary-accent)' : 'var(--app-input-bg)', borderColor: 'var(--app-border-mid)' }}
-                                    checked={allowEditingDB}
-                                    onChange={e => setAllowEditingDB(e.target.checked)}
-                                />
-                                <label className="form-check-label opacity-75" htmlFor="allowDb" style={{ paddingTop: '1px', cursor: 'pointer' }}>
-                                    Allow editing DB-filled values
-                                </label>
-                            </div>
+                            {dbFilled && (
+                                <div className="mb-2 form-check d-flex align-items-center gap-2">
+                                    <input
+                                        className="form-check-input mt-0"
+                                        type="checkbox"
+                                        id="allowDb"
+                                        style={{ width: '18px', height: '18px', backgroundColor: allowEditingDB ? 'var(--app-primary-accent)' : 'var(--app-input-bg)', borderColor: 'var(--app-border-mid)' }}
+                                        checked={allowEditingDB}
+                                        onChange={e => setAllowEditingDB(e.target.checked)}
+                                    />
+                                    <label className="form-check-label opacity-75" htmlFor="allowDb" style={{ paddingTop: '1px', cursor: 'pointer' }}>
+                                        Allow editing DB-filled values
+                                        {lockDb && <span className="ms-2 fst-italic" style={{ fontSize: '0.8rem' }}>(rate, units and emission factor are locked to the schedule of rates)</span>}
+                                    </label>
+                                </div>
+                            )}
 
                             <div className="row mb-2">
                                 <div className="col-md-6">
@@ -342,7 +419,7 @@ const MaterialAddModal = ({ sectionName, onClose, onAdd, projectData, editData }
                                 </div>
                                 <div className="col-md-6">
                                     <label className="form-label fw-medium mb-1">Unit <span className="text-danger">*</span></label>
-                                    <UnitDropdown value={unit} onChange={setUnit} />
+                                    <UnitDropdown value={unit} onChange={setUnit} disabled={lockDb} />
                                 </div>
                             </div>
 
@@ -357,6 +434,7 @@ const MaterialAddModal = ({ sectionName, onClose, onAdd, projectData, editData }
                                         className={`form-control form-control-sm${entryErrors.rate ? ' is-invalid' : ''}`}
                                         placeholder="0.00"
                                         value={rate}
+                                        readOnly={lockDb}
                                         aria-invalid={entryErrors.rate ? 'true' : 'false'}
                                         onChange={e => { setRate(e.target.value); if (entryErrors.rate) setEntryErrors((prev) => ({ ...prev, rate: undefined })); }}
                                     />
@@ -369,6 +447,7 @@ const MaterialAddModal = ({ sectionName, onClose, onAdd, projectData, editData }
                                         className="form-control form-control-sm"
                                         placeholder="e.g. SOR, Market"
                                         value={source}
+                                        readOnly={lockDb}
                                         onChange={e => setSource(e.target.value)}
                                     />
                                 </div>
@@ -397,12 +476,13 @@ const MaterialAddModal = ({ sectionName, onClose, onAdd, projectData, editData }
                                             className="form-control form-control-sm"
                                             placeholder="0.000"
                                             value={emissionFactor}
+                                            readOnly={lockDb}
                                             onChange={e => setEmissionFactor(e.target.value)}
                                         />
                                     </div>
                                     <div className="col-md-4">
                                         <label className="form-label mb-1">Per unit of material</label>
-                                        <UnitDropdown value={emissionPerUnit} onChange={setEmissionPerUnit} />
+                                        <UnitDropdown value={emissionPerUnit} onChange={setEmissionPerUnit} disabled={lockDb} />
                                     </div>
                                     <div className="col-md-4">
                                         <label className="form-label mb-1">Source</label>
@@ -411,8 +491,45 @@ const MaterialAddModal = ({ sectionName, onClose, onAdd, projectData, editData }
                                             className="form-control form-control-sm"
                                             placeholder="e.g. ICE, IPCC"
                                             value={emissionSource}
+                                            readOnly={lockDb}
                                             onChange={e => setEmissionSource(e.target.value)}
                                         />
+                                    </div>
+                                </div>
+                                <div className="row mt-2" style={{ opacity: includeCarbon ? 1 : 0.5, pointerEvents: includeCarbon ? 'auto' : 'none' }}>
+                                    <div className="col-md-5">
+                                        <label className="form-label mb-1" htmlFor="material-conversion">
+                                            Conversion factor ({canonicalUnit(emissionPerUnit) || 'emission unit'} per {canonicalUnit(unit) || 'quantity unit'})
+                                        </label>
+                                        <input
+                                            id="material-conversion"
+                                            type="number"
+                                            min="0"
+                                            step="any"
+                                            className={`form-control form-control-sm${entryErrors.conversion ? ' is-invalid' : ''}`}
+                                            placeholder={conversion.status === 'derived' ? String(conversion.factor) : 'e.g. 2400 for kg per m³'}
+                                            value={conversionFactor}
+                                            readOnly={lockDb && conversionFactorSource === 'db'}
+                                            aria-invalid={entryErrors.conversion ? 'true' : 'false'}
+                                            onChange={e => {
+                                                setConversionFactor(e.target.value);
+                                                setConversionFactorSource(e.target.value === '' ? '' : 'user');
+                                                if (entryErrors.conversion) setEntryErrors((prev) => ({ ...prev, conversion: undefined }));
+                                            }}
+                                        />
+                                        {entryErrors.conversion && <div className="invalid-feedback d-block" data-testid="material-conversion-error">{entryErrors.conversion}</div>}
+                                    </div>
+                                    <div className="col-md-7 d-flex flex-column justify-content-end" style={{ fontSize: '0.8rem' }}>
+                                        {conversion.status === 'mismatch' && !entryErrors.conversion && (
+                                            <div className="text-warning" data-testid="material-conversion-warning">⚠ {conversion.note}</div>
+                                        )}
+                                        {conversion.status === 'derived' && (
+                                            <div className="text-secondary">Auto-converted: {conversion.note}.</div>
+                                        )}
+                                        {conversion.status === 'explicit' && conversionFactorSource === 'db' && (
+                                            <div className="text-secondary">From the schedule of rates: {conversion.note}.</div>
+                                        )}
+                                        {emissionPreview && <div className="fw-medium" data-testid="material-emission-preview">{emissionPreview}</div>}
                                     </div>
                                 </div>
                             </div>
@@ -451,6 +568,40 @@ const MaterialAddModal = ({ sectionName, onClose, onAdd, projectData, editData }
                                             onChange={e => setType(e.target.value)}
                                             placeholder="e.g. Concrete"
                                         />
+                                    </div>
+                                </div>
+                                <div className="row mt-2" style={{ opacity: includeRecyclability ? 1 : 0.5, pointerEvents: includeRecyclability ? 'auto' : 'none' }}>
+                                    <div className="col-md-6">
+                                        <label className="form-label mb-1" htmlFor="material-recovery">Recovery after demolition (%)</label>
+                                        <input
+                                            id="material-recovery"
+                                            type="number"
+                                            min="0"
+                                            max="100"
+                                            step="any"
+                                            className={`form-control form-control-sm${entryErrors.recovery ? ' is-invalid' : ''}`}
+                                            placeholder="e.g. 90"
+                                            value={recoveryPercent}
+                                            onChange={e => { setRecoveryPercent(e.target.value); if (entryErrors.recovery) setEntryErrors((prev) => ({ ...prev, recovery: undefined })); }}
+                                        />
+                                        {entryErrors.recovery && <div className="invalid-feedback d-block">{entryErrors.recovery}</div>}
+                                    </div>
+                                    <div className="col-md-6">
+                                        <label className="form-label mb-1" htmlFor="material-scrap">Scrap rate (per {canonicalUnit(unit) || 'unit'})</label>
+                                        <input
+                                            id="material-scrap"
+                                            type="number"
+                                            min="0"
+                                            step="any"
+                                            className={`form-control form-control-sm${entryErrors.scrap ? ' is-invalid' : ''}`}
+                                            placeholder="e.g. 30000"
+                                            value={scrapRate}
+                                            onChange={e => { setScrapRate(e.target.value); if (entryErrors.scrap) setEntryErrors((prev) => ({ ...prev, scrap: undefined })); }}
+                                        />
+                                        {entryErrors.scrap && <div className="invalid-feedback d-block">{entryErrors.scrap}</div>}
+                                    </div>
+                                    <div className="col-12 text-secondary mt-1" style={{ fontSize: '0.78rem' }}>
+                                        Both values are needed for the material to count on the Recycling page; they can also be set there later.
                                     </div>
                                 </div>
                             </div>

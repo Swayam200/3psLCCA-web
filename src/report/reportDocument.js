@@ -309,6 +309,12 @@ const collectForRecycling = (chunks) => {
 };
 
 const WEB_MATERIAL_PREFIX = /^(foundation_data|substructure_data|superstructure_data|miscellaneous_data)-/;
+const WEB_CHUNK_IDS = {
+    str_foundation: 'foundation_data',
+    str_sub_structure: 'substructure_data',
+    str_super_structure: 'superstructure_data',
+    str_misc: 'miscellaneous_data',
+};
 
 /**
  * Appendix A: say where the construction unit rates actually came from
@@ -337,14 +343,32 @@ const rateProvenanceStatement = (chunks) => {
 
 /** transport_emissions_latex */
 const buildTransport = (chunks) => {
+    // Two indexes: the web app references a delivery material by
+    // "<web chunk>-<row id>" (row ids were only unique within a component
+    // for a long time, so the bare id alone can collide across components —
+    // the steel girder and the railing were both "row-1"). Resolve the
+    // chunk-qualified id first; fall back to the bare id only when it is
+    // unambiguous (desktop projects reference rows by bare id).
     const index = {};
+    const bareIndex = {};
+    const ambiguous = new Set();
     for (const [chunkId, category] of STRUCTURE_CHUNKS) {
+        const webChunkId = WEB_CHUNK_IDS[chunkId];
         for (const [component, items] of Object.entries(obj(chunks[chunkId]))) {
             for (const item of arr(items)) {
-                if (item?.id) index[item.id] = { item, category, component };
+                if (!item?.id) continue;
+                const record = { item, category, component };
+                index[`${webChunkId}-${item.id}`] = record;
+                if (bareIndex[item.id]) ambiguous.add(item.id); else bareIndex[item.id] = record;
             }
         }
     }
+    const resolve = (uuid) => {
+        const key = String(uuid ?? '');
+        if (index[key]) return index[key];
+        const bare = key.replace(WEB_MATERIAL_PREFIX, '');
+        return ambiguous.has(bare) ? null : bareIndex[bare] || null;
+    };
 
     const deliveries = [];
     let n = 0;
@@ -367,7 +391,7 @@ const buildTransport = (chunks) => {
                 ? [matEntry.uuid, numOr(matEntry.kg_factor, 1)] : [matEntry, 1];
             // Desktop references rows by id; the web transport page prefixes
             // the id with its structure chunk (e.g. "foundation_data-<id>").
-            const record = index[uuid] || index[String(uuid ?? '').replace(WEB_MATERIAL_PREFIX, '')];
+            const record = resolve(uuid);
             if (!record) {
                 const savedName = (matEntry && typeof matEntry === 'object' && matEntry.material_name) || '';
                 rows.push({ material: savedName || 'Unknown', category: '', cf: EMDASH, qtyKg: EMDASH, trips: EMDASH, emissions: fmt(0) });
@@ -758,7 +782,10 @@ export const buildReportDocument = (projectData = {}, { results = null, currency
             const figs = [
                 { key: 'pillar_donut', caption: 'LCC components results' },
                 { key: 'stage_bars', caption: 'Distribution of 3PS and 3 stages of LCC' },
-                { key: 'pillar_bars', caption: 'Distribution of various components of road user cost during construction' },
+                // PillarBarsFigure stacks the three pillars by life cycle stage; the
+                // old caption promised a road-user-cost component breakdown that
+                // the chart never drew.
+                { key: 'pillar_bars', caption: 'Distribution of each sustainability pillar across the life cycle stages' },
             ].map((f) => ({ ...f, figureNo: registerFigure(f.caption) }));
             doc.results = {
                 intro: TABLE_INTROS.results(tableNoResults), tableNo: tableNoResults, caption: 'Life Cycle Cost Analysis Results',

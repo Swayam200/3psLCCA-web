@@ -1,3 +1,4 @@
+import { resolveRowConversion } from '../gui/components/carbon_emission/carbonUtils.js';
 const VEHICLE_KEYS = [
     'small_cars',
     'big_cars',
@@ -308,6 +309,11 @@ export const normalizeCarbonEmissionData = (value, project = {}) => {
             const compName = section.name || '';
             const items = asArray(section.rows);
             items.filter(item => !asObject(item.state).in_trash).forEach(item => {
+                // Same unit rule as the Material Emissions page: the stored
+                // factor is trusted when it was chosen deliberately, else the
+                // units decide (MT → kg ×1000 …); incompatible units with no
+                // factor are excluded rather than multiplied by 1.
+                const conversion = resolveRowConversion(item);
                 allMats.push({
                     id: `${chunkId}-${item.id}`,
                     raw_id: item.id,
@@ -316,7 +322,8 @@ export const normalizeCarbonEmissionData = (value, project = {}) => {
                     component: compName,
                     quantity: numberValue(item.qty) || 0,
                     unit: item.unit || '',
-                    cf: numberValue(item.conversionFactor) ?? 1.0,
+                    cf: conversion.factor,
+                    unit_mismatch: conversion.status === 'mismatch',
                     ef: item.carbonEmission ? (numberValue(item.carbonEmission.factor) || 0) : 0,
                     chunkId: chunkId
                 });
@@ -338,7 +345,7 @@ export const normalizeCarbonEmissionData = (value, project = {}) => {
         conversion_factor: m.cf,
         emission_factor: m.ef,
         total_kgCO2e: m.quantity * m.cf * m.ef,
-        included: !excludedSet.has(m.id),
+        included: !excludedSet.has(m.id) && !m.unit_mismatch && m.ef > 0,
     }));
     const includedRows = matRows.filter(row => row.included);
     const calculatedCategoryTotals = includedRows.reduce((acc, row) => {
@@ -611,9 +618,14 @@ export const normalizeDemolitionData = (value) => {
 export const normalizeRecyclingData = (value) => {
     const data = normalizeObject(value);
     const included = asArray(data.included);
-    const totalRecoveredValue = included.reduce((sum, item) => {
-        return sum + (numberValue(asObject(item).recoveredValue) || 0);
-    }, 0);
+    // Desktop files list the included rows here and the total is their sum.
+    // The web Recycling page stores only the derived summary (desktop
+    // get_data): no `included` rows, but a real `total_recovered_value`.
+    // Recomputing 0 from the empty list made the page's summary write never
+    // match what was stored, so it wrote again on every render.
+    const totalRecoveredValue = included.length
+        ? included.reduce((sum, item) => sum + (numberValue(asObject(item).recoveredValue) || 0), 0)
+        : (numberValue(data.total_recovered_value) ?? 0);
     return {
         ...data,
         included,
@@ -735,6 +747,12 @@ export const validateTrafficData = (value) => {
     const totalAdt = VEHICLE_KEYS.reduce((sum, key) => {
         return sum + (numberValue(data.vehicles[key]?.vehicles_per_day) || 0);
     }, 0);
+    for (const key of VEHICLE_KEYS) {
+        const perDay = numberValue(data.vehicles[key]?.vehicles_per_day) || 0;
+        if (perDay < 0 || perDay > 1000000) {
+            errors.push(`Vehicles per day for ${key.replaceAll('_', ' ')} must be between 0 and 1,000,000.`);
+        }
+    }
     if (totalAdt > 0) {
         const accidentTotal = VEHICLE_KEYS.reduce((sum, key) => {
             return sum + (numberValue(data.vehicles[key]?.accident_percentage) || 0);

@@ -1,12 +1,12 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable react-hooks/set-state-in-effect */
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useProjectData } from '../../../contexts/ProjectDataContext';
 import { computeMachineryDetailedTotal, computeMachineryLumpsumTotal, DEFAULT_MACHINERY_DATA, ENERGY_SOURCES, normalizeMachineryData } from './carbonUtils';
 
 const MachineryEmissions = ({ controller }) => {
     const { projectData, updateProjectData } = useProjectData();
-    const [mode, setMode] = useState('detailed'); 
+    const [mode, setMode] = useState('detailed');
     const [detailedEntries, setDetailedEntries] = useState([]);
     const [lumpSum, setLumpSum] = useState({
         elec_kwh_per_day: 0,
@@ -18,10 +18,24 @@ const MachineryEmissions = ({ controller }) => {
     });
     const [remarks, setRemarks] = useState('');
     const [applyDaysVal, setApplyDaysVal] = useState(1);
+    // Local rows are the source of truth while mounted. Hydrate from the
+    // stored chunk on mount and on external replacement only — never from
+    // the echo of this page's own save (that reset rows mid-edit and lost
+    // the value the user had just typed).
+    const ownSavesPending = useRef(0);
+    const hydratedOnce = useRef(false);
+    const machineryChunk = projectData.carbon_emission_data?.machinery_emissions_data;
 
     useEffect(() => {
-        const carbonData = projectData.carbon_emission_data || {};
-        const rawMachineryData = carbonData.machinery_emissions_data || {};
+        if (hydratedOnce.current) {
+            if (ownSavesPending.current > 0) {
+                // Echo of this page's own save: local rows are already current.
+                ownSavesPending.current -= 1;
+                return;
+            }
+        }
+        hydratedOnce.current = true;
+        const rawMachineryData = machineryChunk || {};
         const machineryData = normalizeMachineryData(rawMachineryData);
         const hasSavedDetailedRows = machineryData.detailed.rows.length > 0
             || rawMachineryData.detailed_entries
@@ -41,7 +55,7 @@ const MachineryEmissions = ({ controller }) => {
             fuel_ef: machineryData.lumpsum.fuel_ef,
         });
         if (machineryData.remarks) setRemarks(machineryData.remarks);
-    }, [projectData]);
+    }, [machineryChunk]);
 
     const handleAddEntry = (template = null) => {
         const newEntry = template ? { ...template, hours: 8, days: 1 } : {
@@ -76,7 +90,14 @@ const MachineryEmissions = ({ controller }) => {
 
     const handleUpdateEntry = (index, field, value) => {
         const updated = [...detailedEntries];
-        updated[index][field] = value;
+        updated[index] = { ...updated[index], [field]: value };
+        // Stored rows carry the desktop key `hrs` next to the web key
+        // `hours`; every reader prefers `hrs`, so an edit to `hours` alone was
+        // shadowed by the stale `hrs` and never saved.
+        if (field === 'hours' || field === 'hrs') {
+            updated[index].hours = value;
+            updated[index].hrs = value;
+        }
         if (field === 'source') {
             const src = ENERGY_SOURCES.find(s => s.label === value);
             if (src) updated[index].ef = src.ef;
@@ -118,9 +139,11 @@ const MachineryEmissions = ({ controller }) => {
         const total = desktopMode === 'detailed'
             ? computeMachineryDetailedTotal(detailedRows)
             : computeMachineryLumpsumTotal(lumpsum);
-        const prev = projectData.carbon_emission_data || {};
-        updateProjectData('carbon_emission_data', {
-            ...prev,
+        ownSavesPending.current += 1;
+        // Build on the latest stored chunk, not a render-time closure, so a
+        // save that lands between renders cannot resurrect stale sibling data.
+        updateProjectData('carbon_emission_data', (current) => ({
+            ...(current || {}),
             machinery_emissions_data: {
                 mode: desktopMode,
                 detailed: { rows: detailedRows },
@@ -130,7 +153,7 @@ const MachineryEmissions = ({ controller }) => {
                 remarks: rem,
                 total_kgCO2e: total,
             }
-        });
+        }));
     };
 
     const detailedTotal = useMemo(() => {
@@ -432,7 +455,7 @@ const MachineryEmissions = ({ controller }) => {
                                             value={applyDaysVal}
                                             onChange={e => setApplyDaysVal(parseInt(e.target.value) || 0)}
                                         />
-                                        <span className="position-absolute end-0 top-50 translate-middle-y pe-2 text-secondary" style={{ fontSize: '10px' }}>d</span>
+                                        <span className="position-absolute end-0 top-50 translate-middle-y pe-2 text-secondary" style={{ fontSize: '10px' }}>days</span>
                                     </div>
                                     <button className="machinery-btn-secondary px-3" style={{ fontSize: '13px' }} onClick={handleApplyDays}>Apply Days to All Rows</button>
                                 </div>

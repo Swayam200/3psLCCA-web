@@ -91,13 +91,18 @@ const MaterialEmissions = () => {
                             <td className="text-end font-monospace">{formatNumber(row.emission_factor)}</td>
                             <td>{row.emission_unit || '-'}</td>
                             <td className="text-end font-monospace fw-semibold">{isIncluded ? formatNumber(row.total_kgCO2e) : '-'}</td>
-                            <td className="text-secondary small">{isIncluded ? (row.warning || '') : row.reason}</td>
+                            <td className="text-secondary small">
+                                {isIncluded ? (row.warning || '') : row.reason}
+                                {!isIncluded && row.reason === 'Unit mismatch' && (
+                                    <div className="text-warning" style={{ fontSize: '0.75rem' }}>{row.conversion_note} Edit the material on its construction page.</div>
+                                )}
+                            </td>
                             <td className="text-center">
                                 <button
                                     className={`btn btn-sm ${isIncluded ? 'btn-outline-danger' : 'btn-outline-success'}`}
                                     title={isIncluded ? 'Exclude from calculation' : 'Include in calculation'}
                                     onClick={() => updateMaterialState(row.id, !isIncluded)}
-                                    disabled={!isIncluded && row.reason === 'Incomplete Data'}
+                                    disabled={!isIncluded && (row.reason === 'Incomplete Data' || row.reason === 'Unit mismatch')}
                                 >
                                     <i className={`bi ${isIncluded ? 'bi-trash' : 'bi-plus-lg'}`} />
                                 </button>

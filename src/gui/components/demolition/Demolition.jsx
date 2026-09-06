@@ -14,7 +14,7 @@ const DEMOLITION_SECTIONS = [
             {
                 key: 'demolition_cost',
                 label: 'Demolition & Disposal Cost (%)',
-                hint: 'Cost of demolition cost expressed as percentage of initial construction cost.',
+                hint: 'Demolition and disposal cost expressed as a percentage of initial construction cost.',
                 type: 'float',
                 min: 0.0,
                 max: 100.0,
@@ -165,6 +165,14 @@ const Demolition = ({ controller, engine }) => {
 
     const [errors, setErrors] = useState(new Set());
     const [validationMsg, setValidationMsg] = useState('');
+    const [statusMsg, setStatusMsg] = useState('');
+
+    // Auto-dismiss the transient status line
+    useEffect(() => {
+        if (!statusMsg) return undefined;
+        const timer = setTimeout(() => setStatusMsg(''), 3000);
+        return () => clearTimeout(timer);
+    }, [statusMsg]);
 
     // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -187,6 +195,7 @@ const Demolition = ({ controller, engine }) => {
         }));
         setErrors(new Set());
         setValidationMsg('');
+        setStatusMsg('Suggested values applied');
         if (engine && engine._log) {
             engine._log('Demolition: Suggested values applied.');
         } else if (controller && controller.engine) {
@@ -195,9 +204,11 @@ const Demolition = ({ controller, engine }) => {
     };
 
     const handleClearAll = () => {
+        if (!window.confirm('Clear all demolition inputs? This cannot be undone.')) return;
         setForm(INITIAL_STATE);
         setErrors(new Set());
         setValidationMsg('');
+        setStatusMsg('');
         if (engine && engine._log) {
             engine._log('Demolition: All fields cleared.');
         } else if (controller && controller.engine) {
@@ -270,6 +281,12 @@ const Demolition = ({ controller, engine }) => {
                     Clear All
                 </button>
             </div>
+
+            {statusMsg && (
+                <div className="mb-3" style={{ fontSize: '0.85rem', color: 'var(--app-primary-accent)' }} role="status" aria-live="polite">
+                    ✓ {statusMsg}
+                </div>
+            )}
 
             {/* Validation message */}
             {validationMsg && (

@@ -1,3 +1,5 @@
+import { resolveConversionFactor } from '../../../utils/carbonUnits.js';
+
 export const STRUCTURE_CHUNKS = [
     ['foundation_data', 'Foundation'],
     ['substructure_data', 'Sub-Structure'],
@@ -116,8 +118,9 @@ export const getStructureMaterials = (projectData = {}, carbonData = projectData
                 const emission = row?.carbonEmission || {};
                 const values = row?.values || {};
                 const quantity = parseNumber(row?.qty ?? values.quantity);
-                const conversionFactor = parseNumber(row?.conversionFactor ?? values.conversion_factor, 1) || 1;
                 const emissionFactor = parseNumber(emission.factor ?? values.carbon_emission);
+                const conversion = resolveRowConversion(row);
+                const conversionFactor = conversion.factor;
                 const explicitInclude = state.included_in_carbon_emission;
                 const included = explicitInclude === undefined
                     ? !excludedIds.has(materialId)
@@ -132,6 +135,9 @@ export const getStructureMaterials = (projectData = {}, carbonData = projectData
                     quantity,
                     unit: row?.unit || values.unit || '',
                     conversion_factor: conversionFactor,
+                    conversion_status: conversion.status,
+                    warning: conversion.status === 'derived' ? `Converted ${conversion.note}` : '',
+                    conversion_note: conversion.note,
                     emission_factor: emissionFactor,
                     emission_unit: emission.perUnit || values.carbon_unit || '',
                     carbon_source: emission.source || values.carbon_emission_src || '',
@@ -146,8 +152,33 @@ export const getStructureMaterials = (projectData = {}, carbonData = projectData
     });
 };
 
+export const REASON_UNIT_MISMATCH = 'Unit mismatch';
+
+/**
+ * Conversion factor for a web construction row: emission units per quantity
+ * unit. A factor that came from the schedule of rates, a desktop import or
+ * a deliberate user entry is trusted; otherwise the units decide (see
+ * resolveConversionFactor).
+ */
+export const resolveRowConversion = (row = {}) => {
+    const values = row?.values || {};
+    const emission = row?.carbonEmission || {};
+    const explicit = row?.conversionFactor ?? values.conversion_factor;
+    const source = row?.conversionFactorSource;
+    const trusted = source === 'db' || source === 'user' || source === 'import'
+        || row?.state?.carbon_conversion_confirmed === true
+        || values.conversion_factor !== undefined;
+    return resolveConversionFactor({
+        quantityUnit: row?.unit ?? values.unit,
+        emissionUnit: carbonUnitDenominator(emission.perUnit || emission.unit ? emission : values),
+        explicit,
+        trusted,
+    });
+};
+
 const materialReason = (row) => {
     if (!row.emission_factor) return 'Incomplete Data';
+    if (row.conversion_status === 'mismatch') return REASON_UNIT_MISMATCH;
     if (row.conversion_factor <= 0) return 'Incomplete Data';
     if (!row.included) return 'Manually Excluded';
     return '';

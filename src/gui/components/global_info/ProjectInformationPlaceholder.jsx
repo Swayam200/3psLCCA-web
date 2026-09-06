@@ -47,6 +47,10 @@ const REQUIRED_KEYS = new Set(['project_name']);
 // Fields that are display-only (locked)
 const LOCKED_KEYS = new Set(['project_country', 'project_currency', 'unit_system']);
 
+// Light email check: something@something.tld — advisory only, never blocks saving
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const isInvalidEmail = (value) => Boolean(value && value.toString().trim()) && !EMAIL_PATTERN.test(value.toString().trim());
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function SectionHeader({ title, rightElement }) {
@@ -68,7 +72,7 @@ function FieldHint({ text }) {
     );
 }
 
-function TextField({ id, label, hint, required, value, onChange, hasError, disabled }) {
+function TextField({ id, label, hint, required, value, onChange, hasError, disabled, type = 'text', errorMessage }) {
     return (
         <div className="mb-4">
             <label htmlFor={id} className="fw-bold mb-1 d-block" style={{ fontSize: '0.9rem', color: 'var(--app-text-secondary)', transition: 'color 0.3s' }}>
@@ -77,13 +81,20 @@ function TextField({ id, label, hint, required, value, onChange, hasError, disab
             <FieldHint text={hint} />
             <input
                 id={id}
-                type="text"
+                type={type}
                 value={value}
                 onChange={(e) => onChange && onChange(id, e.target.value)}
                 disabled={disabled}
                 className={`form-control ${hasError ? 'is-invalid' : ''}`}
                 style={disabled ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
+                aria-invalid={hasError || undefined}
+                aria-describedby={errorMessage ? `${id}-error` : undefined}
             />
+            {errorMessage && (
+                <div id={`${id}-error`} className="invalid-feedback d-block" style={{ fontSize: '0.8rem' }}>
+                    {errorMessage}
+                </div>
+            )}
         </div>
     );
 }
@@ -120,7 +131,7 @@ function PhoneField({ id, label, hint, value, onChange, hasError }) {
                 value={value}
                 onChange={(e) => onChange(id, e.target.value)}
                 className={`form-control ${hasError ? 'is-invalid' : ''}`}
-                placeholder="+1 234 567 8900"
+                placeholder="+91 98765 43210"
             />
         </div>
     );
@@ -463,11 +474,13 @@ const ProjectInformationPlaceholder = ({ controller }) => {
 
             <TextField
                 id="agency_email"
+                type="email"
                 label="Email"
                 hint="Official email address for correspondence."
                 value={form.agency_email}
                 onChange={handleChange}
-                hasError={hasError('agency_email')}
+                hasError={hasError('agency_email') || isInvalidEmail(form.agency_email)}
+                errorMessage={isInvalidEmail(form.agency_email) ? 'Enter a valid email address' : ''}
             />
 
             <PhoneField
@@ -521,11 +534,13 @@ const ProjectInformationPlaceholder = ({ controller }) => {
 
             <TextField
                 id="reviewer_email"
+                type="email"
                 label="Email"
                 hint=""
                 value={form.reviewer_email}
                 onChange={handleChange}
-                hasError={hasError('reviewer_email')}
+                hasError={hasError('reviewer_email') || isInvalidEmail(form.reviewer_email)}
+                errorMessage={isInvalidEmail(form.reviewer_email) ? 'Enter a valid email address' : ''}
             />
 
             <PhoneField

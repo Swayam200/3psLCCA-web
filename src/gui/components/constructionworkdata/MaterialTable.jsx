@@ -4,7 +4,7 @@ import MaterialAddModal from './MaterialAddModal';
 const calcTotal = (row) => {
     const r = parseFloat(row.rate) || 0;
     const q = parseFloat(row.qty) || 0;
-    return (r * q).toFixed(2);
+    return (r * q).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
 const cellTextStyle = { color: 'var(--app-text-primary)' };
