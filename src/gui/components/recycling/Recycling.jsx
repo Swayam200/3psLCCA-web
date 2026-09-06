@@ -101,15 +101,27 @@ const Recycling = () => {
         verticalAlign: 'middle',
     };
 
-    const modalItem = editingItem && {
-        __item: editingItem,
-        material: rowName(editingItem.row),
-        qtyValue: String(rowQuantity(editingItem.row)),
-        qtyUnit: rowUnit(editingItem.row),
-        scrapRate: String(scrapRate(editingItem.row) || ''),
-        recoveryPercent: String(recyclePct(editingItem.row) || ''),
-        recyclability: String(recyclePct(editingItem.row) || ''),
-    };
+    const modalItem = editingItem && (() => {
+        const row = editingItem.row;
+        const values = row.values || {};
+        const emission = row.carbonEmission || {};
+        const orBlank = (value) => (value === undefined || value === null ? '' : String(value));
+        return {
+            __item: editingItem,
+            material: rowName(row),
+            qtyValue: String(rowQuantity(row)),
+            qtyUnit: rowUnit(row),
+            rateCost: orBlank(row.rate ?? values.rate),
+            rateSource: orBlank(row.source ?? values.rate_source),
+            emissionFactor: orBlank(emission.factor ?? values.carbon_emission),
+            perUnit: orBlank(emission.perUnit ?? values.carbon_unit),
+            conversionFactor: orBlank(row.conversionFactor ?? values.conversion_factor ?? 1),
+            currency,
+            scrapRate: scrapRate(row) ? String(scrapRate(row)) : '',
+            recoveryPercent: recyclePct(row) ? String(recyclePct(row)) : '',
+            recyclability: recyclePct(row) ? String(recyclePct(row)) : '',
+        };
+    })();
 
     return (
         <div className="h-100 d-flex flex-column overflow-hidden" style={{ backgroundColor: 'var(--app-bg-main)', color: 'var(--app-text-primary)' }}>
@@ -162,8 +174,8 @@ const Recycling = () => {
                                     <td style={cellStyle} className="text-end">{fmt(item.value, 2)}</td>
                                     <td style={cellStyle} className="text-center">
                                         <div className="d-flex justify-content-center gap-3">
-                                            <FaEdit style={{ cursor: 'pointer', color: 'var(--app-text-muted)' }} title="Edit" onClick={() => setEditingItem(item)} />
-                                            <FaChevronDown style={{ cursor: 'pointer', color: '#dc3545' }} title="Exclude from calculation" onClick={() => setIncludedFlag(item, false)} />
+                                            <button type="button" className="btn btn-link p-0" aria-label={`Edit recyclability for ${rowName(item.row)}`} title="Edit recyclability" onClick={() => setEditingItem(item)} style={{ color: 'var(--app-text-muted)', lineHeight: 1 }}><FaEdit aria-hidden="true" /></button>
+                                            <button type="button" className="btn btn-link p-0" aria-label={`Exclude ${rowName(item.row)} from the recycling calculation`} title="Exclude from calculation" onClick={() => setIncludedFlag(item, false)} style={{ color: '#dc3545', lineHeight: 1 }}><FaChevronDown aria-hidden="true" /></button>
                                         </div>
                                     </td>
                                 </tr>
@@ -200,9 +212,9 @@ const Recycling = () => {
                                     <td style={cellStyle}><span className="text-muted">{item.reason}</span></td>
                                     <td style={cellStyle} className="text-center">
                                         <div className="d-flex justify-content-center gap-3">
-                                            <FaEdit style={{ cursor: 'pointer', color: 'var(--app-text-muted)' }} title="Edit" onClick={() => setEditingItem(item)} />
+                                            <button type="button" className="btn btn-link p-0" aria-label={`Edit recyclability for ${rowName(item.row)}`} title="Edit recyclability" onClick={() => setEditingItem(item)} style={{ color: 'var(--app-text-muted)', lineHeight: 1 }}><FaEdit aria-hidden="true" /></button>
                                             {item.reason === 'Manually Excluded' && (
-                                                <FaChevronUp style={{ cursor: 'pointer', color: '#198754' }} title="Include in calculation" onClick={() => setIncludedFlag(item, true)} />
+                                                <button type="button" className="btn btn-link p-0" aria-label={`Include ${rowName(item.row)} in the recycling calculation`} title="Include in calculation" onClick={() => setIncludedFlag(item, true)} style={{ color: '#198754', lineHeight: 1 }}><FaChevronUp aria-hidden="true" /></button>
                                             )}
                                         </div>
                                     </td>

@@ -83,11 +83,11 @@ const ctr = (v, key) => <td key={key} className="ctr">{v}</td>;
 
 /* ── Sections ────────────────────────────────────────────────────────────── */
 
-const TitlePage = ({ page, currency }) => (
+const TitlePage = ({ page, currency, draft }) => (
     <section className="title-page">
         {/* Source of the running header; must sit inside the first page's
             content or Paged.js gives it a page of its own. */}
-        <span className="running-title">{page.projectName}</span>
+        <span className="running-title">{draft ? `${page.projectName} — DRAFT` : page.projectName}</span>
         <div className="tri-bar-vertical" />
         <div className="logos">
             {page.agencyLogo
@@ -97,6 +97,11 @@ const TitlePage = ({ page, currency }) => (
         </div>
         <h1>{REPORT_TITLE}</h1>
         <div className="tri-bar" />
+        {draft && (
+            <div className="draft-banner" data-testid="report-draft-banner">
+                DRAFT — input data only. No calculation results are included; run the calculation on the Results page and reopen the report to complete it.
+            </div>
+        )}
         <div className="infocard">
             <div className="sec-head">Project information</div>
             <table className="info">
@@ -374,7 +379,7 @@ const ResultsSection = ({ r }) => {
     );
 };
 
-const SummarySection = ({ summary }) => (
+const SummarySection = ({ summary }) => (summary ? (
     <>
         <p>{SUMMARY_LEAD}</p>
         <p>
@@ -384,16 +389,18 @@ const SummarySection = ({ summary }) => (
             The most contributing pillar is <b>{summary?.pillarLabel || '________'}</b> contributing to around <b>{summary?.pillarPct ? `${summary.pillarPct}%` : '____%'}</b> of the total life cycle cost.
         </p>
     </>
-);
+) : (
+    <p className="note" data-testid="report-summary-draft">No calculation results are available yet, so no conclusions are drawn in this draft. Run the calculation on the Results page and reopen the report.</p>
+));
 
-const AppendixA = () => (
+const AppendixA = ({ rateStatement }) => (
     <section className="appendix page-break" id="appendix-a">
         <h2>{APPENDIX_A.title}</h2>
         <p>{APPENDIX_A.intro}</p>
         <ul>
             {APPENDIX_A.items.map((item, i) => (
                 <li key={i}>
-                    {item.bold ? (
+                    {item.key === 'rates' && rateStatement ? rateStatement : item.bold ? (
                         <>{item.text.split(item.bold)[0]}<b>{item.bold}</b>{item.text.split(item.bold)[1]}</>
                     ) : item.text}
                     {item.children && <ul>{item.children.map((c, j) => <li key={j}>{c}</li>)}</ul>}
@@ -609,7 +616,7 @@ const ReportPage = ({ projectId, projectData }) => {
                 )}
             </div>
 
-            <ReportSectionModal show={showSections} onHide={() => setShowSections(false)} onConfirm={(next) => { setSelections(next); setShowSections(false); }} />
+            <ReportSectionModal show={showSections} onHide={() => setShowSections(false)} confirmLabel="Apply sections" onConfirm={(next) => { setSelections(next); setShowSections(false); }} />
 
             {paged && (
                 <div className="lcca-paged">
@@ -623,7 +630,7 @@ const ReportPage = ({ projectId, projectData }) => {
             )}
 
             <article ref={sourceRef} className="lcca-report source" data-testid="lcca-html-report">
-                {doc.titlePage && <TitlePage page={doc.titlePage} currency={doc.meta.currency} />}
+                {doc.titlePage && <TitlePage page={doc.titlePage} currency={doc.meta.currency} draft={!doc.meta.hasResults} />}
 
                 <Toc entries={toc} tables={doc.tables} figures={doc.figures} runningTitle={doc.titlePage ? null : doc.meta.projectName} />
 
@@ -671,7 +678,7 @@ const ReportPage = ({ projectId, projectData }) => {
                 </section>
 
                 {doc.appendices.map((a) => {
-                    if (a.kind === 'appendix-a') return <AppendixA key={a.id} />;
+                    if (a.kind === 'appendix-a') return <AppendixA key={a.id} rateStatement={a.rateStatement} />;
                     if (a.kind === 'appendix-b') return <AppendixB key={a.id} />;
                     if (a.kind === 'appendix-c') return <AppendixC key={a.id} a={a} />;
                     return null;

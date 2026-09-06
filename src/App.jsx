@@ -256,9 +256,11 @@ function ProjectViewWrapper({ projectData, setProjectData, logs, setLogs, isLock
         saveState={saveState}
       >
         {content ? React.cloneElement(content, {
+          key: activeNode,
           logs,
           onClearLogs: handleClearLogs,
           isLocked: isLocked,
+          setIsLocked,
           projectData: projectData
         }) : <div className="p-4 text-muted fst-italic">Select a section from the sidebar to begin.</div>}
       </ProjectLayout>

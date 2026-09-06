@@ -308,7 +308,7 @@ test('page validators allow zero-cost percentages but reject invalid durations a
         alternate_road: { alternate_road_carriageway: 'Two Lane', carriage_width_in_m: 7, hourly_capacity: 1500 },
         wpi_profile: '2024',
         wpi_data: { small_cars: { petrol: 1 } },
-    }).some((message) => message.includes('Vehicle accident percentages')));
+    }).some((message) => message.includes('Shares of accidents by vehicle type')));
 });
 
 test('bridge normalization mirrors desktop defaults and carries project country', () => {

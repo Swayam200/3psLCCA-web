@@ -44,6 +44,8 @@ const ICON_MAP = {
     "Report": "list",
 };
 
+const GROUP_ONLY_NODES = new Set(['Input Parameters']);
+
 const TreeNode = ({ label, childrenData, depth, activeNode, setActiveNode }) => {
     const hasChildren = childrenData && (Array.isArray(childrenData) ? childrenData.length > 0 : Object.keys(childrenData).length > 0);
     const [isExpanded, setIsExpanded] = useState(true);
@@ -57,6 +59,8 @@ const TreeNode = ({ label, childrenData, depth, activeNode, setActiveNode }) => 
             setIsExpanded(prev => !prev);
         }
 
+        // Pure groups have no page of their own; clicking them only toggles.
+        if (GROUP_ONLY_NODES.has(label)) return;
         setActiveNode(label);
     };
 
@@ -76,8 +80,14 @@ const TreeNode = ({ label, childrenData, depth, activeNode, setActiveNode }) => 
                     color: isActive ? 'var(--app-primary-accent)' : nodeColor,
                 }}
                 onClick={handleToggle}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToggle(e); } }}
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
+                role="button"
+                tabIndex={0}
+                aria-label={hasChildren ? `${label} section${GROUP_ONLY_NODES.has(label) ? '' : ' page'}, ${isExpanded ? 'expanded' : 'collapsed'}` : label}
+                aria-expanded={hasChildren ? isExpanded : undefined}
+                aria-current={isActive ? 'page' : undefined}
             >
                 {isActive && (
                     <div style={{ position: 'absolute', left: 0, top: '4px', bottom: '4px', width: '3px', backgroundColor: 'var(--app-primary-accent)', borderRadius: '0 3px 3px 0' }}></div>

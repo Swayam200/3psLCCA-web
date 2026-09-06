@@ -221,13 +221,20 @@ const NewProjectModal = ({ show, onHide, onCreate }) => {
                     </Form.Group>
                 </Form>
             </Modal.Body>
-            <Modal.Footer className="gap-2">
+            <Modal.Footer className="gap-2 flex-column align-items-stretch">
+                {country && currency && (
+                    <div className="w-100 text-start" style={{ fontSize: '0.8rem', color: 'var(--app-text-secondary)' }} data-testid="new-project-summary">
+                        Creating a project in <b>{country}</b> using <b>{currency}</b>. Country and currency cannot be changed after creation.
+                    </div>
+                )}
+                <div className="d-flex justify-content-end gap-2 w-100">
                 <Button className="btn-create" onClick={handleCreate}>
                     Create Project
                 </Button>
                 <Button className="btn-cancel" onClick={onHide}>
                     Cancel
                 </Button>
+            </div>
             </Modal.Footer>
         </Modal>
     );

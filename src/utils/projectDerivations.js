@@ -1,4 +1,7 @@
 import { normalizeProjectData } from './projectSchema.js';
+import {
+    pickTrafficField, TRAFFIC_ALTERNATE_ROAD_KEYS, TRAFFIC_SEVERITY_KEYS, TRAFFIC_ROAD_PARAM_KEYS,
+} from './projectPageSchema.js';
 import { recyclingChunkData } from './recyclingDerivations.js';
 import {
     computeMachineryTotal,
@@ -162,6 +165,35 @@ export const deriveRecyclingData = (projectData) => {
     };
 };
 
+/**
+ * Desktop-shaped (flat) view of the traffic data for consumers that read
+ * the desktop chunk contract (report, LaTeX runtime): the web form's
+ * sub-objects are copied onto the flat keys they mirror, and web-only names
+ * get their desktop aliases. Flat keys that already hold a real value are
+ * left untouched, so desktop-imported projects are unchanged.
+ */
+export const flattenTrafficData = (trafficData = {}) => {
+    const traffic = { ...(trafficData || {}) };
+    const groups = [
+        [traffic.alternate_road, TRAFFIC_ALTERNATE_ROAD_KEYS],
+        [traffic.severity, TRAFFIC_SEVERITY_KEYS],
+        [traffic.road_params, TRAFFIC_ROAD_PARAM_KEYS],
+    ];
+    groups.forEach(([group, keys]) => {
+        if (!group || typeof group !== 'object') return;
+        keys.forEach((key) => {
+            const value = pickTrafficField(group[key], traffic[key]);
+            if (value !== undefined) traffic[key] = value;
+        });
+    });
+    const filled = (value) => value && typeof value === 'object' && Object.keys(value).length > 0;
+    if (!filled(traffic.vehicle_data) && filled(traffic.vehicles)) traffic.vehicle_data = traffic.vehicles;
+    if (!filled(traffic.peak_hour_distribution) && filled(traffic.peak_distribution)) traffic.peak_hour_distribution = traffic.peak_distribution;
+    if (traffic.mode === undefined && traffic.calculation_mode !== undefined) traffic.mode = traffic.calculation_mode;
+    if (traffic.force_free_flow_off_peak === undefined && traffic.force_free_flow !== undefined) traffic.force_free_flow_off_peak = traffic.force_free_flow;
+    return traffic;
+};
+
 export const deriveTrafficAndRoadData = (projectData) => {
     const project = normalizeProjectData(projectData);
     const traffic = project.traffic_data || {};
@@ -169,6 +201,7 @@ export const deriveTrafficAndRoadData = (projectData) => {
     const vehiclesPerDay = traffic.vehicles_per_day || {};
     const roadParams = traffic.road_params || {};
     const alternateRoad = traffic.alternate_road || {};
+    const severity = traffic.severity || {};
 
     // Per-vehicle rerouting emission factors live on the Traffic Rerouting
     // Emissions page data (desktop diversion_emissions chunk); the engine
@@ -210,20 +243,24 @@ export const deriveTrafficAndRoadData = (projectData) => {
         ...traffic,
         mode: resolveTrafficMode(projectData),
         vehicle_data: normalizedVehicles,
-        severity_minor: parseNumber(traffic.severity_minor ?? traffic.severity?.severity_minor ?? traffic.severity?.minor),
-        severity_major: parseNumber(traffic.severity_major ?? traffic.severity?.severity_major ?? traffic.severity?.major),
-        severity_fatal: parseNumber(traffic.severity_fatal ?? traffic.severity?.severity_fatal ?? traffic.severity?.fatal),
-        carriage_width_in_m: parseNumber(traffic.carriage_width_in_m ?? roadParams.carriage_width_in_m),
-        hourly_capacity: parseNumber(traffic.hourly_capacity ?? roadParams.hourly_capacity),
-        alternate_road_carriageway: traffic.alternate_road_carriageway ?? alternateRoad.alternate_road_carriageway ?? '',
+        // The traffic form stores these in sub-objects (alternate_road,
+        // severity, road_params); desktop files use the flat keys. The
+        // normalized sub-object already reconciles the two (pickTrafficField),
+        // so it is the source of truth here; the flat key is the fallback.
+        severity_minor: parseNumber(pickTrafficField(severity.severity_minor ?? severity.minor, traffic.severity_minor)),
+        severity_major: parseNumber(pickTrafficField(severity.severity_major ?? severity.major, traffic.severity_major)),
+        severity_fatal: parseNumber(pickTrafficField(severity.severity_fatal ?? severity.fatal, traffic.severity_fatal)),
+        carriage_width_in_m: parseNumber(pickTrafficField(alternateRoad.carriage_width_in_m, traffic.carriage_width_in_m ?? roadParams.carriage_width_in_m)),
+        hourly_capacity: parseNumber(pickTrafficField(alternateRoad.hourly_capacity, traffic.hourly_capacity ?? roadParams.hourly_capacity)),
+        alternate_road_carriageway: pickTrafficField(alternateRoad.alternate_road_carriageway, traffic.alternate_road_carriageway) ?? '',
         alternate_road_speed: parseNumber(traffic.alternate_road_speed ?? alternateRoad.alternate_road_speed),
-        road_roughness_mm_per_km: parseNumber(traffic.road_roughness_mm_per_km ?? roadParams.road_roughness_mm_per_km),
-        road_rise_m_per_km: parseNumber(traffic.road_rise_m_per_km ?? roadParams.road_rise_m_per_km),
-        road_fall_m_per_km: parseNumber(traffic.road_fall_m_per_km ?? roadParams.road_fall_m_per_km),
-        additional_reroute_distance_km: parseNumber(traffic.additional_reroute_distance_km ?? roadParams.additional_reroute_distance_km),
-        additional_travel_time_min: parseNumber(traffic.additional_travel_time_min ?? roadParams.additional_travel_time_min),
-        crash_rate_accidents_per_million_km: parseNumber(traffic.crash_rate_accidents_per_million_km ?? roadParams.crash_rate_accidents_per_million_km),
-        work_zone_multiplier: parseNumber(traffic.work_zone_multiplier ?? roadParams.work_zone_multiplier),
+        road_roughness_mm_per_km: parseNumber(pickTrafficField(roadParams.road_roughness_mm_per_km, traffic.road_roughness_mm_per_km)),
+        road_rise_m_per_km: parseNumber(pickTrafficField(roadParams.road_rise_m_per_km, traffic.road_rise_m_per_km)),
+        road_fall_m_per_km: parseNumber(pickTrafficField(roadParams.road_fall_m_per_km, traffic.road_fall_m_per_km)),
+        additional_reroute_distance_km: parseNumber(pickTrafficField(roadParams.additional_reroute_distance_km, traffic.additional_reroute_distance_km)),
+        additional_travel_time_min: parseNumber(pickTrafficField(roadParams.additional_travel_time_min, traffic.additional_travel_time_min)),
+        crash_rate_accidents_per_million_km: parseNumber(pickTrafficField(roadParams.crash_rate_accidents_per_million_km, traffic.crash_rate_accidents_per_million_km)),
+        work_zone_multiplier: parseNumber(pickTrafficField(roadParams.work_zone_multiplier, traffic.work_zone_multiplier)),
         force_free_flow_off_peak: Boolean(traffic.force_free_flow_off_peak ?? traffic.force_free_flow),
         road_user_cost_per_day: parseNumber(traffic.road_user_cost_per_day),
         peak_hour_distribution: traffic.peak_hour_distribution || traffic.peak_distribution || {},

@@ -123,7 +123,7 @@ const TrafficEmissions = () => {
                                 <tr>
                                     <th>Vehicle Type</th>
                                     <th className="text-end">Vehicles / Day</th>
-                                    <th className="text-end">Emission Factor (kgCO2e/veh-km/day)</th>
+                                    <th className="text-end">Emission Factor (kgCO₂e / veh-km)</th>
                                     <th className="text-end">Emissions (kgCO2e/day)</th>
                                 </tr>
                             </thead>

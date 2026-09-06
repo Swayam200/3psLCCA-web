@@ -186,6 +186,9 @@
 .lcca-report .title-page .footer .brand { font-weight: bold; color: var(--rp-slate); }
 .lcca-report .title-page .footer .disclaimer { width: 46%; font-size: 0.8em; color: var(--rp-muted); text-align: justify; }
 
+/* Draft marker on the cover when the report has no calculation results. */
+.lcca-report .draft-banner { border: 1.5px solid #b91c1c; color: #b91c1c; background: #fff5f5; padding: 3mm 4mm; margin: 4mm 0 2mm; font-weight: bold; font-size: 0.9em; }
+
 /* ── Table of contents ────────────────────────────────────────────────── */
 .lcca-report .toc { break-after: page; page-break-after: always; }
 .lcca-report .toc ol { list-style: none; padding: 0; margin: 0; }
