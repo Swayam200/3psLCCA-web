@@ -342,8 +342,8 @@ const Outputs = ({ addLog, navTrigger, setIsLocked }) => {
             <h2 className="mb-4" style={{ color: 'var(--app-primary-accent)' }}>Outputs</h2>
             
             <Form.Group className="mb-4">
-                <Form.Label className="fw-bold" style={{ color: 'var(--app-text-primary)' }}>Project Results Data (.3psLCCAFile) *</Form.Label>
-                <div className="mb-2" style={{ fontSize: '0.85rem', color: 'var(--app-text-secondary)' }}>Upload a previously calculated project file to view its outputs.</div>
+                <Form.Label className="fw-bold" style={{ color: 'var(--app-text-primary)' }}>Previously calculated results file (.3psLCCAFile) — optional</Form.Label>
+                <div className="mb-2" style={{ fontSize: '0.85rem', color: 'var(--app-text-secondary)' }}>Only needed to view outputs from an earlier calculation. Otherwise proceed with the calculation below.</div>
                 <div className="d-flex gap-3 align-items-center">
                     <Button 
                         variant="outline-secondary" 

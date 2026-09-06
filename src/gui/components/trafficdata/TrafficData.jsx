@@ -450,17 +450,29 @@ const TrafficData = () => {
     const [hasValidated, setHasValidated] = useState(false);
     const [wpiEditor, setWpiEditor] = useState(null);
     const reroutingSelectRef = useRef(null);
+    const validationRef = useRef(null);
     const accidentShareTotal = VEHICLES.reduce((sum, v) => sum + (Number(form.vehicles?.[v.key]?.accident_percentage) || 0), 0);
 
+    // The form is the single source of truth while this page is mounted.
+    // Every form change is pushed to the project context; the context echo
+    // of that push is ignored, so the two effects can never ping-pong
+    // (rebuilding the form from the normalized copy changes types/formatting,
+    // which used to loop React and silently revert in-flight edits).
+    const lastPushed = useRef(null);
+
     useEffect(() => {
-        updateProjectData('traffic_data', serializeTrafficForm(form));
+        const serialized = serializeTrafficForm(form);
+        // The context stores normalizeTrafficData(serialized); remember that
+        // exact shape so the echo can be recognised below.
+        lastPushed.current = JSON.stringify(normalizeTrafficData(serialized));
+        updateProjectData('traffic_data', serialized);
     }, [form, updateProjectData]);
 
     useEffect(() => {
-        const next = buildTrafficForm(projectData.traffic_data);
-        // Project imports can replace traffic data while this page remains mounted.
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setForm(prev => JSON.stringify(next) !== JSON.stringify(prev) ? next : prev);
+        if (lastPushed.current !== null && JSON.stringify(projectData.traffic_data) === lastPushed.current) return;
+        // Only an external replacement (project import, assistant edit) gets
+        // here: rehydrate the form from the new context value.
+        setForm(buildTrafficForm(projectData.traffic_data));
     }, [projectData.traffic_data]);
 
     const handleModeChange = (val) => setForm(prev => ({ ...prev, calculation_mode: val }));
@@ -468,6 +480,7 @@ const TrafficData = () => {
     const handleRemarksChange = (html) => setForm(prev => ({ ...prev, remarks: html }));
 
     const handleClearAll = () => {
+        if (!window.confirm('Clear all traffic inputs on this page? This cannot be undone.')) return;
         setForm(buildTrafficForm(INITIAL_STATE));
         setValidationMsg('');
         setHasValidated(false);
@@ -584,6 +597,8 @@ const TrafficData = () => {
     const validate = () => {
         const messages = validateTrafficData(form);
         setHasValidated(true);
+        // The message renders below the buttons; make sure it is on screen.
+        setTimeout(() => validationRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 0);
         if (messages.length > 0) {
             setValidationMsg(messages.join(' '));
             if (!form.alternate_road.alternate_road_carriageway) {
@@ -952,9 +967,14 @@ const TrafficData = () => {
                 </div>
             )}
 
-            {validationMsg && (
-                <div className="alert alert-danger p-2 mt-3" style={{ fontSize: '0.8rem' }} role="alert">⚠️ {validationMsg}</div>
-            )}
+            <div ref={validationRef}>
+                {validationMsg && (
+                    <div className="alert alert-danger p-2 mt-3" style={{ fontSize: '0.8rem' }} role="alert">⚠️ {validationMsg}</div>
+                )}
+                {hasValidated && !validationMsg && (
+                    <div className="alert alert-success p-2 mt-3" style={{ fontSize: '0.8rem' }} role="status" data-testid="traffic-valid">✓ All traffic inputs are valid.</div>
+                )}
+            </div>
           <style>{`\n@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }\n`}</style>
         </div>
     );

@@ -8,27 +8,27 @@ export { REPORT_SECTIONS, SECTION_KEYS } from './reportSections.js';
 
 const SUBSECTION_MAP = {
     "Bridge geometry and description": [
-        { label: "Table 2-1: Bridge description", key: SECTION_KEYS.KEY_SHOW_BRIDGE_DESC },
+        { label: "Bridge Data Summary", key: SECTION_KEYS.KEY_SHOW_BRIDGE_DESC },
     ],
     "User note": [
-        { label: "Table 2-2: Financial Data", key: SECTION_KEYS.KEY_SHOW_FINANCIAL },
+        { label: "Financial Data", key: SECTION_KEYS.KEY_SHOW_FINANCIAL },
     ],
     "Construction data": [
-        { label: "Table 2-3: Construction materials", key: SECTION_KEYS.KEY_SHOW_CONSTRUCTION },
-        { label: "Table 2-4: Maintenance and end-of-life inputs", key: SECTION_KEYS.KEY_SHOW_USE_STAGE },
-        { label: "Table 2-5: Recycling data", key: SECTION_KEYS.KEY_SHOW_RECYCLING },
+        { label: "Construction materials", key: SECTION_KEYS.KEY_SHOW_CONSTRUCTION },
+        { label: "Maintenance and end-of-life inputs", key: SECTION_KEYS.KEY_SHOW_USE_STAGE },
+        { label: "Recycling data", key: SECTION_KEYS.KEY_SHOW_RECYCLING },
     ],
     "Traffic data": [
-        { label: "Table 2-6: Average daily traffic", key: SECTION_KEYS.KEY_SHOW_AVG_TRAFFIC },
-        { label: "Table 2-7: Road and traffic data", key: SECTION_KEYS.KEY_SHOW_ROAD_TRAFFIC },
-        { label: "Table 2-8: Peak hour distribution", key: SECTION_KEYS.KEY_SHOW_PEAK_HOUR },
+        { label: "Average daily traffic", key: SECTION_KEYS.KEY_SHOW_AVG_TRAFFIC },
+        { label: "Road and traffic data", key: SECTION_KEYS.KEY_SHOW_ROAD_TRAFFIC },
+        { label: "Peak hour distribution", key: SECTION_KEYS.KEY_SHOW_PEAK_HOUR },
     ],
     "Environmental input data": [
-        { label: "Table 2-14: Social cost of carbon", key: SECTION_KEYS.KEY_SHOW_SOCIAL_CARBON },
-        { label: "Table 2-15: Material emission factors", key: SECTION_KEYS.KEY_SHOW_MATERIAL_EMISSION },
-        { label: "Table 2-16: Traffic diversion emissions", key: SECTION_KEYS.KEY_SHOW_VEHICLE_EMISSION },
-        { label: "Table 2-17: On-site emissions", key: SECTION_KEYS.KEY_SHOW_ONSITE_EMISSION },
-        { label: "Table 2-18: Transport emissions", key: SECTION_KEYS.KEY_SHOW_TRANSPORT_EMISSION },
+        { label: "Social cost of carbon", key: SECTION_KEYS.KEY_SHOW_SOCIAL_CARBON },
+        { label: "Material emission factors", key: SECTION_KEYS.KEY_SHOW_MATERIAL_EMISSION },
+        { label: "Traffic diversion emissions", key: SECTION_KEYS.KEY_SHOW_VEHICLE_EMISSION },
+        { label: "On-site emissions", key: SECTION_KEYS.KEY_SHOW_ONSITE_EMISSION },
+        { label: "Transport emissions", key: SECTION_KEYS.KEY_SHOW_TRANSPORT_EMISSION },
     ],
 };
 

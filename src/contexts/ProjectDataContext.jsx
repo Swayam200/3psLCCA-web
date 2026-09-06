@@ -20,9 +20,13 @@ export const ProjectDataProvider = ({ children, projectId = 'default', initialDa
         }
     }, [projectData, onStateChange]);
 
+    // `data` may be an updater `(currentChunk, wholeProject) => nextChunk` so
+    // pages can build on the latest stored chunk instead of a render-time
+    // closure (two quick saves from one page must not clobber each other).
     const updateProjectData = useCallback((chunkName, data) => {
         setProjectData(prev => {
-            const normalizedData = normalizeProjectSection(chunkName, data, prev);
+            const resolved = typeof data === 'function' ? data(prev[chunkName], prev) : data;
+            const normalizedData = normalizeProjectSection(chunkName, resolved, prev);
             const next = { ...prev, [chunkName]: normalizedData };
             if (chunkName === 'maintenance_repair_data') {
                 next.maintenance_data = normalizedData;

@@ -92,6 +92,23 @@ const REQUIRED_KEYS = new Set(
     FINANCIAL_FIELDS.filter((f) => f.required).map((f) => f.key)
 );
 
+const NUMBER_FIELDS = FINANCIAL_FIELDS.filter((f) => f.type !== 'text');
+const FIELD_BY_KEY = Object.fromEntries(FINANCIAL_FIELDS.map((f) => [f.key, f]));
+const SUGGESTED_SOURCE = '3psLCCA suggested default';
+
+/** Returns an inline error message when a numeric value is outside the field's min/max, otherwise ''. */
+const getRangeError = (key, value) => {
+    const field = FIELD_BY_KEY[key];
+    if (!field || field.type === 'text') return '';
+    if (value === '' || value === null || value === undefined) return '';
+    const number = Number(value);
+    if (Number.isNaN(number)) return `${field.label} must be a number.`;
+    if (number < field.min || number > field.max) {
+        return `${field.label} must be between ${field.min} and ${field.max}${field.unit ? ` ${field.unit}` : ''}.`;
+    }
+    return '';
+};
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function SectionHeader({ title }) {
@@ -131,7 +148,7 @@ function TextField({ field, value, onChange }) {
     );
 }
 
-function NumberField({ field, value, onChange, hasError }) {
+function NumberField({ field, value, onChange, onBlur, hasError, errorMessage }) {
     const { key, label, hint, required, min, max, step, unit } = field;
     return (
         <div className="mb-4">
@@ -148,7 +165,10 @@ function NumberField({ field, value, onChange, hasError }) {
                     step={step}
                     value={value || ''}
                     onChange={(e) => onChange(key, e.target.value)}
+                    onBlur={(e) => onBlur && onBlur(key, e.target.value)}
                     className={`form-control ${hasError ? 'is-invalid' : ''}`}
+                    aria-invalid={hasError || undefined}
+                    aria-describedby={errorMessage ? `${key}-error` : undefined}
                 />
                 {unit && (
                     <span className="input-group-text border-start-0" style={{ fontSize: '0.8rem', backgroundColor: 'var(--app-bg-alt)', borderColor: 'var(--app-border-mid)' }}>
@@ -156,6 +176,11 @@ function NumberField({ field, value, onChange, hasError }) {
                     </span>
                 )}
             </div>
+            {errorMessage && (
+                <div id={`${key}-error`} className="invalid-feedback d-block" style={{ fontSize: '0.8rem' }}>
+                    {errorMessage}
+                </div>
+            )}
         </div>
     );
 }
@@ -169,7 +194,16 @@ const FinancialData = ({ controller }) => {
         return normalizeFinancialData((saved && Object.keys(saved).length > 0) ? { ...INITIAL_STATE, ...saved } : INITIAL_STATE);
     });
     const [errors, setErrors] = useState(new Set());
+    const [rangeErrors, setRangeErrors] = useState({});
     const [validationMsg, setValidationMsg] = useState('');
+    const [statusMsg, setStatusMsg] = useState('');
+
+    // Auto-dismiss the transient status line
+    useEffect(() => {
+        if (!statusMsg) return undefined;
+        const timer = setTimeout(() => setStatusMsg(''), 3000);
+        return () => clearTimeout(timer);
+    }, [statusMsg]);
 
     // Sync local state when projectData changes externally
     useEffect(() => {
@@ -184,6 +218,17 @@ const FinancialData = ({ controller }) => {
     }, [form, updateProjectData]);
 
     // ── Handlers ─────────────────────────────────────────────────────────────
+
+    const updateRangeError = useCallback((key, value) => {
+        const message = getRangeError(key, value);
+        setRangeErrors((prev) => {
+            if ((prev[key] || '') === message) return prev;
+            const next = { ...prev };
+            if (message) next[key] = message;
+            else delete next[key];
+            return next;
+        });
+    }, []);
 
     const handleChange = useCallback((key, value) => {
         setForm(prev => ({ ...prev, [key]: value }));
@@ -204,8 +249,13 @@ const FinancialData = ({ controller }) => {
                 return next;
             });
         }
+        updateRangeError(key, value);
         setValidationMsg('');
-    }, []);
+    }, [updateRangeError]);
+
+    const handleBlur = useCallback((key, value) => {
+        updateRangeError(key, value);
+    }, [updateRangeError]);
 
     const handleLoadSuggested = () => {
         const next = {
@@ -213,21 +263,33 @@ const FinancialData = ({ controller }) => {
                 Object.entries(SUGGESTED_VALUES).map(([k, v]) => [k, String(v)])
             )
         };
+        // Record provenance for every suggested value unless the user already typed a source
+        Object.keys(SUGGESTED_VALUES).forEach((k) => {
+            const sourceKey = `${k}_source`;
+            if (sourceKey in INITIAL_STATE && !(next[sourceKey] || '').toString().trim()) {
+                next[sourceKey] = SUGGESTED_SOURCE;
+            }
+        });
         setForm(next);
         setErrors(new Set());
+        setRangeErrors({});
         setValidationMsg('');
+        setStatusMsg('Suggested values applied');
         controller?.engine?._log('Financial: Suggested values applied.');
     };
 
     const handleClearAll = () => {
+        if (!window.confirm('Clear all financial inputs? This cannot be undone.')) return;
         setForm(INITIAL_STATE);
         updateProjectData('financial_data', INITIAL_STATE);
         setErrors(new Set());
+        setRangeErrors({});
         setValidationMsg('');
+        setStatusMsg('');
         controller?.engine?._log('Financial: All fields cleared.');
     };
 
-    const hasError = (key) => errors.has(key);
+    const hasError = (key) => errors.has(key) || Boolean(rangeErrors[key]);
 
     // ── Validation ────────────────────────────────────────────────────────────
     const validate = () => {
@@ -236,6 +298,18 @@ const FinancialData = ({ controller }) => {
         REQUIRED_KEYS.forEach((key) => {
             if (messages.some((message) => message.includes(key.replace(/_/g, ' ')))) newErrors.add(key);
         });
+
+        // Out-of-range values are invalid even when the shared schema accepts them
+        const newRangeErrors = {};
+        NUMBER_FIELDS.forEach(({ key }) => {
+            const message = getRangeError(key, form[key]);
+            if (message) {
+                newRangeErrors[key] = message;
+                newErrors.add(key);
+                if (!messages.includes(message)) messages.push(message);
+            }
+        });
+        setRangeErrors(newRangeErrors);
 
         setErrors(newErrors);
         if (newErrors.size > 0) {
@@ -271,7 +345,9 @@ const FinancialData = ({ controller }) => {
                         field={field}
                         value={form[field.key]}
                         onChange={handleChange}
+                        onBlur={handleBlur}
                         hasError={hasError(field.key)}
+                        errorMessage={rangeErrors[field.key] || ''}
                     />
                 )
             ))}
@@ -296,6 +372,12 @@ const FinancialData = ({ controller }) => {
                     Clear All
                 </button>
             </div>
+
+            {statusMsg && (
+                <div className="mb-3" style={{ fontSize: '0.85rem', color: 'var(--app-primary-accent)' }} role="status" aria-live="polite">
+                    ✓ {statusMsg}
+                </div>
+            )}
 
             {validationMsg && (
                 <div className="alert alert-danger p-2 mt-3 d-flex align-items-center" style={{ fontSize: '0.85rem', borderRadius: '8px' }} role="alert">

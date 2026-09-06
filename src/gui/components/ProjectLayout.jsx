@@ -77,6 +77,13 @@ const LockedOverlay = () => {
 
 const ProjectLayout = ({ children, activeNode, setActiveNode, onBackToHome, onNewProject, onOpenProject, addLog, isLocked, setIsLocked, projectName, projectData, onRenameProject, onExportProject, projectId, saveState }) => {
     const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+    const scrollRef = React.useRef(null);
+
+    // Every section opens at its top; the scroll container is shared across
+    // pages, so a long page would otherwise hand its scroll position to the next.
+    React.useEffect(() => {
+        if (scrollRef.current) scrollRef.current.scrollTop = 0;
+    }, [activeNode]);
 
     return (
         <div className="d-flex flex-column overflow-hidden" style={{ height: '100vh', width: '100vw' }}>
@@ -100,7 +107,7 @@ const ProjectLayout = ({ children, activeNode, setActiveNode, onBackToHome, onNe
                 <div className="d-none d-md-flex flex-shrink-0 h-100">
                     <Sidebar activeNode={activeNode} setActiveNode={setActiveNode} />
                 </div>
-                <div className="flex-grow-1 overflow-y-auto" style={{ backgroundColor: 'var(--app-bg-main)', transition: 'background-color 0.3s ease' }}>
+                <div ref={scrollRef} className="flex-grow-1 overflow-y-auto" style={{ backgroundColor: 'var(--app-bg-main)', transition: 'background-color 0.3s ease' }}>
                     <div style={{ position: 'relative', minHeight: '100%' }}>
                         {children}
                         {isLocked && activeNode !== 'Results' && activeNode !== 'Outputs' && activeNode !== 'Logs' && <LockedOverlay />}

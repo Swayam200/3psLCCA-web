@@ -500,7 +500,7 @@ const InputSection = ({ s }) => {
         case 'fields': return <><p className="intro">{s.intro}</p><FieldsTable {...s} /></>;
         case 'construction': return <ConstructionSection section={s} />;
         case 'global-traffic': return <GlobalTraffic s={s} />;
-        case 'adt': return <><p className="intro">{s.intro}</p><SimpleRowsTable tableNo={s.tableNo} caption={s.caption} headers={['Vehicle Type', 'Vehicles / Day', 'Accident (% of vehicles)', 'PWR']} rows={s.rows} /></>;
+        case 'adt': return <><p className="intro">{s.intro}</p><SimpleRowsTable tableNo={s.tableNo} caption={s.caption} headers={['Vehicle Type', 'Vehicles / Day', 'Share of accidents (%)', 'PWR']} rows={s.rows} /></>;
         case 'diversion': return <><p className="intro">{s.intro}</p><SimpleRowsTable tableNo={s.tableNo} caption={s.caption} headers={['Vehicle Type', 'Vehicles / Day', 'Factor (kg/veh-km)', 'Emissions (kg/day)']} rows={s.rows} totalRow={['Total Daily Emissions', '', '', s.total]} /><Notes notes={s.notes} /></>;
         case 'diversion-direct': return <><p>The total traffic diversion emissions, entered directly, amount to <b>{s.total} kgCO₂e/day</b>.{s.source ? ` This estimate is based on ${s.source}.` : ' Source not mentioned.'}{s.comments ? ` ${s.comments}` : ''}</p><Notes notes={s.notes} /></>;
         case 'peak': return <><p className="intro">{s.intro}</p><SimpleRowsTable tableNo={s.tableNo} caption={s.caption} headers={['Hour', 'Traffic Proportion (%)']} rows={s.rows} /></>;

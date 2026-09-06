@@ -13,6 +13,7 @@
  */
 
 import { flattenTrafficData } from '../../../utils/projectDerivations.js';
+import { resolveRowConversion, REASON_UNIT_MISMATCH } from '../carbon_emission/carbonUtils.js';
 
 const asArray = (value) => (Array.isArray(value) ? value : []);
 const asObject = (value) => (value && typeof value === 'object' && !Array.isArray(value) ? value : {});
@@ -34,8 +35,18 @@ const numberOr = (value, fallback) => {
  */
 const desktopRow = (row, { chunkId = '', excludedIds = new Set() } = {}) => {
     const prior = asObject(row.values);
-    const hasPrior = row.values !== undefined;
+    // An imported desktop row always carries the full desktop `values`
+    // record (material_name, quantity, …). A web-created row may carry a
+    // partial `values` object written by other pages (older builds of the
+    // Recycling page did); that must not turn it into an "imported" row,
+    // which used to skip the inclusion rule below and drop the material
+    // from the report's carbon table as "Incomplete Data".
+    const hasPrior = prior.material_name !== undefined || prior.quantity !== undefined;
     const emission = asObject(row.carbonEmission);
+    // Emission units per quantity unit, by the same rule the Material
+    // Emissions page and the calculation use (schedule-of-rates factor,
+    // MT → kg ×1000, …), so the report multiplies the same numbers.
+    const conversion = resolveRowConversion(row);
 
     // (flat value, import-derivation from prior, desktop key) per field.
     const pick = (flat, derived, priorValue, fallback) => {
@@ -50,12 +61,14 @@ const desktopRow = (row, { chunkId = '', excludedIds = new Set() } = {}) => {
         unit: pick(row.unit, prior.unit ?? '', prior.unit, row.unit ?? ''),
         rate: pick(row.rate, prior.rate !== undefined ? prior.rate : 0, prior.rate, numberOr(row.rate, 0)),
         rate_source: pick(row.source, prior.rate_source ?? '', prior.rate_source, row.source ?? ''),
-        conversion_factor: pick(
-            row.conversionFactor,
-            prior.conversion_factor !== undefined ? prior.conversion_factor : 1,
-            prior.conversion_factor,
-            numberOr(row.conversionFactor, 1),
-        ),
+        conversion_factor: conversion.status === 'derived' || conversion.status === 'mismatch'
+            ? conversion.factor
+            : pick(
+                row.conversionFactor,
+                prior.conversion_factor !== undefined ? prior.conversion_factor : 1,
+                prior.conversion_factor,
+                numberOr(row.conversionFactor, 1),
+            ),
         carbon_emission: pick(
             emission.factor,
             prior.carbon_emission !== undefined ? prior.carbon_emission : 0,
@@ -84,17 +97,22 @@ const desktopRow = (row, { chunkId = '', excludedIds = new Set() } = {}) => {
     // apply the Material Emissions page's own rule here (carbonUtils
     // getStructureMaterials/materialReason): included unless the user
     // excluded it, and only when the factor data is complete.
-    if (!hasPrior && state.included_in_carbon_emission === undefined) {
+    const mismatch = conversion.status === 'mismatch';
+    const complete = numberOr(values.carbon_emission, 0) > 0 && numberOr(values.conversion_factor, 1) > 0 && !mismatch;
+    const carbonReason = mismatch ? REASON_UNIT_MISMATCH : (complete ? 'Manually Excluded' : 'Incomplete Data');
+    if (state.included_in_carbon_emission === undefined) {
         const materialId = `${chunkId}-${row.id}`;
         const userIncluded = !excludedIds.has(materialId);
-        const complete = numberOr(values.carbon_emission, 0) > 0 && numberOr(values.conversion_factor, 1) > 0;
         state.included_in_carbon_emission = userIncluded && complete;
-        if (!state.included_in_carbon_emission) {
-            values.exclusion_reason = {
-                ...asObject(values.exclusion_reason),
-                carbon: complete ? 'Manually Excluded' : 'Incomplete Data',
-            };
-        }
+    } else if (state.included_in_carbon_emission === true && !complete) {
+        // The Material Emissions page stamps the flag on web rows; a later
+        // unit change can make the row uncountable regardless of that flag.
+        state.included_in_carbon_emission = false;
+    }
+    if (!state.included_in_carbon_emission && !asObject(values.exclusion_reason).carbon) {
+        // A row the user excluded on the Material Emissions page carries the
+        // flag but no reason; without this it printed as "Incomplete Data".
+        values.exclusion_reason = { ...asObject(values.exclusion_reason), carbon: carbonReason };
     }
 
     return {

@@ -88,7 +88,7 @@ const EditRecyclabilityModal = ({ show, onClose, item, onSave }) => {
                     <Row>
                         {readOnly('Quantity', `${fmt(quantity)} ${unit}`, 'recyclability-quantity')}
                         {readOnly('Rate', item?.rateCost === '' || item?.rateCost === undefined ? '—' : `${fmt(parse(item.rateCost), 2)} ${currency}/${unit}`, 'recyclability-rate')}
-                        {readOnly('Emission factor', emissionFactor === null ? '—' : `${fmt(emissionFactor, 3)} ${item?.perUnit || 'kgCO₂e/unit'}`, 'recyclability-ef')}
+                        {readOnly('Emission factor', emissionFactor === null ? '—' : `${fmt(emissionFactor, 3)} kgCO₂e per ${item?.perUnit || 'unit'}`, 'recyclability-ef')}
                     </Row>
                 </div>
 

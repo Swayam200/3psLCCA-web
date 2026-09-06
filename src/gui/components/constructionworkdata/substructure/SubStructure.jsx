@@ -5,8 +5,10 @@ import '../ConstructionWorkData.css';
 import MaterialTable from '../MaterialTable';
 import AddComponentModal from '../AddComponentModal';
 
-let _uid = 0;
-const uid = () => `row-${++_uid}`;
+// Row ids must be unique across every component, page and session: they are
+// referenced by the transport deliveries and the report. A per-page counter
+// restarted at "row-1" on every mount and collided across components.
+const uid = () => `row-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 // calcTotal removed as it's in MaterialTable.jsx
 
 const DEFAULT_SECTIONS = [

@@ -72,15 +72,22 @@ const Recycling = () => {
         if (!item) return;
         const pct = parseFloat(String(saved.recoveryPercent).replace(/,/g, ''));
         const rate = parseFloat(String(saved.scrapRate).replace(/,/g, ''));
+        // Write the flat web fields only. `values` is the verbatim desktop
+        // record of an imported row; creating a partial one on a web row made
+        // the report treat the row as imported and drop it from the carbon
+        // table. Imported rows keep their `values` in sync so exports stay
+        // byte-stable.
         updateRow(item, (row) => ({
             ...row,
             ...(Number.isFinite(rate) ? { scrapRate: rate } : {}),
             ...(Number.isFinite(pct) ? { postDemolitionRecoveryPercentage: pct } : {}),
-            values: {
-                ...(row.values || {}),
-                ...(Number.isFinite(rate) ? { scrap_rate: rate } : {}),
-                ...(Number.isFinite(pct) ? { post_demolition_recovery_percentage: pct } : {}),
-            },
+            ...(row.values && row.values.material_name !== undefined ? {
+                values: {
+                    ...row.values,
+                    ...(Number.isFinite(rate) ? { scrap_rate: rate } : {}),
+                    ...(Number.isFinite(pct) ? { post_demolition_recovery_percentage: pct } : {}),
+                },
+            } : {}),
         }));
     };
 
@@ -163,7 +170,7 @@ const Recycling = () => {
                         </thead>
                         <tbody>
                             {computed.includedItems.map((item) => (
-                                <tr key={item.row.id}>
+                                <tr key={`${item.sectionKey}-${item.sectionId}-${item.row.id}`}>
                                     <td style={cellStyle}>{item.category} — {item.sectionName}</td>
                                     <td style={cellStyle}>{rowName(item.row)}</td>
                                     <td style={cellStyle} className="text-end">{fmt(rowQuantity(item.row))}</td>
@@ -202,7 +209,7 @@ const Recycling = () => {
                         </thead>
                         <tbody>
                             {computed.excludedItems.map((item) => (
-                                <tr key={item.row.id}>
+                                <tr key={`${item.sectionKey}-${item.sectionId}-${item.row.id}`}>
                                     <td style={cellStyle}>{item.category} — {item.sectionName}</td>
                                     <td style={cellStyle}>{rowName(item.row)}</td>
                                     <td style={cellStyle} className="text-end">{fmt(rowQuantity(item.row))}</td>
