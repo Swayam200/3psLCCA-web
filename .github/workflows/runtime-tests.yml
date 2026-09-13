@@ -1,0 +1,46 @@
+name: Engine and report parity
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'src/lib/lccaEngine/**'
+      - 'src/utils/**'
+      - 'src/report/**'
+      - 'src/gui/components/outputs/**'
+      - 'vendor/report-runtime/**'
+      - 'report-runtime/**'
+      - 'public/*worker.js'
+      - 'scripts/**'
+      - 'tests/fixtures/**'
+      - 'tests/integration/**'
+      - 'package*.json'
+      - '.github/workflows/runtime-tests.yml'
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: npm ci
+      - run: python -m pip install -r backend/requirements.txt
+      - run: npm run verify:parity
+        env:
+          LCCA_PYTHON: python
+      - run: npm run test:report

@@ -2,6 +2,9 @@
 
 FastAPI backend for the web app. It imports `three_ps_lcca_core` only and does not import the desktop GUI package or PySide/PyQt modules.
 
+The requirements install the same hash-pinned core 1.0.2 release as the browser.
+A sibling engine checkout is not required.
+
 ## Local dev
 
 ```bash
@@ -27,3 +30,8 @@ cd backend
 source .venv/bin/activate
 pytest -q
 ```
+
+From the repository root, `npm run test:backend` also locates the virtual
+environment on macOS, Linux, and Windows. Set `LCCA_PYTHON` to select another
+interpreter. The canonical setup and testing instructions are in
+[tests/README.md](../tests/README.md).

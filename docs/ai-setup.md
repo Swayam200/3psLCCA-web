@@ -43,7 +43,7 @@ Two switches, both required:
    ```
 
    Without it, the AI code is not shipped at all: the production bundle
-   contains none of it (enforced by `tests/ai/bundleExclusion.test.js`). With
+   contains none of it (enforced by `tests/build/bundleExclusion.test.js`). With
    it, the AI ships as lazy chunks that load only when the panel is used.
 
 2. **Runtime toggle** — Settings → **AI Assistant** → "Enable the AI
@@ -163,13 +163,13 @@ export async function generate(prompt, { apiKey, model, system, tools }) {
 - Register it in `src/lib/ai/providers/registry.js` and it appears in the
   Settings picker automatically.
 
-Test doubles in `tests/ai/router.test.js` show the contract in miniature.
+Test doubles in `tests/unit/ai/router.test.js` show the contract in miniature.
 
 ### Extending the rules engine
 
 `src/lib/ai/providers/rules.js` is a deterministic pattern matcher over the
 context object built by `src/lib/ai/tools/context.js`. Add a pattern + answer
-and a test in `tests/ai/rules.test.js`. Two rules of the house: answer only
+and a test in `tests/unit/ai/rules.test.js`. Two rules of the house: answer only
 from the context (never compute new figures), and when in doubt return
 `unparsed: true` rather than guessing — "I don't know" routes the question to
 a model; a wrong guess misinforms silently.

@@ -1,12 +1,9 @@
-/* eslint-disable no-unused-vars */
-/* eslint-disable react-hooks/exhaustive-deps */
-/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect } from 'react'
-import { Routes, Route, useNavigate, useLocation, Navigate, useParams } from 'react-router-dom'
+import { Routes, Route, useNavigate, Navigate, useParams } from 'react-router-dom'
 import HomePage from './gui/components/Homepage'
 import Loginpage from './gui/Login/Loginpage'
 import ProjectLayout from './gui/components/ProjectLayout'
-import ProjectInformationPlaceholder from './gui/components/global_info/ProjectInformationPlaceholder'
+import GeneralInformation from './gui/components/global_info/GeneralInformation'
 import BridgeData from './gui/components/bridgedata/BridgeData'
 import FinancialData from './gui/components/financialdata/FinancialData'
 import TrafficData from './gui/components/trafficdata/TrafficData'
@@ -46,6 +43,7 @@ function ProjectViewWrapper({ projectData, setProjectData, logs, setLogs, isLock
 
   useEffect(() => {
     if (projectId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Preserve the existing project-load and debounced-save lifecycle; this resets status when its external inputs change.
       setDataLoaded(false);
       const loadData = async () => {
         const saved = await projectStorageService.loadProject(projectId);
@@ -64,10 +62,12 @@ function ProjectViewWrapper({ projectData, setProjectData, logs, setLogs, isLock
       };
       loadData();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- Load only when the project ID changes; adding mutable project data would reload over unsaved edits.
   }, [projectId]);
 
   useEffect(() => {
     if (projectId && projectData && dataLoaded) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Preserve the existing project-load and debounced-save lifecycle; this resets status when its external inputs change.
       setSaveState('saving');
       const timeoutId = setTimeout(async () => {
         try {
@@ -183,7 +183,7 @@ function ProjectViewWrapper({ projectData, setProjectData, logs, setLogs, isLock
   };
 
   const CONTENT_MAP = {
-    'General Information': <ProjectInformationPlaceholder key="general" />,
+    'General Information': <GeneralInformation key="general" />,
     'Bridge Data': <BridgeData key="bridge" data={projectData.bridge_data} onUpdate={(d) => updateProjectData('bridge_data', d)} />,
     'Financial Data': <FinancialData key="financial" data={projectData.financial_data} onUpdate={(d) => updateProjectData('financial_data', d)} />,
     'Traffic Data': <TrafficData key="traffic" data={projectData.traffic_data} onUpdate={(d) => updateProjectData('traffic_data', d)} />,
@@ -304,7 +304,7 @@ function App() {
            setUserName(user.name || user.email.split('@')[0]);
            sessionStorage.setItem('isGuest', 'false');
         }
-      } catch (e) {
+      } catch {
         // No active session
       }
     };
@@ -325,6 +325,7 @@ function App() {
       window.removeEventListener('online', handleOnline);
       clearInterval(syncInterval);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- Preserve the mount-only session check and single background-sync subscription.
   }, []);
 
   useEffect(() => { sessionStorage.setItem('isLoggedIn', isLoggedIn); }, [isLoggedIn]);
@@ -520,7 +521,7 @@ function App() {
             handleLogin(false, user.name || credentials.email.split('@')[0]);
         } else {
             await account.createEmailPasswordSession(credentials.email, credentials.password);
-            const user = await account.get();
+            await account.get();
         }
     } catch (e) {
         console.error("Auth error:", e);

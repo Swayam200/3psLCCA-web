@@ -17,6 +17,8 @@ public/report/runtime.zip
 .wasm-assets
 test-results
 playwright-report
+coverage/
+.pytest_cache/
 backend/.venv
 *.local
 

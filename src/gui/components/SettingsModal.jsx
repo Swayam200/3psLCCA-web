@@ -69,30 +69,6 @@ const SettingsModal = ({ show, handleClose, isDarkMode, theme, initialUserName, 
     const [phone, setPhone] = useState('');
     const [activeTab, setActiveTab] = useState('general');
 
-    // Load profiles when modal opens
-    useEffect(() => {
-        if (show) {
-            setDisplayName(initialUserName || '');
-            setAppearanceMode(userSettings?.appearanceMode || 'Auto(follow os)');
-            setLightTheme(userSettings?.lightTheme || 'standard light');
-            setDarkTheme(userSettings?.darkTheme || 'standard dark');
-            
-            // Load profiles
-            const loadedProfiles = getProfiles();
-            setProfiles(loadedProfiles);
-            
-            // Try to select active profile
-            const active = getActiveProfile();
-            if (active?.profile_name && loadedProfiles[active.profile_name]) {
-                setSelectedProfile(active.profile_name);
-                loadProfileData(active.profile_name, loadedProfiles[active.profile_name]);
-            } else {
-                setSelectedProfile('+ New Profile');
-                clearProfileForm();
-            }
-        }
-    }, [show, initialUserName, userSettings]);
-
     const loadProfileData = (name, data) => {
         setAgencyName(data.agency_name || '');
         setContactName(data.contact_person || '');
@@ -116,6 +92,31 @@ const SettingsModal = ({ show, handleClose, isDarkMode, theme, initialUserName, 
         setLogoData(null);
         setProfileCountry(null);
     };
+
+    // Load profiles when modal opens
+    useEffect(() => {
+        if (show) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- Opening settings intentionally restores persisted settings and profile fields.
+            setDisplayName(initialUserName || '');
+            setAppearanceMode(userSettings?.appearanceMode || 'Auto(follow os)');
+            setLightTheme(userSettings?.lightTheme || 'standard light');
+            setDarkTheme(userSettings?.darkTheme || 'standard dark');
+
+            // Load profiles
+            const loadedProfiles = getProfiles();
+            setProfiles(loadedProfiles);
+
+            // Try to select active profile
+            const active = getActiveProfile();
+            if (active?.profile_name && loadedProfiles[active.profile_name]) {
+                setSelectedProfile(active.profile_name);
+                loadProfileData(active.profile_name, loadedProfiles[active.profile_name]);
+            } else {
+                setSelectedProfile('+ New Profile');
+                clearProfileForm();
+            }
+        }
+    }, [show, initialUserName, userSettings]);
 
     const getProfileData = () => ({
         agency_name: agencyName,

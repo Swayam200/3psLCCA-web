@@ -1,7 +1,6 @@
-/* eslint-disable no-unused-vars */
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useProjectData } from '../../../contexts/ProjectDataContext';
-import { normalizeMaintenanceData, validateMaintenanceData } from '../../../utils/projectPageSchema';
+import { normalizeMaintenanceData } from '../../../utils/projectPageSchema';
 import '../financialdata/FinancialData.css';
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -284,6 +283,7 @@ const MaintenanceAndRepair = ({ controller, engine }) => {
 
     useEffect(() => {
         const next = normalizeMaintenanceData({ ...INITIAL_STATE, ...(projectData.maintenance_repair_data || {}) });
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Restore normalized saved inputs while preserving the existing form-to-context synchronization.
         setForm(prev => JSON.stringify(next) !== JSON.stringify(prev) ? next : prev);
     }, [projectData.maintenance_repair_data]);
 
@@ -346,25 +346,6 @@ const MaintenanceAndRepair = ({ controller, engine }) => {
 
     // ── Validation ────────────────────────────────────────────────────────────
 
-    const validate = () => {
-        const messages = validateMaintenanceData(form);
-        const newErrors = new Set();
-        REQUIRED_KEYS.forEach((key) => {
-            if (messages.some((message) => message.includes(key.replace(/_/g, ' ')))) newErrors.add(key);
-        });
-
-        setErrors(newErrors);
-        if (newErrors.size > 0) {
-            const msg = `Maintenance data needs attention: ${messages.join(' ')}`;
-            setValidationMsg(msg);
-            if (engine && engine._log) engine._log(msg);
-            else if (controller && controller.engine) controller.engine._log(msg);
-            return { valid: false, errors: messages };
-        }
-
-        setValidationMsg('');
-        return { valid: true, errors: [] };
-    };
 
     const hasError = (key) => errors.has(key);
 

@@ -14,24 +14,23 @@ results — the exact same adapter the in-browser engine uses.
 ## Prerequisites
 
 - Python **3.12+**
-- A checkout of the `3psLCCA-core` repository (the calculation engine)
+- Network access to install the pinned `3psLCCA-core` release
 
 ## 1. Get the core engine
 
-`backend/requirements.txt` installs the core engine from a sibling checkout at
-`../../3psLCCA-gui-python-venv/3psLCCA-core` (the layout used by the desktop
-project). Either recreate that layout, or edit the last line of
-`backend/requirements.txt` to point at your core checkout, e.g.:
+`backend/requirements.txt` installs the hash-pinned **1.0.2** wheel used by the
+browser release. No sibling checkout or source-path editing is required.
 
-```text
--e /absolute/path/to/3psLCCA-core
+If you are developing the engine itself, install the normal requirements first,
+then explicitly override the engine in that virtual environment:
+
+```sh
+python -m pip install -e /absolute/path/to/3psLCCA-core
 ```
 
-or install straight from GitHub:
-
-```text
-three_ps_lcca_core @ git+https://github.com/3psLCCA/3psLCCA-core.git@main
-```
+This opts your environment into the local checkout. The default reproducible
+setup remains the release wheel. See [the testing guide](../tests/README.md) for
+backend and browser/native parity checks.
 
 ## 2. Create the environment and run
 

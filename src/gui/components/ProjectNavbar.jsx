@@ -1,8 +1,7 @@
-/* eslint-disable no-unused-vars */
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Navbar, Nav, NavDropdown, Button, Tooltip, OverlayTrigger, Spinner } from 'react-bootstrap';
-import { FaHome, FaLock, FaLockOpen, FaInfoCircle, FaCheckCircle, FaUndo, FaSave, FaCalculator, FaHistory, FaFolderOpen, FaPlus, FaSignOutAlt, FaCog, FaExclamationTriangle, FaBars } from 'react-icons/fa';
+import { FaHome, FaLock, FaLockOpen, FaCheckCircle, FaSave, FaCalculator, FaHistory, FaFolderOpen, FaPlus, FaSignOutAlt, FaCog, FaExclamationTriangle, FaBars } from 'react-icons/fa';
 import NewProjectModal from './NewProjectModal';
 import OpenProjectModal from './OpenProjectModal';
 import RenameProjectModal from './RenameProjectModal';
@@ -11,33 +10,6 @@ import HelpModal from './HelpModal';
 import ProjectInfoModal from './ProjectInfoModal';
 import Logo3psLCCA from '../../assets/logo-3psLCCA.svg';
 
-const NavItemLink = ({ href, children, onClick, icon: Icon }) => {
-    const [hover, setHover] = useState(false);
-    return (
-        <Nav.Link 
-            href={href} 
-            className="px-2 py-1 mx-1 rounded d-flex align-items-center justify-content-center"
-            style={{ 
-                color: hover ? 'var(--app-primary-accent)' : 'var(--app-text-primary)', 
-                backgroundColor: hover ? 'var(--app-bg-alt)' : 'transparent',
-                fontSize: '14px',
-                transition: 'all 0.2s ease',
-                minWidth: Icon ? '36px' : 'auto',
-                height: '32px'
-            }}
-            onMouseEnter={() => setHover(true)}
-            onMouseLeave={() => setHover(false)}
-            onClick={(e) => {
-                if (onClick) {
-                    e.preventDefault();
-                    onClick();
-                }
-            }}
-        >
-            {Icon ? <Icon size={18} /> : children}
-        </Nav.Link>
-    );
-};
 
 const CustomDropdown = ({ title, id, items, icon: Icon }) => {
     const [hover, setHover] = useState(false);
@@ -78,37 +50,6 @@ const CustomDropdown = ({ title, id, items, icon: Icon }) => {
     );
 };
 
-const CustomNavBtn = ({ variant, outlineColor, outlineHoverBg, children, icon: Icon, ...props }) => {
-    const [hover, setHover] = useState(false);
-    const borderCol = hover ? 'var(--app-primary-accent)' : outlineColor;
-    const bgCol = hover ? outlineHoverBg : 'transparent';
-    const textCol = hover ? 'var(--app-bg-card)' : 'var(--app-text-secondary)';
-    const finalOutlineHoverBg = hover ? 'var(--app-primary-accent)' : bgCol;
-
-    return (
-        <Button 
-            variant={variant} 
-            size="sm" 
-            className="d-flex align-items-center justify-content-center"
-            style={{ 
-                borderColor: variant === 'outline-secondary' ? borderCol : 'transparent',
-                backgroundColor: variant === 'outline-secondary' ? (hover ? 'var(--app-primary-accent)' : 'transparent') : 'transparent',
-                color: variant === 'outline-secondary' ? (hover ? 'var(--app-bg-card)' : 'var(--app-text-secondary)') : 'var(--app-text-secondary)',
-                fontSize: '13px',
-                padding: Icon && !children ? '4px 8px' : '4px 12px',
-                transition: 'all 0.2s ease',
-                height: '32px',
-                borderRadius: '4px'
-            }}
-            onMouseEnter={() => setHover(true)}
-            onMouseLeave={() => setHover(false)}
-            {...props}
-        >
-            {Icon && <Icon size={14} className={children ? "me-2" : ""} />}
-            {children}
-        </Button>
-    );
-};
 
 const ProjectNavbar = ({ onBackToHome, setActiveNode, onNewProject, onOpenProject, addLog, isLocked, setIsLocked, projectName, projectData, onRenameProject, onExportProject, projectId, saveState = 'saved', onToggleSidebar }) => {
     const [showNewProjectModal, setShowNewProjectModal] = useState(false);

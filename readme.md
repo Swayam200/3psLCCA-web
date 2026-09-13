@@ -35,7 +35,8 @@ flowchart LR
   optional — see [docs/appwrite-setup.md](docs/appwrite-setup.md). Without
   Appwrite the app runs in **guest mode**: projects are stored offline-first
   in the browser's localStorage.
-- **Reports** are generated client-side with jsPDF.
+- **Reports** use an HTML/Paged.js preview with browser printing, with an optional
+  desktop LaTeX/Pyodide PDF path and a jsPDF fallback.
 
 ## Features
 
@@ -57,7 +58,7 @@ flowchart LR
 
 ## Quickstart
 
-Prerequisites: Node.js 22+.
+Prerequisites: Node.js 22 (latest patch; minimum 22.12). `.nvmrc` selects Node 22.
 
 ```bash
 npm ci
@@ -75,7 +76,7 @@ Optionally, run the FastAPI fallback backend as well (Python 3.12+; see
 ```bash
 cd backend
 python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt      # needs a 3psLCCA-core checkout, see the doc
+pip install -r requirements.txt      # installs the pinned core release
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -109,12 +110,20 @@ All variables are read by Vite at **build/dev-server start** — restart
 | `npm run dev` | Start the Vite development server |
 | `npm run build` | Build the static frontend into `dist/` |
 | `npm run preview` | Preview the production build |
-| `npm test` | Run JavaScript unit tests (`node --test`) |
+| `npm test` | Run Node unit/integration/build and Vitest component/service tests |
 | `npm run verify:parity` | Prove the in-browser engine matches native CPython field by field |
 | `npm run lint` | Run ESLint over the project |
 
 Backend tests: `cd backend && pytest -q` (see
 [docs/backend-setup.md](docs/backend-setup.md)).
+
+## Testing and contributing
+
+Start with [tests/README.md](tests/README.md) for fresh-clone setup, individual
+suites, browser tests, coverage, fixtures, and troubleshooting. Coding agents
+should also read [AGENTS.md](AGENTS.md). `npm test` does not execute the full
+Pyodide report runtime; use `npm run test:report` and `npm run verify:parity`
+for the separate real-runtime checks.
 
 ## Project structure
 
@@ -127,10 +136,11 @@ ai-demo/                  standalone AI-editing prototype (zero deps, not wired 
 src/
   contexts/               React context for project data
   gui/components/         data-entry pages, homepage, outputs/results
-    outputs/              results dashboard, report model + jsPDF generator
+    outputs/              results dashboard, report models and PDF engines
+  report/                 HTML/Paged.js report preview and printing
   lib/                    Appwrite client, storage service, calculation API client
   utils/                  project schema, normalizers, derivations, import/export
-tests/                    JS unit tests (node --test)
+tests/                    unit, integration, component, browser, build tests + fixtures
 ```
 
 ## AI assistant (optional)

@@ -155,7 +155,7 @@ export async function import3psFile(arrayBuffer) {
     try {
         zip = await JSZip.loadAsync(arrayBuffer);
     } catch (err) {
-        throw new Error("Corrupted or invalid .3ps zip archive.");
+        throw new Error("Corrupted or invalid .3ps zip archive.", { cause: err });
     }
 
     const project = {};
@@ -186,7 +186,7 @@ export async function import3psFile(arrayBuffer) {
                     mapper(project, chunkContent);
                 } catch (err) {
                     console.error(`Failed to parse chunk "${chunkName}":`, err);
-                    throw new Error(`Parsing failure in chunk "${chunkName}": ${err.message}`);
+                    throw new Error(`Parsing failure in chunk "${chunkName}": ${err.message}`, { cause: err });
                 }
             } else {
                 console.warn(`Unmapped chunk found in zip: ${chunkName}`);

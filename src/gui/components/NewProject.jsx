@@ -1,5 +1,4 @@
-/* eslint-disable no-unused-vars */
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Modal, Button, Form } from 'react-bootstrap';
 import Select from 'react-select';
 import { COUNTRIES, CURRENCIES, COUNTRY_TO_CURRENCY } from './utils/countriesdata';
