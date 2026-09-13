@@ -1,5 +1,4 @@
-/* eslint-disable no-unused-vars */
-import React, { useState, useEffect } from 'react';
+
 import { Button } from 'react-bootstrap';
 
 const Logs = ({ logs = [], onClearLogs }) => {

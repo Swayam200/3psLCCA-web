@@ -1,5 +1,4 @@
-/* eslint-disable no-unused-vars */
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { BsHouseDoorFill, BsFileEarmarkPlus, BsFolder2Open, BsGearFill, BsThreeDotsVertical, BsStarFill, BsStar } from 'react-icons/bs';
 import { AiOutlineRedo } from 'react-icons/ai';
 import NewProject from './NewProject';
@@ -125,6 +124,7 @@ const Homepage = ({ onProjectOpen, onProjectCreate, userName = 'ritik!', isDarkM
     };
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Refresh the stored project list on mount; preserve the existing loading indicator.
         fetchProjects();
     }, []);
 

@@ -41,7 +41,7 @@ numbered from 1 with a running header (project name on the left, report title
 on the right) and the page number in the footer, and Appendix C on a landscape
 page. What is shown is exactly what **Print / Save as PDF** writes.
 
-Every number is checked against the desktop report: `tests/reportDocument.test.js`
+Every number is checked against the desktop report: `tests/integration/reportDocument.test.js`
 pins values straight from the LaTeX golden (`m20-report.golden.tex`) — bridge
 and financial fields, construction totals and source markers, material,
 transport, machinery and recycling tables, the full results table with stage
@@ -103,6 +103,6 @@ project sidebar. The **Sections…** button reuses the existing section picker.
 - `src/report/reportContent.js` — static text: intro, table intros, Appendix A, Appendix B (LaTeX equations)
 - `src/report/ReportPage.jsx`, `ReportRoute.jsx`, `ReportCharts.jsx`, `Equation.jsx`, `report.css`
 - `src/report/pagedPreview.js`, `report.paged.css` — page preview: Paged.js pagination, page numbering, running header, landscape sheet
-- `tests/reportDocument.test.js` — golden-value checks against the LaTeX report
+- `tests/integration/reportDocument.test.js` — golden-value checks against the LaTeX report
 - `scripts/print-report-sample.mjs` — lays out and prints the reference project with headless Chromium and checks the pagination (page numbers, contents list, landscape sheet)
 - `public/report-assets/` — 3psLCCA header logo, 3PS-LCC framework figure, Latin Modern fonts (latex.css, MIT)

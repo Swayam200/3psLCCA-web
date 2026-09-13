@@ -64,7 +64,7 @@ So: ship nothing up front, fetch ~11 KB when the user picks Ricke mode.
      hardcoded 6-combo stub (a sync normalizer cannot do async lookups, and
      the stub overwriting a precise stored value would both corrupt data and
      break stringify-idempotence). The stub remains only as a fallback for
-     legacy rows with no params. Extend `tests/carbonNormalization.test.js`
+     legacy rows with no params. Extend `tests/unit/carbonNormalization.test.js`
      with a ricke-mode idempotence case — this is the invariant that
      prevented the carbon-page freeze from coming back.
 6. **Parity test:** unit test comparing `lookupScc` output for a handful of

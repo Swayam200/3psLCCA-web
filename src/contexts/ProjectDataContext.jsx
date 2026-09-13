@@ -1,14 +1,13 @@
-/* eslint-disable no-unused-vars */
-/* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { createDefaultProject, normalizeProjectData } from '../utils/projectSchema';
 import { normalizeProjectSection } from '../utils/projectPageSchema';
 
 const ProjectDataContext = createContext();
 
+// eslint-disable-next-line react-refresh/only-export-components -- Keep the existing public hook/provider module API together.
 export const useProjectData = () => useContext(ProjectDataContext);
 
-export const ProjectDataProvider = ({ children, projectId = 'default', initialData, onStateChange }) => {
+export const ProjectDataProvider = ({ children, initialData, onStateChange }) => {
     const [projectData, setProjectData] = useState(() => {
         return normalizeProjectData(initialData);
     });

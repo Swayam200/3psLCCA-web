@@ -1,5 +1,4 @@
-/* eslint-disable no-unused-vars */
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Modal, Button, Form } from 'react-bootstrap';
 
 const RenameProjectModal = ({ show, onHide, onRename, currentName }) => {
@@ -7,6 +6,7 @@ const RenameProjectModal = ({ show, onHide, onRename, currentName }) => {
 
     useEffect(() => {
         if (show) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- Opening the modal intentionally restores the current project name.
             setNewName(currentName || '');
         }
     }, [show, currentName]);

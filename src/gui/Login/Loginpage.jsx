@@ -1,7 +1,6 @@
-/* eslint-disable no-unused-vars */
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Form, Button, Container, Row, Col, Modal, Alert, Spinner } from 'react-bootstrap';
-import { BsStars, BsGoogle } from 'react-icons/bs';
+import {  BsGoogle } from 'react-icons/bs';
 import Logo3psLCCA from '../../assets/logo-3psLCCA.svg';
 
 const Loginpage = ({ onLogin, onGuestLogin, onGoogleLogin }) => {
@@ -25,6 +24,7 @@ const Loginpage = ({ onLogin, onGuestLogin, onGoogleLogin }) => {
     useEffect(() => {
         let index = 0;
         let timer;
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Restart the welcome animation when its existing effect inputs change.
         setWelcomeText('');
 
         // Start typing after a delay of 1.8 seconds (matching logo entrance completion)

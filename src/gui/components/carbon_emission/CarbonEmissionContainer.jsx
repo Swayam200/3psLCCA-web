@@ -1,6 +1,4 @@
-/* eslint-disable no-unused-vars */
-/* eslint-disable react-hooks/set-state-in-effect */
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import MaterialEmissions from './MaterialEmissions';
 import TransportationEmissions from './TransportationEmissions';
 import MachineryEmissions from './MachineryEmissions';
@@ -19,6 +17,7 @@ const CarbonEmissionContainer = ({ controller, initialTab = 'SocialCost', setAct
     const [activeTab, setActiveTab] = useState(initialTab);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Keep the visible tab synchronized with route-driven initialTab changes.
         setActiveTab(initialTab);
     }, [initialTab]);
 

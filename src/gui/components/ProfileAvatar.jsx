@@ -1,5 +1,4 @@
-/* eslint-disable no-unused-vars */
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 
 const ProfileAvatar = ({ size = 80, profileName, logoData, onLogoChange, theme }) => {
     const [isHovered, setIsHovered] = useState(false);

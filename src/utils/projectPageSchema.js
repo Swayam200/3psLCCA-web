@@ -444,7 +444,7 @@ export const normalizeCarbonEmissionData = (value, project = {}) => {
     const detailedEntries = asArray(machData.detailed_entries || machData.entries);
     const ls = asObject(machData.lump_sum);
 
-    let machineryTotal = 0;
+    let machineryTotal;
     if (machMode === 'detailed' && detailedEntries.length > 0) {
         machineryTotal = detailedEntries.reduce((sum, e) => {
             const r = numberValue(e.rate) || 0;
@@ -492,7 +492,7 @@ export const normalizeCarbonEmissionData = (value, project = {}) => {
     const directValue = numberValue(diversionData.direct_value) || 0;
 
     const trafficData = asObject(projectData.traffic_data);
-    let totalPerDay = 0;
+    let totalPerDay;
     if (divMode === 'calculate') {
         const getVehicleAdt = (td, key) => {
             const vehicles = asObject(td.vehicles || td.vehicle_data);

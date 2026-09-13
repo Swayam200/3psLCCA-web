@@ -1,5 +1,3 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-/* eslint-disable react-hooks/set-state-in-effect */
 import { useEffect, useMemo, useState } from 'react';
 import { useProjectData } from '../../../contexts/ProjectDataContext';
 import { computeTrafficReroutingData, formatNumber, parseNumber, VEHICLE_TYPES } from './carbonUtils';
@@ -17,9 +15,11 @@ const TrafficEmissions = () => {
     const [remarks, setRemarks] = useState(computedContext.remarks || '');
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Restore saved traffic-emission inputs when the normalized project changes.
         setFactors(computedContext.emission_factors || defaultFactors());
         setDirectEntry(computedContext.direct_entry || { total_direct_emissions: 0, source: '', comments: '' });
         setRemarks(computedContext.remarks || '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Preserve the existing normalized-input synchronization boundary and edit/save cycle.
     }, [computedContext.mode]);
 
     const vehicles = projectData.traffic_data?.vehicles || projectData.traffic_data?.vehicle_data || {};
@@ -69,6 +69,7 @@ const TrafficEmissions = () => {
 
     useEffect(() => {
         saveData(factors, directEntry, remarks);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Preserve the existing normalized-input synchronization boundary and edit/save cycle.
     }, [computedContext.mode, computedContext.reroute_km, totalCalculated, totalPerDay]);
 
     const updateFactor = (key, value) => {

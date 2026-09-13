@@ -14,9 +14,10 @@
  * native reference. Exits non-zero on any mismatch.
  */
 import { execFileSync } from 'node:child_process'
-import { readFileSync, existsSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { getPython } from './python-runtime.mjs'
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const read = (path) => readFileSync(resolve(repoRoot, path), 'utf8')
@@ -29,12 +30,17 @@ const ANALYSIS_PERIOD_YEARS = 50
 const REL_TOLERANCE = 1e-9
 const ABS_TOLERANCE = 1e-6
 
+// Fail before downloading WASM packages when the native reference is missing.
+const nativePython = getPython()
+
 // --- 1. The wheel under test: exactly what the published release ships. ---
 const { getEngineUrl } = await import('../src/lib/lccaEngine/cdnEngine.js')
 const engineUrl = getEngineUrl()
 console.log(`engine release:  ${engineUrl}`)
 
-const engineSource = await (await fetch(engineUrl)).text()
+const response = await fetch(engineUrl)
+if (!response.ok) throw new Error(`Engine release download failed: HTTP ${response.status}`)
+const engineSource = await response.text()
 const wheelMatch = engineSource.match(/RELEASE_WHEEL_URL = "([^"]+\.whl)"/)
 if (!wheelMatch) {
   console.error('Could not find RELEASE_WHEEL_URL inside the published engine script.')
@@ -77,11 +83,6 @@ const wasmCalculate = async (project) => {
 }
 
 // --- 3. Native reference: the backend venv's CPython + the same adapter. ---
-const nativePython = resolve(repoRoot, 'backend/.venv/bin/python')
-if (!existsSync(nativePython)) {
-  console.error(`Backend venv not found at ${nativePython} (see docs/backend-setup.md).`)
-  process.exit(1)
-}
 const nativeCalculate = (fixturePath) => JSON.parse(execFileSync(nativePython, ['-c', `
 import json, sys
 sys.path.insert(0, 'backend')

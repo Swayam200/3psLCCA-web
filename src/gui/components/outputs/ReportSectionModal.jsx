@@ -1,7 +1,6 @@
-/* eslint-disable no-unused-vars */
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Modal, Button, Form, Accordion, Row, Col } from 'react-bootstrap';
-import { FaFilePdf, FaCheckSquare, FaSquare } from 'react-icons/fa';
+import { FaFilePdf } from 'react-icons/fa';
 import { SECTION_KEYS } from './reportSections.js';
 
 export { REPORT_SECTIONS, SECTION_KEYS } from './reportSections.js';

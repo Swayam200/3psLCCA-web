@@ -1,5 +1,4 @@
-/* eslint-disable no-unused-vars */
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Modal, Button, Form } from 'react-bootstrap';
 import { COUNTRIES, CURRENCIES } from './utils/countriesdata';
 import { materialCatalog } from './utils/materialCatalog';
@@ -16,6 +15,7 @@ const NewProjectModal = ({ show, onHide, onCreate }) => {
 
     useEffect(() => {
         if (show) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- Opening the modal intentionally resets the previous draft.
             setProjectName('');
             setCountry('');
             setCurrency('');

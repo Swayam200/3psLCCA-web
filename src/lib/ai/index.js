@@ -11,7 +11,7 @@
  * The comparison must be written INLINE at the call site (not read from a
  * shared constant) so Vite's define replacement makes it a build-time literal
  * and the entire package — this file and everything it reaches — is dropped
- * from flag-off bundles. tests/ai/bundleExclusion.test.js enforces that.
+ * from flag-off bundles. tests/build/bundleExclusion.test.js enforces that.
  *
  * The build flag decides whether the code EXISTS in the bundle; the runtime
  * toggle in Settings (prefs.enabled) decides whether the UI is shown. Both

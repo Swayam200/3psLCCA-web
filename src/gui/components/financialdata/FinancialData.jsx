@@ -1,7 +1,6 @@
-/* eslint-disable no-unused-vars */
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useProjectData } from '../../../contexts/ProjectDataContext';
-import { normalizeFinancialData, validateFinancialData } from '../../../utils/projectPageSchema';
+import { normalizeFinancialData } from '../../../utils/projectPageSchema';
 import './FinancialData.css';
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -92,7 +91,7 @@ const REQUIRED_KEYS = new Set(
     FINANCIAL_FIELDS.filter((f) => f.required).map((f) => f.key)
 );
 
-const NUMBER_FIELDS = FINANCIAL_FIELDS.filter((f) => f.type !== 'text');
+
 const FIELD_BY_KEY = Object.fromEntries(FINANCIAL_FIELDS.map((f) => [f.key, f]));
 const SUGGESTED_SOURCE = '3psLCCA suggested default';
 
@@ -209,6 +208,7 @@ const FinancialData = ({ controller }) => {
     useEffect(() => {
         const saved = projectData.financial_data;
         const next = normalizeFinancialData({ ...INITIAL_STATE, ...(saved || {}) });
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Restore normalized saved inputs while preserving the existing form-to-context synchronization.
         setForm(prev => JSON.stringify(next) !== JSON.stringify(prev) ? next : prev);
     }, [projectData.financial_data]);
 
@@ -292,37 +292,6 @@ const FinancialData = ({ controller }) => {
     const hasError = (key) => errors.has(key) || Boolean(rangeErrors[key]);
 
     // ── Validation ────────────────────────────────────────────────────────────
-    const validate = () => {
-        const messages = validateFinancialData(form);
-        const newErrors = new Set();
-        REQUIRED_KEYS.forEach((key) => {
-            if (messages.some((message) => message.includes(key.replace(/_/g, ' ')))) newErrors.add(key);
-        });
-
-        // Out-of-range values are invalid even when the shared schema accepts them
-        const newRangeErrors = {};
-        NUMBER_FIELDS.forEach(({ key }) => {
-            const message = getRangeError(key, form[key]);
-            if (message) {
-                newRangeErrors[key] = message;
-                newErrors.add(key);
-                if (!messages.includes(message)) messages.push(message);
-            }
-        });
-        setRangeErrors(newRangeErrors);
-
-        setErrors(newErrors);
-        if (newErrors.size > 0) {
-            const msg = `Financial data needs attention: ${messages.join(' ')}`;
-            setValidationMsg(msg);
-            controller?.engine?._log(msg);
-            return { valid: false, errors: messages };
-        }
-
-        setValidationMsg('');
-        return { valid: true, errors: [] };
-    };
-
 
 
     // ---- Render --------------------------------------------------------------

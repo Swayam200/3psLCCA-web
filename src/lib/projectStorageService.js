@@ -1,5 +1,4 @@
-/* eslint-disable no-unused-vars */
-import { databases, APPWRITE_CONFIG, ID, Query, account } from './appwrite';
+import { databases, APPWRITE_CONFIG, Query, account } from './appwrite';
 import { normalizeProjectData } from '../utils/projectSchema';
 
 /**
@@ -9,7 +8,7 @@ const getCurrentUserId = async () => {
     try {
         const user = await account.get();
         return user.$id;
-    } catch (e) {
+    } catch {
         return null;
     }
 };
@@ -76,7 +75,7 @@ export const projectStorageService = {
                         projectId,
                         cloudData
                     );
-                } catch (e) {
+                } catch {
                     await databases.createDocument(
                         APPWRITE_CONFIG.databaseId,
                         APPWRITE_CONFIG.collectionId,
@@ -91,7 +90,7 @@ export const projectStorageService = {
 
             } catch (err) {
                 console.error("Failed to save project to cloud. Preserved locally.", err);
-                throw new Error("offline");
+                throw new Error("offline", { cause: err });
             }
         }
     },
@@ -246,7 +245,7 @@ export const projectStorageService = {
                                 proj.id,
                                 cloudData
                             );
-                        } catch (e) {
+                        } catch {
                             await databases.createDocument(
                                 APPWRITE_CONFIG.databaseId,
                                 APPWRITE_CONFIG.collectionId,

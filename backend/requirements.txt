@@ -3,4 +3,5 @@ uvicorn[standard]>=0.30
 pydantic>=2.7
 httpx>=0.27
 pytest>=8.0
--e ../../3psLCCA-gui-python-venv/3psLCCA-core
+# Same core release as src/lib/lccaEngine/cdnEngine.js; no sibling checkout needed.
+three-ps-lcca-core @ https://3psLCCA.github.io/3psLCCA-core/release/v1.0.2/three_ps_lcca_core-1.0.2-py3-none-any.whl#sha256=c69379930c8bdf215196fe76337d8649dfef43286fac7c2ef43edbb8cd639e5f

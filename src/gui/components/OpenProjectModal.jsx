@@ -1,6 +1,5 @@
-/* eslint-disable no-unused-vars */
-import React, { useState } from 'react';
-import { Modal, Button, ListGroup, Form } from 'react-bootstrap';
+import { useState } from 'react';
+import { Modal, Button, ListGroup } from 'react-bootstrap';
 import { FaFolderOpen, FaFileUpload, FaClock } from 'react-icons/fa';
 
 const OpenProjectModal = ({ show, onHide, onOpen }) => {
@@ -19,7 +18,7 @@ const OpenProjectModal = ({ show, onHide, onOpen }) => {
                     const data = JSON.parse(event.target.result);
                     onOpen(data);
                     onHide();
-                } catch (err) {
+                } catch {
                     alert('Invalid project file format.');
                 }
             };

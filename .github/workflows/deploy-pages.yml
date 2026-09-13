@@ -20,7 +20,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version-file: .nvmrc
           cache: npm
 
       - name: Install dependencies
@@ -28,6 +28,9 @@ jobs:
 
       - name: Run unit tests
         run: npm test
+
+      - name: Check maintained code
+        run: npm run lint
 
       - name: Build for GitHub Pages subdirectory hosting
         env:

@@ -1,10 +1,8 @@
-/* eslint-disable no-unused-vars */
-/* eslint-disable react-hooks/set-state-in-effect */
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useProjectData } from '../../../contexts/ProjectDataContext';
 import { computeMachineryDetailedTotal, computeMachineryLumpsumTotal, DEFAULT_MACHINERY_DATA, ENERGY_SOURCES, normalizeMachineryData } from './carbonUtils';
 
-const MachineryEmissions = ({ controller }) => {
+const MachineryEmissions = () => {
     const { projectData, updateProjectData } = useProjectData();
     const [mode, setMode] = useState('detailed');
     const [detailedEntries, setDetailedEntries] = useState([]);
@@ -40,6 +38,7 @@ const MachineryEmissions = ({ controller }) => {
         const hasSavedDetailedRows = machineryData.detailed.rows.length > 0
             || rawMachineryData.detailed_entries
             || rawMachineryData.detailed?.rows;
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Restore saved machinery inputs when the stored project section changes.
         if (machineryData.mode) setMode(machineryData.mode);
         setDetailedEntries(
             hasSavedDetailedRows

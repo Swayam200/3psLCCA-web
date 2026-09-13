@@ -1,5 +1,4 @@
-/* eslint-disable no-unused-vars */
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Modal, Row, Col, ListGroup } from 'react-bootstrap';
 
 const VersionHistoryModal = ({ show, onHide }) => {
