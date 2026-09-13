@@ -65,9 +65,20 @@ test('mapper: desktop archive round-trips into desktop-shaped chunks', async () 
 
 /** Environment-path normalization: plot temp suffixes, FS prefixes, temp dirs. */
 const normalize = (text) => text
-    .replace(/lcca_plot_([a-z_]+)_[a-z0-9_]+\.png/g, 'lcca_plot_$1.png')
+    .replace(/lcca_plot_(pillar_donut|sustainability_matrix|stage_bars|pillar_bars)_[a-z0-9_]+\.png/g, 'lcca_plot_$1.png')
     .replace(/\{[^{}]*\/(three_ps_lcca_gui|r0_out|out|report_out|tmp[a-z0-9_]*)\//g, '{$1/')
     .replace(/\{[^{}]*[/\\](3ps_lcca_agency_logo\.png)\}/g, '{$1}');
+
+test('plot filename normalization removes random underscores without changing chart identity or report values', () => {
+    for (const chart of ['pillar_donut', 'sustainability_matrix', 'stage_bars', 'pillar_bars']) {
+        const canonical = `\\includegraphics{lcca_plot_${chart}.png} Total: 123.45`;
+        for (const suffix of ['abcd1234', 'x_abc123', '_abcdef_', 'abcdefgh']) {
+            assert.equal(normalize(`\\includegraphics{lcca_plot_${chart}_${suffix}.png} Total: 123.45`), canonical);
+        }
+        assert.equal(normalize(canonical), canonical, 'already normalized chart names must remain intact');
+    }
+    assert.equal(normalize('lcca_plot_unknown_chart_x_abc123.png'), 'lcca_plot_unknown_chart_x_abc123.png');
+});
 
 /**
  * Number-canonical form: 20 and 20.0 compare equal. Python prints floats
